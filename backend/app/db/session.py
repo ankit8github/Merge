@@ -9,5 +9,7 @@ def build_engine(settings: Settings) -> Engine:
         settings.database_url(),
         pool_pre_ping=True,
         hide_parameters=True,
+        isolation_level="READ COMMITTED",
+        execution_options={"schema_translate_map": {None: "public"}},
         connect_args={"connect_timeout": 5},
     )

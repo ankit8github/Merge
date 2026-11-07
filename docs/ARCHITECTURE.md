@@ -1,6 +1,6 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
-**Status:** APPROVED DIRECTION / PHASE 0 SKELETON IMPLEMENTED; domain design not implemented. Source requirements: `docs/REQUIREMENTS.md`. Decisions: `docs/DECISIONS.md`. Verification and remaining database prerequisites: `docs/PROGRESS.md`.
+**Status:** PHASE 0 VERIFIED / M-006A DOMAIN SCHEMA IMPLEMENTED; domain services/APIs not implemented. Concrete schema and database guards: `docs/SCHEMA.md`. Source requirements: `docs/REQUIREMENTS.md`. Decisions: `docs/DECISIONS.md`. Verification: `docs/PROGRESS.md`.
 
 ## 1. Goals and constraints
 - Solve PS1 with a **correct-by-design membership core**, not an application-server mutex.
@@ -49,8 +49,8 @@ Browser verification: Playwright → accessible mobile/keyboard flows
 ## 4. Data model proposal
 - `users(id, email UNIQUE, password_hash, display_name, timezone, skills, created_at, ...)`.
 - `hackathons(id, name, min_team_size, max_team_size, ...)` with `min>=1`, `max>=min`.
-- `teams(id, hackathon_id FK, leader_id FK, member_count, state, deleted_at, created_at, ...)`.
-- `memberships(id, hackathon_id FK, team_id FK, user_id FK, created_at, removed_at?)` with **active `(hackathon_id,user_id)` UNIQUE**. May be represented by an active-only partial unique index or current-member table; final migration must specify which.
+- `teams(id, hackathon_id, leader_user_id, min_team_size, max_team_size, version, deleted_at, ...)`. Member count is derived from rows; readiness is derived from count/minimum/deletion, with neither stored.
+- Active-only `memberships(hackathon_id, user_id, team_id, joined_at)` with **PRIMARY KEY `(hackathon_id,user_id)`**, composite team/hackathon FK and unique `(team_id,user_id)` for the deferred leader FK. History belongs in audit.
 - `invitations(id, team_id, token_hash UNIQUE, expires_at, revoked_at, created_by, ...)`.
 - `join_requests(id, team_id, user_id, state, created_at, decided_at, decided_by, ...)` with sensible pending uniqueness.
 - `idempotency_records(id, actor_id, operation, key, request_hash, status, response, created_at, ...)` with unique `(actor_id,operation,key)`; exact pending-request behavior is to be specified.
@@ -60,16 +60,16 @@ Browser verification: Playwright → accessible mobile/keyboard flows
 **Integrity details requiring migration-level design:**
 - Ensure membership `hackathon_id` is consistent with its `team.hackathon_id` (composite foreign key or equivalent validated transactional rule).
 - Ensure leader is a current member, including initial team creation and succession. If circular FKs complicate creation, use a controlled deferred constraint/transactional design; document concrete implementation.
-- Capacity is a cross-row invariant and cannot be guaranteed by a naive CHECK on member count alone. Serialize team capacity mutations and keep cached count consistent with membership rows.
-- `removed_at` vs active-only membership storage must be chosen so the unique index enforces only active membership; audit preserves history.
+- Capacity is a cross-row invariant and cannot be guaranteed by a naive CHECK. Parent-team locks and deferred final-state validation enforce capacity using actual membership rows; no stored counter exists.
+- M-005B chose active-only membership storage; audit preserves history. M-006A provides database-enforced capacity/final-state checks, with the exact table/function definitions documented in `SCHEMA.md`.
 - Soft deletion retains audit references but user-facing APIs and board must hide deleted teams.
 
 ## 5. Canonical transaction protocol (to finalize in first implementation PR)
 All membership-changing operations must acquire locks in **one consistent order**. Proposed:
 1. Authenticate/authorize and perform syntax validation before transaction.
 2. Begin database transaction; establish idempotency ownership for operation (unique key, fingerprint, safe replay semantics).
-3. Serialize the user's per-hackathon membership changes (e.g. lock the **user row** for the affected user; if multiple users involved, lock user IDs in sorted order).
-4. Lock target `teams` row with `SELECT ... FOR UPDATE` (if two teams, sort team IDs). Leadership changes must follow same protocol.
+3. Lock hackathon FOR SHARE, then serialize affected membership subjects with user-row **FOR NO KEY UPDATE** locks in sorted user-ID order. No new user lock may be acquired after a team lock.
+4. Lock target `teams` row with **FOR NO KEY UPDATE** (if multiple teams, sorted team IDs), then future auxiliary request/invite rows. Leadership changes use the team lock; selecting a successor does not change its membership or acquire its user lock afterward.
 5. Under lock, re-read team state and current membership; verify action permission, capacity, membership uniqueness, invite expiry, request state and leader rules.
 6. Write membership/team updates, corresponding audit event, idempotency outcome and outbox record in the **same transaction**.
 7. Commit; event dispatcher may publish committed outbox signal. Any rolled-back transaction produces no durable domain mutation or event.
@@ -175,9 +175,9 @@ Folders beyond `docs/` are **proposed**; create only as tasks need them.
 - **G5:** Working public deployment, one-page design, benchmark report, <=5-min demo, submitted links.
 
 ## 14. Known limitations / decision gates
-- The M-002 bootstrap implements only public process health, a frontend health page, connection configuration and an empty migration baseline. Domain locks, IDs, schema and endpoints remain proposals until coded/tested.
+- M-006A adds concrete schema, deferred leadership/final-state integrity and immutability guards. APIs, full service lock protocol, auth, idempotency replay, audit generation and dispatch remain future work. Schema tests do not prove 50-way service races.
 - Phase 0 uses the owner's existing local PostgreSQL 17 server, dedicated `merge_dev` database and non-administrative `merge_app` role; manual provisioning is required when credentials are unavailable. Docker is optional and unverified. See the dated setup clarification in `DECISIONS.md`.
 - Deployment provider and database hosting must be chosen after checking availability and cold-start constraints.
 - SSE scaling across multiple instances is not solved merely by adding a transactional outbox.
-- A cached member count requires careful consistency enforcement; alternative is transactional count under team row lock.
+- Counts/readiness are derived; future services must count in a fresh statement after taking the team lock, not use stale loaded ORM values.
 - Browser-only or SQLite tests cannot prove cross-process PostgreSQL race correctness.

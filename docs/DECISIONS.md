@@ -80,6 +80,10 @@ This file explains **why** we are building the system a particular way. `docs/RE
 - **ADR-020** Idempotency concurrent reservation behavior.
 
 ## ADR change protocol
+### ADR-016/017/018/020 — approved M-005B refinement, implemented schema subset in M-006A
+
+Accepted by owner for bounded schema implementation, 2026-11-07: active-only memberships with `(hackathon_id,user_id)` primary key; derived counts/readiness (supersedes earlier cached-count suggestion); composite hackathon FKs; initially deferred leader membership FK; final-state constraint triggers and parent-team NO KEY UPDATE locks; immutable identities; soft deletion; frozen hackathon size configuration; transactional-support tables with deferred completed-outcome validation; additive 0002 after unchanged 0001. READ COMMITTED is explicit. See `SCHEMA.md` for exact mechanisms, error categories and tests. No auth, mutation/idempotency services, audit generation, dispatcher, or API/race correctness claim is included. Raw SQL can still deadlock; supported future services must use the full lock matrix and bounded whole-transaction retries. Tests must establish actual enforcement rather than treating this ADR as evidence.
+
 ### Phase 0 local setup clarification — accepted 2026-11-06
 
 Owner approved using the existing PostgreSQL 17 server at `127.0.0.1:5432` instead of requiring Docker Compose for M-002. Use only a dedicated `merge_dev` database and non-administrative `merge_app` role, provisioned manually when credentials are unavailable. Do not modify existing databases or roles. Docker remains an optional later local setup, with no verification claim. This changes the local setup assumption only; PostgreSQL authority, domain invariants, lock protocol, authentication and production deployment decisions remain unchanged. Add public `GET /health` returning `{"status":"ok"}` as process liveness; database connectivity is a separate smoke test. Dependencies are pinned for the bootstrap. Consequence: G0 remains incomplete until real connectivity and baseline migration/repeated upgrade are verified.

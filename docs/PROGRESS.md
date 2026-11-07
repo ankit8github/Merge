@@ -14,7 +14,7 @@
 - [x] Local Git repository at `I:/Merge` on `main`; initial verified commit `66d28b51728f466b3d0124de03f457dd190c22f1` created 2026-11-07 (M-004).
 - [ ] Remote connected — none configured; no push performed.
 - [x] Application code executed — FastAPI and Vite verified over local HTTP (M-002).
-- [x] Automated tests passed — latest M-003 verification: 15 backend tests including real PostgreSQL, plus 6 frontend tests; see evidence below.
+- [x] Automated tests passed — latest M-006A verification: 46 backend tests (31 new schema cases plus 15 Phase 0 tests), plus 6 frontend tests; see evidence below. This is not a claim of 20 API tests or a verified 50-way race.
 - [ ] Any public deployment exists — **not verified**.
 - [ ] PS1 submission completed — **not verified**.
 
@@ -23,7 +23,7 @@
 | Gate | Scope | Required objective evidence | Status |
 |---|---|---|---|
 | G0 | Repository and local integration | Commit hash, README, backend health, React build, PostgreSQL connectivity, migration, smoke test | DONE — local checks recorded in M-003; initial commit `66d28b51728f466b3d0124de03f457dd190c22f1`; closed 2026-11-07 |
-| G1 | Transactional team core | Real PostgreSQL 50-way last-seat race, cross-team race, idempotency; repeatable tests | NOT STARTED |
+| G1 | Transactional team core | Real PostgreSQL 50-way last-seat race, cross-team race, idempotency; repeatable tests | PARTIAL — schema/guards verified in M-006A; services and multi-connection/API races pending |
 | G2 | Business flows and security | Team lifecycle, invites, requests, leader succession, audit, authorization negative tests | NOT STARTED |
 | G3 | Frontend and realtime | Complete React flows, SSE between two clients, mobile/keyboard browser tests, scoring | NOT STARTED |
 | G4 | Acceptance performance and CI | >=20 API tests in passing GitHub Actions, 10k/2k seed, k6 100 VUs, measured board p95 <200ms | NOT STARTED |
@@ -34,8 +34,8 @@
 2. **M-002 — Minimal end-to-end skeleton:** IMPLEMENTED / LOCAL VERIFICATION PASSED, including database integration completed in M-003. FastAPI health, Vite React app, local PostgreSQL configuration, empty Alembic baseline, environment example, startup docs and tests. Owner approved existing PostgreSQL 17 instead of Compose; Docker unverified.
 3. **M-003 — PostgreSQL integration (owner's task scope):** VERIFIED locally on 2026-11-06: authenticated SELECT 1, online baseline upgrade, repeated upgrade, current revision, full backend suite and frontend/HTTP regressions passed. Owner completed provisioning/schema recovery. Do not rerun provisioning. Earlier schema/lock design scope remains deferred: propose DDL/lock order and record ADR-016/017/020 before coding transactions.
 4. **M-004 — Initial verified Git commit (owner's current task scope):** Initial local bootstrap commit created after source/index secret and artifact checks; G0 closed. Earlier concurrency-core scope is deferred, not implemented: after schema/lock ADR review, implement create/join with idempotency and real PostgreSQL race tests under a future task ID.
-5. **M-005 — Team lifecycle:** Invites, requests, approvals, leave, transfer, deletion, audit and authorization via same transaction service.
-6. **M-006 — React user flows + SSE:** Board, profiles, teams, requests, suggestions, live events, browser accessibility tests.
+5. **M-005/M-005B — Schema and transaction design (owner's revised task IDs):** Owner approved active memberships, derived count/readiness, deferred leader FK and final-state guards, fixed lock order, frozen sizes and additive migration. Detailed implemented subset and unresolved service work: `SCHEMA.md`.
+6. **M-006A — PostgreSQL domain schema (current bounded component):** IMPLEMENTED / TESTED locally: 0002 tables, functions/triggers, metadata consistency and 31 schema cases. No APIs, auth, replay service, audit generation, dispatch or React changes. Future lifecycle/concurrency services and frontend/SSE work require separately scoped tasks.
 7. **M-007 — Challenge verification:** CI, seeds, k6 baseline/tuning, deployment, deliverables, owner-led live-change exercise.
 
 ## Test/benchmark evidence log
@@ -203,6 +203,41 @@ G0 closure: all local runtime gates have actual M-003 evidence (15 backend tests
 Outstanding limitations: one known Starlette/HTTPX TestClient deprecation warning; Docker/Compose, CI, browser/mobile/keyboard E2E, deployment, concurrency correctness, load benchmarks and Phase 1/domain features remain unverified or unimplemented. G1–G5 remain open. No remote configured or push performed.
 
 Owner explanation/exercise: `git show --stat 66d28b5` shows the bootstrap snapshot; the next documentation commit records that immutable hash without rewriting it. Explain why `backend/.env` remains local and why a clean working tree alone is not a secret scan.
+
+## M-006A schema implementation and verification — 2026-11-07
+
+Scope: approved active-only relational schema and PostgreSQL guards, no domain APIs or application services. Files: new `backend/app/models/{__init__,domain}.py`, `backend/alembic/versions/0002_domain.py`, `backend/tests/test_domain_schema.py`, `docs/SCHEMA.md`; updated `backend/app/db/{base,session}.py`, `backend/alembic/env.py`, architecture/decisions/progress. No new dependencies, role/permission/credential changes, commits or pushes.
+
+Preflight actually executed through configured SQLAlchemy engine, READ ONLY: authenticated `merge_dev`/`merge_app`; revision `0001_baseline`; only public relations `alembic_version` and its existing primary-key index; zero public routines. No conflicting domain objects found. No database reset, unrelated object replacement or data removal performed.
+
+Implementation: seven tables (minimal users, hackathons, teams, active memberships, idempotency records, audit events, outbox). Counts/readiness derived. Immediate `(hackathon_id,user_id)` membership PK; composite hackathon and frozen-size FKs; initially deferred exact-team leader FK; immutable identities/current membership rows; irreversible team tombstones; append-only/immutable transactional support; five fixed-search-path VOLATILE SECURITY INVOKER functions; 18 user triggers including seven statement-level TRUNCATE guards. Deferred validators re-read current final rows, not queued row images. Parent membership guards lock teams NO KEY UPDATE. READ COMMITTED is explicit on the runtime engine. SQLSTATE/constraint names and lock caveats: `SCHEMA.md`.
+
+Migration evidence, commands from `I:\Merge\backend` using the existing Python 3.11.9 venv:
+- `.\.venv\Scripts\python.exe -m alembic upgrade head --sql > .pytest_cache/0002-review.sql`: offline render passed, exit 0; ignored artifact reviewed. No database changes from this command.
+- `.\.venv\Scripts\python.exe -m alembic upgrade head`: applied the additive 0002 transaction, exit 0; no console output.
+- `.\.venv\Scripts\python.exe -m alembic current`: `0002_domain (head)`, exit 0.
+- Schema test `test_migration_upgrade_repeat` executes `alembic upgrade head` twice and `alembic current` as subprocesses, all exit 0. It does not reset or recreate the schema.
+- `.\.venv\Scripts\python.exe -m alembic check`: final result `No new upgrade operations detected.`, exit 0; FK/type/default differences are not excluded.
+- `git -c safe.directory=I:/Merge diff --exit-code -- alembic/versions/0001_baseline.py` from backend: exit 0. Existing 0001 file unchanged; 0002 explicitly references it. Destructive downgrade intentionally refuses and needs a separately approved procedure.
+
+Actual test outcomes and correction:
+- First `.\.venv\Scripts\python.exe -m pytest -q tests/test_domain_schema.py --tb=short`: 26 passed, 1 metadata-consistency failure. Alembic reported 22 FK remove/add differences because reflected default public schema was unnamed while ORM targets explicitly named public. Diagnostic comparison confirmed matching FK targets/options. No design invariant or PostgreSQL constraint failed.
+- Corrected only metadata representation: default-schema ORM metadata now matches PostgreSQL reflection; engine schema translation explicitly targets public even with caller search_path excluding it. Frozen migration/actual FK constraints were NOT relaxed or recreated.
+- Repeated focused command: 27 passed, exit 0. First full suite: 42 passed, 1 existing HTTPX warning; exit 0.
+- Added four more cases for explicit ORM public resolution, membership in distinct hackathons, invalid live-empty departure and audit/outbox schema constraints. Final `.\.venv\Scripts\python.exe -m pytest -q --tb=short`: **46 passed, 1 existing Starlette/HTTPX deprecation warning**, exit 0. This includes 31 schema cases and all 15 prior tests. No test was weakened/deleted to pass.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements, exit 0.
+
+Real PostgreSQL coverage: founding membership; actual failing COMMIT for founderless team and direct overflow; cross-team PK conflict; invalid leader FK; forbidden membership move; valid/invalid soft deletion and blocked resurrection; TRUNCATE rejection on all seven protected tables; temporary overflow followed by departures/succession in the same transaction; composite hackathon consistency; frozen sizes; team identity/hard-delete protection; pending/completed idempotency state; immutable audit; allowed outbox attempt update; fixed function search path; full metadata and leader-FK deferral; repeated upgrade.
+
+Cleanup/safety: tests use UUID fixture rows in outer transactions, forcing genuine deferred validation via SET CONSTRAINTS ALL IMMEDIATE before rollback. The two failing-COMMIT tests exercise PostgreSQL rollback of those transactions. Successful fixtures are not durably committed. TRUNCATE tests verify guard presence before asserting statement rejection; cleanup never uses TRUNCATE or disables triggers. After the final suite, actual READ ONLY count queries returned **0 rows in each of all seven domain tables**, 18 noninternal domain triggers and revision `0002_domain`. No unrelated data existed in the new tables before migration; the preexisting Alembic tracking table remains.
+
+Phase 0 regression commands from frontend: `npm.cmd run typecheck`, `npm.cmd test`, `npm.cmd run build` — all exit 0; 6 frontend tests passed and 29-module production build completed. From root: `.\backend\.venv\Scripts\python.exe scripts/check_local_http.py` — API health/frontend HTML/proxy, outage error and recovery all passed, exit 0. No frontend source changed.
+
+Limits/risks: these are real schema tests, not authenticated API/race proofs. Independent multi-connection final-seat/leader races, actual successful durable domain-operation commits, complete service lock ordering/retries, audit generation, replay and event publication remain future work. Deferred capacity's snapshot argument assumes the approved READ COMMITTED isolation; tests/runtime use it, and other isolation modes are not certified. Raw DELETE can lock membership before its trigger locks the team and may deadlock; later services must prelock team/participant rows in canonical order and retry entire transactions. Privileged DDL/trigger disabling is outside the runtime integrity boundary. One existing HTTPX deprecation warning and Windows LF/CRLF warnings remain. G1 is not closed.
+
+Owner explanation/exercise: inspect `merge_validate_team` and explain why its count runs after the parent lock in a separate query, and why a queued founderless/overflow row can become valid before final validation. Add a case inserting a temporary third member then deleting that member before validation; verify no committed overflow and no stored counter to repair.
+
+Proposed commit message: `feat: add PostgreSQL domain schema and integrity guards (M-006A)`. Not committed. G0 baseline commits preserved; no push.
 
 ## Daily work log template
 ```

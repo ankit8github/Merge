@@ -1,5 +1,5 @@
 from alembic import context
-from sqlalchemy import pool
+import app.models  # Register the complete declarative metadata.
 
 from app.core.config import Settings
 from app.db.base import Base
@@ -21,7 +21,7 @@ def run_migrations() -> None:
     engine = build_engine(Settings())
     try:
         with engine.connect() as connection:
-            context.configure(connection=connection, target_metadata=Base.metadata)
+            context.configure(connection=connection, target_metadata=Base.metadata, include_schemas=True)
             with context.begin_transaction():
                 context.run_migrations()
     except Exception:
