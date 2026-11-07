@@ -175,6 +175,10 @@ Folders beyond `docs/` are **proposed**; create only as tasks need them.
 - **G5:** Working public deployment, one-page design, benchmark report, <=5-min demo, submitted links.
 
 ## 14. Known limitations / decision gates
+- M-006B provides a separate opt-in local merge_test target and dedicated online
+  migration runner using unchanged versions. Owner verified 45 database-level
+  adversarial cases in 39.72s (three repetitions); see TEST_DATABASE.md/PROGRESS.md.
+  Ordinary backend configuration remains merge_dev. Service/API races remain open.
 - M-006A adds concrete schema, deferred leadership/final-state integrity and immutability guards. APIs, full service lock protocol, auth, idempotency replay, audit generation and dispatch remain future work. Schema tests do not prove 50-way service races.
 - Phase 0 uses the owner's existing local PostgreSQL 17 server, dedicated `merge_dev` database and non-administrative `merge_app` role; manual provisioning is required when credentials are unavailable. Docker is optional and unverified. See the dated setup clarification in `DECISIONS.md`.
 - Deployment provider and database hosting must be chosen after checking availability and cold-start constraints.

@@ -95,3 +95,14 @@ When a decision changes, append an ADR entry with: context, change, alternatives
 Owner scoped M-003 to PostgreSQL integration, superseding the earlier task number assigned to schema/lock design. That design work remains pending before domain implementation. Local backend secrets now belong in ignored `backend/.env`, loaded by an absolute path regardless of working directory; the root `.env` is no longer loaded. This is an explicit local configuration change, not a change to authentication/session design or production deployment. Existing database/role conflicts must stop provisioning; unavailable credentials require an owner-run read-only metadata inspection and manual provisioning without secrets in chat. No database integration success is asserted until real smoke, online baseline, repeated upgrade and full backend tests pass.
 
 Official source: https://hack4hack.com/hackathons/hack4hack-crew-hiring-challenge-2026-tp3m
+
+### M-006B.1 dedicated test target — owner-approved preparation, 2026-11-08
+
+Owner approved local merge_test exclusively for automated integration/concurrency
+tests, with execution deferred for review. Reuse existing merge_owner/merge_app;
+only new database/schema ACLs are in scope. Dedicated test settings and an online
+Alembic entry point require explicit opt-in and server-side identity checks; they
+do not load backend/.env, change ordinary Settings or edit frozen migrations.
+This avoids durable test tombstones in merge_dev without weakening guards.
+No DROP is authorized/executed here; disposal requires separate approval. See
+TEST_DATABASE.md for commands, partial-provisioning risks and cleanup design.

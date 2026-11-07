@@ -132,5 +132,8 @@ triggers. Metadata comparison includes FK/type/default comparison. Repeat
 upgrade tests run against the existing head and do not reset the database.
 
 These tests are schema checks, not 20 API tests or the required 50-way race.
-Multi-connection commit-order races, service authorization/retries, deployment,
-and board performance remain separate acceptance work.
+M-006B adds an isolated merge_test suite: owner verified 45 database-level
+adversarial cases in 39.72 seconds with three repetitions and fresh-state checks
+(2026-11-08). See TEST_DATABASE.md/PROGRESS.md. This covers the implemented
+multi-connection schedules; service authorization/retries, the 50-way HTTP race,
+deployment and board performance remain separate acceptance work.

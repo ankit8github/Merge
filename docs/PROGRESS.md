@@ -239,6 +239,389 @@ Owner explanation/exercise: inspect `merge_validate_team` and explain why its co
 
 Proposed commit message: `feat: add PostgreSQL domain schema and integrity guards (M-006A)`. Not committed. G0 baseline commits preserved; no push.
 
+## M-006B isolation preflight — 2026-11-07
+
+Stopped before implementing or running adversarial tests, following the task's
+explicit disposable-database fallback when reliable cleanup is unavailable.
+Initial `git -c safe.directory=I:/Merge status --short --branch` returned only
+`## main`. `git -c safe.directory=I:/Merge log -1 --format="%H %s"` confirmed
+committed M-006A at `41b6bdc6849340ff6018d84c1f5b74e28bfcdfea`, message
+`feat: add PostgreSQL domain schema and integrity guards (M-006A)`.
+
+Read AGENTS and requirements/architecture/decisions/schema/progress, existing
+schema fixtures, engine/configuration and migration guards. Authenticated
+inspection executed from backend via a PowerShell here-string piped to
+`.\.venv\Scripts\python.exe -`, using `build_engine(Settings())` and
+`SET TRANSACTION READ ONLY; SET LOCAL statement_timeout = '10s'`.
+`SELECT current_database()` returned `merge_dev`; engine isolation was
+READ COMMITTED; `SELECT version_num FROM public.alembic_version` returned
+`0002_domain`. Individual `SELECT count(*) FROM public.<table>` queries returned
+zero for all seven domain tables. A pg_trigger query confirmed one enabled
+noninternal DELETE trigger on public.teams. Transaction rolled back; exit 0.
+No credentials or connection strings printed; no database objects/data changed.
+
+Isolation blocker: existing successful fixtures use an outer rollback-only
+transaction. Independent sessions need committed shared seed rows for the
+requested commit-order races. Migration guards prohibit physical team deletion
+(`guard_team_soft_delete`) and changes to tombstones (`guard_team_tombstone`);
+retained teams reference their hackathon and creator. Therefore committing
+fixtures in merge_dev cannot be followed by complete ordinary-DML cleanup.
+Unique UUIDs alone do not solve retained test data. Disabling guards, changing
+schema or leaving permanent fixtures is not authorized and was not attempted.
+
+Proposed next scope requires owner approval: provision an explicitly disposable,
+uniquely named local test database; approve a narrow test-only target guard
+(current Settings permits only merge_dev); apply the existing unchanged
+0001/0002 migrations there; run bounded independent-connection races against
+UUID-scoped committed fixtures; verify final invariants and collect SQLSTATEs
+and lock observations; repeat against fresh disposable databases. Whole-database
+cleanup must be separately authorized and restricted to those test databases.
+Do not reset merge_dev or weaken any domain guard for cleanup.
+
+No new tests, race repetitions, SQLSTATE outcomes or deadlock observations are
+claimed. Backend/frontend/HTTP regressions were not rerun after this stop;
+M-006A results above remain historical evidence only. M-006B success gate and
+G1 remain open. Only this progress entry changed; no application/schema,
+role/permission/credential changes, commits or pushes.
+
+Owner explanation/exercise: explain why a rollback-only fixture is invisible
+to another connection and why soft deletion cannot provide full fixture cleanup
+under immutable tombstones.
+
+## M-006B.1 dedicated test database preparation — 2026-11-08
+
+Owner approved merge_test exclusively for automated integration/concurrency tests,
+with privileged execution held for review. Preserved the existing uncommitted
+M-006B blocker entry. HEAD remains M-006A
+41b6bdc6849340ff6018d84c1f5b74e28bfcdfea; no commit/push.
+
+Added scripts/inspect_merge_test.sql and scripts/provision_merge_test.sql,
+backend/test_support/{__init__,database}.py, backend/test_alembic/env.py,
+backend/tests/test_test_database_safety.py and docs/TEST_DATABASE.md. Updated
+README, architecture, decisions and progress. No dependencies added. Ordinary
+Settings, engine, Alembic environment, 0001/0002 and all domain guards unchanged.
+
+Actual read-only preflight: from backend, a PowerShell Python here-string used
+Settings credentials privately to build a maintenance postgres connection (not
+merge_dev), SET TRANSACTION READ ONLY, a 10-second statement timeout, and
+SELECT datname FROM pg_database WHERE datname='merge_test'. Result: connected
+database postgres; merge_test exists False; rollback; exit 0. No password/URL
+printed. Owner scripts repeat existence checks immediately before provisioning.
+psql resolved to C:\Program Files\PostgreSQL\17\bin\psql.exe.
+
+Prepared provisioning reuses non-elevated existing roles, creates only merge_test
+owned by merge_owner, and scopes CONNECT/public USAGE/CREATE to merge_app there.
+No role/password changes. All scripts stop on errors; partial CREATE DATABASE
+cannot be rolled back with later ACLs, so failed provisioning requires inspection,
+never automatic rerun. Exact owner-review commands and guarded disposal design
+are in TEST_DATABASE.md. No executable DROP procedure provided or executed.
+
+Test tools require --confirm-merge-test, fixed local address/port/database/role,
+private interactive password or separate MERGE_TEST_DB_PASSWORD, no dotenv or
+ordinary application settings. Every utility connection checks actual server
+identity and READ COMMITTED; separate online Alembic environment rechecks before
+writing. Fresh-target conflict checks reject public relations/routines; only base
+or exact 0002 head is accepted. Verification transaction is read-only. Future
+independent fixtures must use this connection helper; adversarial tests not added.
+
+Actual commands from backend:
+- `.\.venv\Scripts\python.exe -m pytest -q tests/test_test_database_safety.py tests/test_config.py tests/test_health.py --tb=short`: 17 passed, 1 existing HTTPX warning.
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`: first 24 passed, 32 deselected, 2 warnings. Added explicit Alembic path_separator=os to remove its configuration warning; repeat: 24 passed, 32 deselected, 1 existing HTTPX warning, exit 0. These are pure safety/configuration/health tests, not PostgreSQL concurrency evidence.
+- `git -c safe.directory=I:/Merge diff --exit-code HEAD -- backend/app backend/alembic backend/requirements.lock`: exit 0, baseline application/migrations/dependencies unchanged.
+- `git -c safe.directory=I:/Merge diff --check`: exit 0; Git LF/CRLF working-copy warnings remain. `git ... check-ignore backend/.env` confirmed ignored.
+
+Not executed: privileged SQL scripts, test provisioning, online test verification,
+test migrations/repeat, real database tests, adversarial tests, frontend/HTTP
+regressions or database disposal. merge_dev was not connected to or modified by
+this task. No database/schema/role/permission/credential changes. M-006B remains
+open pending owner review, provisioning and actual online verification.
+
+Owner exercise: omit --confirm-merge-test; explain why the CLI refuses before
+reading credentials, and why an initial identity check is repeated per connection.
+
+## M-006B.1R read-only recovery correction — 2026-11-08
+
+Added scripts/inspect_merge_test_recovery.sql and
+backend/tests/test_recovery_inspection_safety.py; updated TEST_DATABASE.md and
+this progress entry. Existing M-006B/M-006B.1 pending work preserved. Original
+inspect_merge_test.sql preflight refusal and provisioning SQL unchanged in this
+correction. No application/migration/dependency changes.
+
+Recovery script uses ON_ERROR_STOP and explicit REPEATABLE READ READ ONLY,
+transaction-local statement/lock deadlines and catalog-only search_path. It
+requires local 127.0.0.1:5432, merge_test, current_user and session_user postgres
+before metadata reports. Reports connection identity, raw database/schema ACLs
+and owners, effective app CONNECT/USAGE/CREATE, role flags and memberships in
+both directions, public relations/routine signatures/types, and optional Alembic
+revision through guarded psql conditionals. No hashes, routine bodies or
+application rows selected; no repair or privileged mutation commands. Existing
+malformed version tables fail safely; absent version tables are reported.
+Exact owner-run command and partial-outcome handling are in TEST_DATABASE.md.
+
+Executed from backend:
+`.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`.
+First run: 1 failed, 27 passed, 32 deselected, one existing HTTPX warning.
+The new static relation-read checker incorrectly treated IS DISTINCT FROM as a
+FROM relation clause. Corrected only that checker to distinguish the operator
+and strip string literals; no SQL safeguard relaxed. Repeat: 28 passed,
+32 deselected, one existing HTTPX warning; exit 0.
+
+`git -c safe.directory=I:/Merge diff --check` passed, with existing LF/CRLF
+working-copy warnings. `git ... diff --exit-code HEAD -- backend/app backend/alembic`
+passed: application, original Alembic environment and migrations unchanged.
+Four new database-free checks cover identity/read-only guards, forbidden SQL and
+psql operations, catalog-only reads/optional revision, and preflight refusal.
+These checks are conservative text checks, not server-side SQL parsing/execution.
+
+Static review now satisfies all 12 provisioning-audit checks, including the
+separate administrator recovery path for partial provisioning. This is not an
+online PostgreSQL verification claim. No database connection, credential access,
+provisioning, migration, database creation/disposal or permissions change occurred
+in this correction. merge_dev untouched. No commits/pushes. Owner review and
+actual provisioning/online verification remain pending; M-006B still open.
+
+Owner exercise: explain why recovery connects as postgres directly to merge_test
+instead of depending on merge_app CONNECT after a partial grant failure, and why
+an absent database must use the original maintenance preflight instead.
+
+## M-006B.2A guarded migration credential preflight — 2026-11-08
+
+Owner reported successful merge_test provisioning/recovery inspection, expected
+owner/ACLs, no application objects and no Alembic revision. These are owner
+evidence, not new automated connection verification. Read required instructions,
+TEST_DATABASE, SCHEMA, progress and exact test-support/Alembic entry points.
+
+Actual commands from backend:
+- `.\.venv\Scripts\python.exe -m test_support.database --help`: exit 0;
+  exact interface `{verify,migrate}` plus required `--confirm-merge-test`.
+- `.\.venv\Scripts\python.exe -m test_support.database migrate`: correctly
+  rejected with required-flag argparse error before credential/connection code.
+  Tool reported process exit 1 for this expected rejection; no migration ran.
+- Private Python environment-presence check printed only
+  `Explicit test-only credential available: False`. No secret value or URL output.
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+  28 passed, 32 deselected, 1 existing HTTPX deprecation warning; exit 0.
+
+Stopped database execution as instructed: test-only MERGE_TEST_DB_PASSWORD is
+unavailable and automated noninteractive stdin cannot securely satisfy the
+runner's private terminal password prompt. Did not import development credentials
+into test settings or bypass the guard. Owner should run the exact documented
+verify / migrate / verify / migrate / verify sequence with --confirm-merge-test
+in their interactive backend terminal, checking exit status after every command.
+Each prompt requests the existing merge_app password privately; never send it
+to chat or put it in a command. Migration preflight checks actual identity and
+rejects unexpected fresh-target public relations/routines before writing.
+
+Not executed: authenticated test verification, migrations/repeat, fresh-object
+inspection, or independent merge_dev revision/data inspection after this stop.
+No database connected to or modified in this task; no revision/head result claimed.
+No concurrency tests, roles/ACL/password changes, database creation/disposal,
+commits or pushes. Only this progress entry changed for M-006B.2A; earlier pending
+preparation files preserved. Migration gate remains incomplete, awaiting secure
+owner execution. Owner exercise: explain why backend/.env is not a fallback for
+the explicitly separate test credential mechanism.
+
+## M-006B.2A diagnostic-only follow-up — 2026-11-08
+
+Owner reported two guarded verify failures with the original generic error and
+successful direct psql authentication; no migrations executed. Inspected exact
+verification/exception paths. Root cause cannot be established from the old
+message without new owner-run diagnostic output. No database credentials accessed
+or database connections attempted in this follow-up; merge_dev untouched.
+
+Updated backend/test_support/database.py with allowlisted failure categories,
+SQLSTATE-based authentication/connection/permission classification where available,
+identity/permission/migration-state operation stages and sanitized CLI output.
+No raw exception text/arguments, SQL parameters, secret values or URLs emitted.
+Exceptions lacking SQLSTATE during setup remain connection-category rather than
+being asserted to prove authentication failure. Opt-in, identity/address/port,
+isolation, fixed target and no-development-fallback checks preserved. No migration
+or domain code changes. Added backend/tests/test_test_database_diagnostics.py;
+updated TEST_DATABASE.md with one safe owner-run verify diagnostic step.
+
+Executed from backend:
+`.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+39 passed, 32 deselected, one existing HTTPX warning; exit 0. New tests verify
+sanitized categories, CLI secret suppression, pre-first-migration verification
+without a version table, permission/state differentiation, and unencoded special
+characters retained in URL.create. These are database-free tests, not live
+authentication/driver/server validation. No live root cause or migration success
+claimed. No roles, passwords, ACLs, databases or constraints changed; no commits
+or pushes. Owner should rerun only guarded verify interactively and report the
+fixed bracketed category, not credentials, before any remediation/migration.
+
+Owner exercise: explain why successful psql login does not establish which secret
+the Python process used when MERGE_TEST_DB_PASSWORD overrides its hidden prompt.
+
+## M-006B.2B credential-safety preflight — 2026-11-08
+
+Owner verified merge_test provisioning, authenticated merge_app identity,
+READ COMMITTED, 0002_domain and repeated guarded migration. These are owner
+evidence, not new results from this agent process. Read the requested source
+documents and current test support. Existing uncommitted preparation preserved.
+
+Actual command from backend: a Python here-string piped to
+`.\.venv\Scripts\python.exe -` checked only availability of the approved
+test-only secret environment and interactive stdin. Output:
+`Test-only credential configured: False`; `Interactive stdin available: False`;
+exit 0. No password or URL printed. No credential fallback attempted.
+
+Stopped before adversarial test implementation/execution under the task's explicit
+instruction to stop when credential handling is unsafe. A private test credential
+must be made available to the actual tool process using the existing explicit
+MERGE_TEST_DB_PASSWORD mechanism; setting it in an unrelated IDE terminal does
+not configure an already running agent process. Never paste it into chat, source
+or command arguments. Ordinary development dotenv is deliberately not a fallback.
+
+No database connection, fixture writes, concurrency tests/repetitions, SQLSTATE
+observations, lock/deadlock outcomes, migrations or database resets performed.
+Full backend/database-free/frontend regressions were not rerun after this safety
+stop; previous evidence remains historical. No code, schema, constraints, roles,
+permissions or credentials changed; merge_dev untouched. Only this log entry
+changed for M-006B.2B. No commits/pushes. M-006B success gate remains open.
+
+Owner explanation: authenticated owner commands establish database readiness,
+but do not give a separate process access to its password. Confirm secret injection
+in the process launching the agent without printing its value, then resume.
+
+## M-006B.2B credential-free test implementation — 2026-11-08
+
+Owner approved implementing tests without credentials and running PostgreSQL cases
+later in an interactive owner terminal. Added backend/test_support/concurrency.py
+and races.py, backend/concurrency_tests/{conftest,test_adversarial}.py and
+backend/tests/test_concurrency_harness.py; updated TEST_DATABASE.md and progress.
+Earlier pending files preserved. No application services/APIs/dependencies,
+migrations, schema, credentials, roles or ACL changes. No database connection
+attempted; merge_dev never accessed. No commits/pushes.
+
+Implemented 13 test functions / 15 scenarios (both orders for two departure races),
+with default three repetitions = 45 collected cases:
+test_competing_final_seat_joins;
+test_same_user_different_teams_one_hackathon;
+test_same_user_different_hackathons;
+test_lock_wait_snapshot_freshness;
+test_rolled_back_admission_consumes_no_capacity;
+test_direct_sql_over_capacity_rejection;
+test_leader_departure_versus_successor_departure (both orders);
+test_last_member_departure_versus_join (both orders);
+test_invalid_leader_reference_rejected_at_commit;
+test_deferred_validator_uses_final_rows;
+test_transaction_rollback_restores_all_mutations;
+test_bounded_lock_timeout_rolls_back_admission;
+test_deadlock_victim_has_no_partial_membership.
+
+Dedicated owner CLI requires --confirm-merge-test and a private existing app
+password via hidden interactive input or explicit test-only environment; rejects
+empty/missing credentials and Python optimized assertion mode. It does not read
+development Settings/dotenv. Guarded connections verify actual database/role/
+address/port/isolation; preflight reads exact 0002 revision and never migrates.
+Fixed suite path excludes legacy development-database tests. External pytest
+autoload/options are disabled; failure dumps suppressed; fail-fast enabled.
+Only sanitized outcome/status/SQLSTATE/constraint metadata is reported.
+
+All fixtures use committed UUID-scoped data only in merge_test, retained without
+cleanup DML or destructive operations. Workers each own independent connections.
+Barriers/events have bounded waits; controlled schedules require actual server
+pg_blocking_pids evidence before releasing the blocker. Observer polling's short
+wait is not itself concurrency evidence. Worker joins share a 30-second deadline;
+connections retain bounded connect/statement/lock deadlines. Fresh post-test
+connections inspect scoped derived counts, leadership, deletion, uniqueness,
+membership/hackathon consistency and frozen sizes, including on test failure.
+Expected 23514/23505/23503 integrity failures, deliberate 55P03 timeout and 40P01
+deadlock are asserted separately; unexpected errors do not count as success.
+
+Actual credential-free commands from backend:
+- `.\.venv\Scripts\python.exe -m pytest concurrency_tests --collect-only -q`:
+  45 cases collected, exit 0; fixtures did not run.
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+  46 passed, 32 deselected, one existing HTTPX warning, exit 0. Seven new harness
+  checks cover safe worker results/errors, SQLSTATE sanitization, mandatory opt-in,
+  missing/empty credentials, guarded connection reuse and fixed safe pytest options.
+- `.\.venv\Scripts\python.exe -m test_support.concurrency --help`: exit 0;
+  confirms --confirm-merge-test and --repetitions 1..10.
+- Same module without flags: expected required-opt-in rejection, tool exit 1;
+  no credential prompt/connection reached.
+- `git -c safe.directory=I:/Merge diff --check`: passed (existing LF/CRLF warnings).
+  `git ... diff --exit-code HEAD -- backend/app backend/alembic backend/requirements.lock backend/pyproject.toml`:
+  exit 0, committed application/migrations/dependency configuration unchanged.
+
+Owner command (NOT executed here): from backend,
+`.\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --repetitions 3`.
+Stop on nonzero exit and review sanitized outcomes; do not change constraints or
+retry blindly. No live SQLSTATE, lock/deadlock observation or concurrency pass is
+claimed yet. Busy-host deadlines and server deadlock detection/pg_blocking_pids
+availability remain unverified. Fixtures accumulate intentionally. These are
+8-contestant database races, not 50-way API acceptance/CI/load proof. Existing real
+database/backend/frontend/HTTP regressions not executed in this credential-free
+scope. M-006B/G1 remain open until owner execution evidence and findings review.
+
+Owner exercise: explain why pg_blocking_pids must confirm the waiter before the
+first transaction commits, then run with --repetitions 1 for a first bounded review.
+
+## M-006B final review and checkpoint — 2026-11-08
+
+Owner-verified execution supplied for this checkpoint: guarded target merge_test,
+merge_app, READ COMMITTED, revision 0002_domain, repeated guarded migration
+succeeded; adversarial suite **45 passed in 39.72 seconds**, three repetitions,
+fresh committed-state invariants verified. This is owner-reported real PostgreSQL
+evidence, not a database run by Codex. No raw per-case transcript was supplied.
+The passing suite strictly asserts capacity/deletion 23514, uniqueness 23505,
+leader FK 23503, deliberate lock timeout 55P03 and deliberate deadlock 40P01.
+No unexpected errors were reported. No 50-way HTTP/API race has been tested.
+
+Reviewed all 20 pending source/test/SQL/documentation candidates, including guarded
+setup, read-only recovery, isolated online migration environment, sanitized
+diagnostics and concurrency suite. Every worker opens its own guarded SQLAlchemy
+engine/connection and transaction. Barriers synchronize race starts; controlled
+orders require pg_blocking_pids evidence before releasing held locks; deliberate
+deadlock synchronizes opposing held locks. Strict outcome assertions reject
+unexpected deadlocks/timeouts/constraints/infrastructure errors. Fresh independent
+read-only checks inspect scoped committed capacity, leader, deletion, assignment,
+FK consistency and frozen-size invariants after each case. UUID fixtures remain
+only in merge_test with no destructive cleanup. No unaddressed correctness blocker
+identified in this bounded review. Test helper departures are not production
+services and do not certify the complete future canonical service lock protocol.
+
+Actual checkpoint commands from backend, without credentials/database connections:
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+  46 passed, 32 deselected, one existing Starlette/HTTPX warning; exit 0.
+- `.\.venv\Scripts\python.exe -m pytest concurrency_tests --collect-only -q`:
+  45 cases collected, exit 0; no fixture execution.
+
+Git/safety evidence: `git -c safe.directory=I:/Merge diff --exit-code 41b6bdc6849340ff6018d84c1f5b74e28bfcdfea -- backend/app backend/alembic backend/requirements.lock backend/pyproject.toml`
+returned exit 0: domain application, original Alembic environment, 0001/0002 and
+dependencies unchanged. `git ... check-ignore -v` confirmed backend/.env, venv,
+pytest cache, node_modules and dist ignored; tracked backend/.env query empty.
+Changed-file scan of 20 candidates found no private-key/provider-token signatures,
+credential URLs, sensitive/generated filenames or non-synthetic literal password
+arguments. No local secret file was read; this signature-based scan is not proof
+against every unknown secret. Fixed loopback targets/role names are intentional
+nonsecret setup configuration. `git ... diff --check` passed; LF/CRLF working-copy
+warnings remain. Owner authorized one local checkpoint commit with message
+`test: add isolated PostgreSQL concurrency verification (M-006B)`; resulting hash
+will be reported from Git, not invented or embedded self-referentially here.
+
+Updated TEST_DATABASE, SCHEMA and architecture to point to the owner-verified
+outcome while retaining historical preparation/failure entries. No new application
+behavior or dependencies. No database connections, migrations, resets, disposal,
+roles/privileges/password changes, merge_dev access, remotes or pushes in this
+checkpoint. Real database tests were not rerun by Codex. Full backend database,
+frontend/build/HTTP regressions were not rerun; their earlier evidence remains
+historical. Only the owner-reported PostgreSQL suite and current database-free
+checks are newly recorded evidence.
+
+M-006B database-schema verification checkpoint is verified within its stated
+scope. G1 remains partial: M-007 services/authorization/idempotency/audit writers,
+complete lifecycle lock/retry behavior and 50-way authenticated HTTP race are
+unimplemented/unverified. CI/API acceptance, frontend domain workflows, load and
+deployment gates remain open. Local schedule coverage is not proof of all possible
+interleavings or different isolation modes. Retained fixtures require separately
+approved disposal; no cleanup permission inferred from this commit.
+
+Owner explanation/exercise: explain why a deadlock victim must roll back its
+earlier membership insert, and identify the strict 40P01 assertion that would
+reject a lock-timeout substitute.
+
 ## Daily work log template
 ```
 ### YYYY-MM-DD — [component/task ID]

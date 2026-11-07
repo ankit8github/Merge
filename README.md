@@ -4,6 +4,10 @@ Hack4Hack PS1 project. Phase 0 provides a FastAPI liveness endpoint, a React dev
 
 ## Windows prerequisites
 
+Dedicated concurrency-test database preparation and owner-run commands:
+[docs/TEST_DATABASE.md](docs/TEST_DATABASE.md). This workflow is separate from
+ordinary development setup below; never reset merge_dev for race-test cleanup.
+
 - Python **3.11.9**, Node **22.15.0**, npm **10.9.2** (`npm.cmd`).
 - Local PostgreSQL **17**, listening on `127.0.0.1:5432`.
 - Docker is not required for Phase 0 and has not been verified.
