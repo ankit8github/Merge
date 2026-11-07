@@ -1,0 +1,183 @@
+# Merge — Architecture Blueprint (Proposed v1.0)
+
+**Status:** APPROVED DIRECTION / PHASE 0 SKELETON IMPLEMENTED; domain design not implemented. Source requirements: `docs/REQUIREMENTS.md`. Decisions: `docs/DECISIONS.md`. Verification and remaining database prerequisites: `docs/PROGRESS.md`.
+
+## 1. Goals and constraints
+- Solve PS1 with a **correct-by-design membership core**, not an application-server mutex.
+- Support 10k seeded users, 2k teams, board p95 < 200ms under 100 concurrent clients in the measured environment.
+- Deliver an end-to-end React UI, secure API, realtime team/board notifications, verified tests and deployment by challenge deadline.
+- Keep solution understandable for a 45-minute technical interview with live modification.
+- Non-goals before submission: microservices, LLM matching, multi-region deployments, enterprise SSO, speculative high-scale queues.
+
+## 2. Topology
+```
+React + TypeScript (Vite)  -- HTTPS -->  FastAPI modular monolith
+       |                                      |-- Auth / sessions
+       |                                      |-- Hackathons + team lifecycle
+       +<-- SSE (committed change signal) --  |-- Membership transaction service
+                                              |-- Invites + join requests
+                                              |-- Suggestions + board queries
+                                              |-- Audit + outbox dispatcher
+                                              |
+                                              +-- PostgreSQL (source of truth)
+                                                  users, hackathons, teams, memberships,
+                                                  invitations, join_requests,
+                                                  idempotency, audit, outbox
+
+CI: GitHub Actions → pytest/API/real Postgres race tests → UI build
+Performance: k6 → deployed/staging board with fixed seed and test environment
+Browser verification: Playwright → accessible mobile/keyboard flows
+```
+
+**Deployment assumption:** Start with a single backend instance for SSE delivery simplicity. No correctness rule may depend on one instance; PostgreSQL remains authority. A multi-replica fanout design will require cross-instance event distribution (e.g. LISTEN/NOTIFY plus replay) before scaling horizontally.
+
+## 3. Modules (one codebase, clear ownership)
+- `identity`: accounts, safe sessions, password hashing, profiles/skills/timezone.
+- `hackathons`: event configuration and min/max sizes.
+- `teams`: create, rename (if supported), soft-delete, leadership.
+- `memberships`: join/leave/remove, atomic capacity and uniqueness.
+- `invitations`: generate hashed, expiring, revocable invite codes; redeem through memberships.
+- `join_requests`: create/cancel, approve/decline, enforce leader authorization; approve via same membership service.
+- `board`: team discovery, filters, pagination and indexed queries.
+- `matching`: deterministic skill/timezone ranking and rationale.
+- `audit`: durable actor/action/time record within mutation transaction.
+- `events`: transactional outbox, SSE stream, reconnect reconciliation.
+- `reliability`: idempotency records, structured errors and diagnostics.
+
+**Critical rule:** Every route that changes member count or assignments enters one authoritative membership/domain service, never copies SQL business rules into handlers.
+
+## 4. Data model proposal
+- `users(id, email UNIQUE, password_hash, display_name, timezone, skills, created_at, ...)`.
+- `hackathons(id, name, min_team_size, max_team_size, ...)` with `min>=1`, `max>=min`.
+- `teams(id, hackathon_id FK, leader_id FK, member_count, state, deleted_at, created_at, ...)`.
+- `memberships(id, hackathon_id FK, team_id FK, user_id FK, created_at, removed_at?)` with **active `(hackathon_id,user_id)` UNIQUE**. May be represented by an active-only partial unique index or current-member table; final migration must specify which.
+- `invitations(id, team_id, token_hash UNIQUE, expires_at, revoked_at, created_by, ...)`.
+- `join_requests(id, team_id, user_id, state, created_at, decided_at, decided_by, ...)` with sensible pending uniqueness.
+- `idempotency_records(id, actor_id, operation, key, request_hash, status, response, created_at, ...)` with unique `(actor_id,operation,key)`; exact pending-request behavior is to be specified.
+- `audit_events(id, actor_id, hackathon_id, team_id, action, old_state?, new_state?, occurred_at, ...)`.
+- `outbox_events(id, aggregate_type, aggregate_id, event_type, payload, occurred_at, published_at?)`.
+
+**Integrity details requiring migration-level design:**
+- Ensure membership `hackathon_id` is consistent with its `team.hackathon_id` (composite foreign key or equivalent validated transactional rule).
+- Ensure leader is a current member, including initial team creation and succession. If circular FKs complicate creation, use a controlled deferred constraint/transactional design; document concrete implementation.
+- Capacity is a cross-row invariant and cannot be guaranteed by a naive CHECK on member count alone. Serialize team capacity mutations and keep cached count consistent with membership rows.
+- `removed_at` vs active-only membership storage must be chosen so the unique index enforces only active membership; audit preserves history.
+- Soft deletion retains audit references but user-facing APIs and board must hide deleted teams.
+
+## 5. Canonical transaction protocol (to finalize in first implementation PR)
+All membership-changing operations must acquire locks in **one consistent order**. Proposed:
+1. Authenticate/authorize and perform syntax validation before transaction.
+2. Begin database transaction; establish idempotency ownership for operation (unique key, fingerprint, safe replay semantics).
+3. Serialize the user's per-hackathon membership changes (e.g. lock the **user row** for the affected user; if multiple users involved, lock user IDs in sorted order).
+4. Lock target `teams` row with `SELECT ... FOR UPDATE` (if two teams, sort team IDs). Leadership changes must follow same protocol.
+5. Under lock, re-read team state and current membership; verify action permission, capacity, membership uniqueness, invite expiry, request state and leader rules.
+6. Write membership/team updates, corresponding audit event, idempotency outcome and outbox record in the **same transaction**.
+7. Commit; event dispatcher may publish committed outbox signal. Any rolled-back transaction produces no durable domain mutation or event.
+
+**Lock-order warning:** User-before-team ordering is a proposal and must be checked against team creation, join approval, leader departure, and multi-member operations for deadlocks. Avoid reverse-order locks in any endpoint. Record final invariant proof and lock protocol in an ADR before scaling feature work.
+
+### Last-seat race proof
+- Team has exactly one free seat.
+- Fire 50 independently authenticated requests concurrently against the same real PostgreSQL database.
+- Locking serializes capacity mutation for that team; only the first eligible mutation can fill the seat.
+- Remaining requests observe full capacity and return an explicit conflict response.
+- Assertions: one newly inserted active membership, zero over-capacity, no duplicates, member-count matches rows, valid leader, correct audit/outbox count, no 500s. Repeat multiple runs.
+
+### Cross-team race proof
+- Same user submits two concurrent joins targeting different teams.
+- Per-user lock (if used) and active membership UNIQUE constraint ensure at most one succeeds.
+- Verify state in DB, not only HTTP responses.
+
+### Idempotency
+- Client sends `Idempotency-Key` on creation/join mutations.
+- Atomic record uniqueness scoped to actor+operation+key; immutable fingerprint of meaningful request payload.
+- Same key+same payload returns one recorded result; same key+different payload returns conflict.
+- Concurrent same-key requests cannot each perform the operation; use locked or unique reservation semantics.
+- Commit record and domain effect together; define behavior for a request crashing before commit (rollback allows retry) and after commit/before HTTP response (replay returns stored result).
+
+## 6. Business-state policies (proposed)
+- Team states: `forming`, `ready`, `deleted`. A team may have one founding member even if `min_team_size > 1`; readiness requires min members.
+- Pending join requests never reserve capacity; leader acceptance invokes standard safe join.
+- Invitation redeems to a join attempt, no guarantee of seat availability.
+- Leader departure: deterministically select valid successor (e.g. earliest joined remaining member) within same transaction; if no members remain, soft-delete team.
+- Team-deleted means absent from discovery and API mutations; history retained in audit.
+- Team changes have actor/action/timestamp and old/new state where relevant.
+
+## 7. API sketch (to be refined, not yet implemented)
+```
+POST /auth/register          POST /auth/login          POST /auth/logout
+GET  /me                     GET  /hackathons/{id}/teams
+POST /hackathons/{id}/teams  GET  /teams/{team_id}
+POST /teams/{id}/invitations POST /invitations/redeem
+POST /teams/{id}/requests    POST /requests/{id}/accept
+POST /requests/{id}/decline POST /teams/{id}/leave
+DELETE /teams/{id}/members/{user_id}
+GET  /hackathons/{id}/suggestions
+GET  /teams/{id}/audit       GET  /events
+```
+- Validate every payload and enforce authorization for read/write operations.
+- Use consistent error mapping: `400/422` bad request, `401` unauthenticated, `403` forbidden, `404` absent/private, `409` capacity/membership/conflict, `429` rate limit.
+- Use pagination and server-side filters for board endpoints.
+
+## 8. Authentication, invites and security
+- Prefer HttpOnly, Secure, SameSite cookies and server-revocable sessions. If using cookies, include CSRF protection on state-changing requests (SameSite alone may not be sufficient).
+- Password hashes with a maintained password KDF (e.g. Argon2id); never log passwords or raw invite tokens.
+- Invitation tokens generated with cryptographic RNG, sufficient entropy (e.g. >=128 random bits), stored as hashes, expiration and revocation checked server-side, rate-limited per identity/IP.
+- Team leader verification always server-side within transaction.
+- Bound pagination, normalize and validate skills/timezone strings, escape user-provided content at render, and configure CORS narrowly.
+- Test unauthorized access and IDOR cases.
+
+## 9. Realtime strategy
+- Server writes an outbox event in the same transaction as the relevant team mutation.
+- Dispatcher publishes **after commit** to connected SSE clients; events can be duplicated or missed if disconnected.
+- Clients invalidate cached team/board queries and refetch authoritative state (TanStack Query recommended).
+- Reconnection must always re-fetch latest state; optionally use event IDs/replay to reduce refresh cost.
+- For multiple API replicas, implement shared fanout before asserting robust cross-instance live delivery.
+
+## 10. Teammate recommendations
+- Filter to eligible, discoverable, currently unassigned users for given hackathon.
+- Score skills complementary to team's existing coverage and timezone overlap. Initial documented formula suggestion: `0.7 * skill_complement + 0.3 * timezone_overlap` (both normalized to [0,1]).
+- Score ties deterministically. Publish explanation in endpoint/README; add positive and negative cases in unit tests.
+- This is deterministic matching, not a requirement to use ML/LLMs.
+
+## 11. Performance and observability
+- For the board query: indexed hackathon/team status and paging, avoid N+1, bounded result sets, inspect `EXPLAIN ANALYZE` before tuning.
+- Seed script creates 10k users and 2k teams, ideally deterministically with an idempotent/resettable mode that requires confirmation before destructive changes.
+- k6: 100 concurrent VUs, enough duration for warm and sustained periods; report p50/p95/p99, request rate, error %, actual dataset, server hardware/region and test script. Fail target if p95 >=200ms or errors are significant.
+- Structured logs, request IDs, errors and slow SQL timings. Optional tracing only after must-haves.
+
+## 12. Repo layout (incremental)
+```
+merge/
+├── AGENTS.md
+├── backend/
+│   ├── app/{api,core,db,models,schemas,services,realtime}/
+│   ├── tests/
+│   ├── alembic/
+│   └── pyproject.toml
+├── frontend/src/{components,features,pages,hooks,lib}/
+├── docs/{REQUIREMENTS,ARCHITECTURE,DECISIONS,PROGRESS}.md
+├── scripts/
+├── load-tests/
+├── .github/workflows/
+├── compose.yaml
+├── .env.example
+└── README.md
+```
+Folders beyond `docs/` are **proposed**; create only as tasks need them.
+
+## 13. Build sequence / gates
+- **G0:** Docs, repo, local Postgres backend/frontend minimal smoke tests.
+- **G1:** Schema + join service; repeated 50-way race and cross-team join tests pass with real PostgreSQL.
+- **G2:** All lifecycle paths, idempotency, authZ, invite security, audit pass.
+- **G3:** Full React flow, SSE, matching, mobile/keyboard E2E pass.
+- **G4:** CI >=20 API tests, seed verified, k6 board p95 <200ms in declared environment.
+- **G5:** Working public deployment, one-page design, benchmark report, <=5-min demo, submitted links.
+
+## 14. Known limitations / decision gates
+- The M-002 bootstrap implements only public process health, a frontend health page, connection configuration and an empty migration baseline. Domain locks, IDs, schema and endpoints remain proposals until coded/tested.
+- Phase 0 uses the owner's existing local PostgreSQL 17 server, dedicated `merge_dev` database and non-administrative `merge_app` role; manual provisioning is required when credentials are unavailable. Docker is optional and unverified. See the dated setup clarification in `DECISIONS.md`.
+- Deployment provider and database hosting must be chosen after checking availability and cold-start constraints.
+- SSE scaling across multiple instances is not solved merely by adding a transactional outbox.
+- A cached member count requires careful consistency enforcement; alternative is transactional count under team row lock.
+- Browser-only or SQLite tests cannot prove cross-process PostgreSQL race correctness.
