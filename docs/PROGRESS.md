@@ -1,6 +1,6 @@
 # Merge — Verified Progress, Risks & Next Actions
 
-**Last updated:** 2026-11-06
+**Last updated:** 2026-11-07
 **Competition:** Hack4Hack Crew Hiring Challenge 2026, PS1.
 **Official deadline:** 2026-11-15 23:59 IST.
 **Status policy:** Mark DONE only with recorded evidence. 'Planned', 'in progress', 'implemented', 'tested' and 'verified' are not interchangeable.
@@ -11,7 +11,7 @@
 - [x] User chose public-facing project name **Merge**.
 - [x] User chose VS Code with Codex coding support and component-by-component AI-assisted engineering.
 - [x] Architecture direction chosen: React/TypeScript, FastAPI, PostgreSQL modular monolith.
-- [x] Local Git repository initialized at `I:/Merge` on `main`; no commits created (M-002, 2026-11-06).
+- [x] Local Git repository at `I:/Merge` on `main`; initial verified commit `66d28b51728f466b3d0124de03f457dd190c22f1` created 2026-11-07 (M-004).
 - [ ] Remote connected — none configured; no push performed.
 - [x] Application code executed — FastAPI and Vite verified over local HTTP (M-002).
 - [x] Automated tests passed — latest M-003 verification: 15 backend tests including real PostgreSQL, plus 6 frontend tests; see evidence below.
@@ -22,7 +22,7 @@
 
 | Gate | Scope | Required objective evidence | Status |
 |---|---|---|---|
-| G0 | Repository and local integration | Commit hash, README, backend health, React build, PostgreSQL connectivity, migration, smoke test | LOCAL CHECKS VERIFIED — required commit hash pending; no commit authorized |
+| G0 | Repository and local integration | Commit hash, README, backend health, React build, PostgreSQL connectivity, migration, smoke test | DONE — local checks recorded in M-003; initial commit `66d28b51728f466b3d0124de03f457dd190c22f1`; closed 2026-11-07 |
 | G1 | Transactional team core | Real PostgreSQL 50-way last-seat race, cross-team race, idempotency; repeatable tests | NOT STARTED |
 | G2 | Business flows and security | Team lifecycle, invites, requests, leader succession, audit, authorization negative tests | NOT STARTED |
 | G3 | Frontend and realtime | Complete React flows, SSE between two clients, mobile/keyboard browser tests, scoring | NOT STARTED |
@@ -32,8 +32,8 @@
 ## Immediate Codex tasks (in order)
 1. **M-001 — Repository audit:** Owner accepted audit. Existing source-of-truth files preserved; no application code or Git repository existed at inspection.
 2. **M-002 — Minimal end-to-end skeleton:** IMPLEMENTED / LOCAL VERIFICATION PASSED, including database integration completed in M-003. FastAPI health, Vite React app, local PostgreSQL configuration, empty Alembic baseline, environment example, startup docs and tests. Owner approved existing PostgreSQL 17 instead of Compose; Docker unverified.
-3. **M-003 — PostgreSQL integration (owner's current task scope):** VERIFIED locally on 2026-11-06: authenticated SELECT 1, online baseline upgrade, repeated upgrade, current revision, full backend suite and frontend/HTTP regressions passed. Owner completed provisioning/schema recovery. Do not rerun provisioning. Earlier schema/lock design scope remains deferred and is required before M-004: propose DDL/lock order and record ADR-016/017/020 before coding transactions.
-4. **M-004 — Real DB concurrency core:** Implement create/join with idempotency, add parallel tests for 50-way last seat and cross-team membership, verify postconditions in database.
+3. **M-003 — PostgreSQL integration (owner's task scope):** VERIFIED locally on 2026-11-06: authenticated SELECT 1, online baseline upgrade, repeated upgrade, current revision, full backend suite and frontend/HTTP regressions passed. Owner completed provisioning/schema recovery. Do not rerun provisioning. Earlier schema/lock design scope remains deferred: propose DDL/lock order and record ADR-016/017/020 before coding transactions.
+4. **M-004 — Initial verified Git commit (owner's current task scope):** Initial local bootstrap commit created after source/index secret and artifact checks; G0 closed. Earlier concurrency-core scope is deferred, not implemented: after schema/lock ADR review, implement create/join with idempotency and real PostgreSQL race tests under a future task ID.
 5. **M-005 — Team lifecycle:** Invites, requests, approvals, leave, transfer, deletion, audit and authorization via same transaction service.
 6. **M-006 — React user flows + SSE:** Board, profiles, teams, requests, suggestions, live events, browser accessibility tests.
 7. **M-007 — Challenge verification:** CI, seeds, k6 baseline/tuning, deployment, deliverables, owner-led live-change exercise.
@@ -183,6 +183,26 @@ Git/secret review: root `I:/Merge`, `main`, no commits or remotes. `git -c safe.
 Warnings/incomplete gates: existing Starlette TestClient HTTPX deprecation warning remains unsuppressed; no test failure. Docker, deployment, CI, race/load tests and full browser/mobile/keyboard E2E are not verified by this task. All G0 local execution checks are verified, but G0's recorded commit-hash criterion remains pending explicit owner commit approval. No Phase 1 features implemented; schema/lock protocol ADRs still required before domain implementation.
 
 Changes this task: HTTP verification harness deadline and this progress record only. No dependencies or application migrations changed. Owner explanation/exercise: explain why repeating `upgrade head` leaves revision at `0001_baseline`, then use `alembic current` to verify it without modifying schema. Proposed eventual commit message remains `chore: bootstrap Merge frontend and backend (M-002/M-003)`; no commit created.
+
+## M-004 initial verified commit and G0 closure — 2026-11-07
+
+Owner authorized the first local commit and a separate documentation commit recording its hash. No remotes, pushes or database-object changes authorized or performed. Scope is Git review/commit only; no new application features, dependencies or migrations.
+
+Initial commit: `66d28b51728f466b3d0124de03f457dd190c22f1` on `main`, message exactly `chore: bootstrap Merge frontend and backend (M-002)`. Created successfully with 40 intended source/configuration-example/test/documentation files and 4468 insertions. Working tree was clean immediately afterward. This follow-up progress update is committed separately, preserving the initial commit hash.
+
+Review/evidence actually executed:
+- Read AGENTS.md and this progress log; inspected `.gitignore`, `git status --short --branch`, root, unstaged/staged diffs, full candidate file list and remotes, using the existing per-command `git -c safe.directory=I:/Merge` ownership exception.
+- Reviewed all source additions and setup documents; parsed npm's 187 lock entries, confirmed exact manifest pin agreement and that all resolved URLs use HTTPS registry.npmjs.org with SHA-512 integrity.
+- Inline Python pre-stage scan covered all 40 candidates for the actual configured application password, credential-bearing URLs, private keys, provider-token patterns, secret/artifact filenames and generated directories; no findings. `.env.example` password is blank; synthetic test values are deliberate fixtures, not live credentials. Git author/committer identity was already configured; no identity/global settings changed.
+- Staged only the explicit 40 reviewed file paths with `git add -- ...`; did not use broad directory staging or force-add ignored files. Scanned the actual staged blobs again before committing, with no findings. `git diff --quiet` confirmed the reviewed working files matched the index; `git diff --cached --check` passed. Confirmed `backend/.env` ignored and absent from tracked/index paths. No virtual environment, cache, node_modules, build output, database dump, local environment file or known real credential was staged.
+- `git -c safe.directory=I:/Merge commit -m "chore: bootstrap Merge frontend and backend (M-002)"` exited 0; `git -c safe.directory=I:/Merge rev-parse HEAD` returned the full initial hash above; `git -c safe.directory=I:/Merge status --short --branch` returned only `## main`.
+- Git emitted LF-to-CRLF working-copy conversion warnings during staging; staged whitespace validation passed. No line-ending/global Git settings changed.
+
+G0 closure: all local runtime gates have actual M-003 evidence (15 backend tests, 6 frontend tests, TypeScript/build, real HTTP success/outage/recovery, authenticated PostgreSQL SELECT 1, online baseline upgrade twice, `0001_baseline (head)`, dependency check). The initial commit supplies the final missing evidence. Tests/builds/migrations were NOT rerun for this Git-only task; existing verified results are retained, not presented as new runs. No database connection or database mutation was made during this task.
+
+Outstanding limitations: one known Starlette/HTTPX TestClient deprecation warning; Docker/Compose, CI, browser/mobile/keyboard E2E, deployment, concurrency correctness, load benchmarks and Phase 1/domain features remain unverified or unimplemented. G1–G5 remain open. No remote configured or push performed.
+
+Owner explanation/exercise: `git show --stat 66d28b5` shows the bootstrap snapshot; the next documentation commit records that immutable hash without rewriting it. Explain why `backend/.env` remains local and why a clean working tree alone is not a secret scan.
 
 ## Daily work log template
 ```
