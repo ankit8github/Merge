@@ -56,7 +56,14 @@ Browser verification: Playwright → accessible mobile/keyboard flows
   Argon2id work and owned transactions; owner verified 51 guarded live cases in
   28.76s, three repetitions requested and fresh credential committed-state checks.
   Codex checkpoint regressions: 175 database-free tests. See
-  CREDENTIAL_SERVICES.md. No auth endpoints/session issuance or email/MFA claims.
+  CREDENTIAL_SERVICES.md. M-007B.2B adds internal PostgreSQL session lifecycle:
+  credential-verified login with a locked snapshot recheck, digest-only bearer
+  storage, eight-hour absolute expiry, session-bound CSRF and terminal revocation.
+  Owner verified 63 guarded session cases passed in 51.63s against merge_test /
+  0003_auth, three repetitions requested; fresh session invariants verified and
+  fixtures retained. Codex checkpoint: 222 database-free tests; no PostgreSQL
+  rerun. See SESSION_SERVICES.md for the trusted handoff, transaction
+  authority and remaining limitations. No auth endpoints/cookies or email/MFA claims.
 - `hackathons(id, name, min_team_size, max_team_size, ...)` with `min>=1`, `max>=min`.
 - `teams(id, hackathon_id, leader_user_id, min_team_size, max_team_size, version, deleted_at, ...)`. Member count is derived from rows; readiness is derived from count/minimum/deletion, with neither stored.
 - Active-only `memberships(hackathon_id, user_id, team_id, joined_at)` with **PRIMARY KEY `(hackathon_id,user_id)`**, composite team/hackathon FK and unique `(team_id,user_id)` for the deferred leader FK. History belongs in audit.

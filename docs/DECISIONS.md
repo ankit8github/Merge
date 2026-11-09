@@ -162,3 +162,37 @@ No TeamService/schema changes, endpoints, sessions or rate-limit service. Explic
 checks verified and no fixture cleanup. Codex checkpoint: 175 database-free tests
 passed; no database rerun. No additional post-change live suite result supplied.
 Contract, reviewed trade-offs and sources: CREDENTIAL_SERVICES.md.
+
+### M-007B.2B internal session lifecycle — owner-scoped, 2026-11-10
+
+Use unchanged 0003_auth and the approved PostgreSQL-backed opaque session model.
+The only issuance interface is SessionService.login(username,password), internally
+reusing credential verification. Do not accept a UUID, public CredentialIdentity
+or externally supplied proof object. A private verified snapshot is rechecked
+against current credentials under user KEY SHARE → credential SHARE locks before
+session INSERT/COMMIT. This rejects a credential change after verification and
+blocks changes after the final check through commit, without holding locks during
+Argon2. Public CredentialService interfaces/parameters remain unchanged. Python
+private members and caller Engine hooks are trusted code, not an adversarial
+in-process sandbox; no process-memory authentication/session store is introduced.
+
+Generate independent 32-byte session/CSRF secrets before write locks; store only
+the SHA-256 session digest and the existing server-side CSRF representation.
+Return raw material in explicitly sensitive SecretBytes fields only after commit.
+Use authoritative database clock_timestamp(), aware UTC and an eight-hour absolute
+lifetime. Validate active session and credential rows on each call, never renew
+implicitly, compare CSRF with compare_digest, and revoke only where revoked_at
+is NULL. Reuse the credential transaction guard/error mapper; no TeamService or
+schema changes. Existing sessions do not automatically invalidate after a future
+valid password change; that workflow needs explicit revocation and separate review.
+
+Alternative rejected: public constructible identity as login proof, or a memory
+ticket registry. The login facade keeps the verification/issuance dependency local
+without exposing an authentication-ticket protocol. Validation remains a point-in-
+time read, not cancellation of already-authenticated in-flight work. No HTTP,
+cookie/header policy, rate limiter or automatic transaction retry is implemented.
+Owner checkpoint: 63 guarded session cases passed in 51.63s against merge_test /
+0003_auth, three repetitions requested, fresh committed-state invariants verified
+and fixtures retained. Codex checkpoint: 222 database-free passes; no database
+connection or migration ran during Codex review. No additional post-change live
+regression result supplied. Security boundary, errors, tests: SESSION_SERVICES.md.

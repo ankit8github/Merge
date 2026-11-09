@@ -1,6 +1,6 @@
 # Merge — Verified Progress, Risks & Next Actions
 
-**Last updated:** 2026-11-09
+**Last updated:** 2026-11-10
 **Competition:** Hack4Hack Crew Hiring Challenge 2026, PS1.
 **Official deadline:** 2026-11-15 23:59 IST.
 **Status policy:** Mark DONE only with recorded evidence. 'Planned', 'in progress', 'implemented', 'tested' and 'verified' are not interchangeable.
@@ -14,7 +14,7 @@
 - [x] Local Git repository at `I:/Merge` on `main`; initial verified commit `66d28b51728f466b3d0124de03f457dd190c22f1` created 2026-11-07 (M-004).
 - [ ] Remote connected — none configured; no push performed.
 - [x] Application code executed — FastAPI and Vite verified over local HTTP (M-002).
-- [x] Automated tests passed — M-007B.2A checkpoint: owner verified 51 live credential cases in 28.76s; Codex verified 175 database-free tests. Earlier domain/frontend evidence remains recorded below. This is not a claim of 20 API tests or a verified 50-way HTTP race.
+- [x] Automated tests passed — M-007B.2B checkpoint: owner verified 63 guarded live session cases in 51.63s, three repetitions requested, fresh committed-state invariants verified and fixtures retained. Codex verified 222 database-free tests in 7.49s. Earlier M-007B.2A owner evidence: 51 live credential cases in 28.76s. Domain/frontend evidence remains recorded below. This is not a claim of 20 API tests or a verified 50-way HTTP race.
 - [ ] Any public deployment exists — **not verified**.
 - [ ] PS1 submission completed — **not verified**.
 
@@ -1249,6 +1249,234 @@ documented Argon2-related additions. `git ... diff --check` passed; LF/CRLF
 conversion warnings remain. These checks supplement manual review rather than
 proving absence of every possible unknown secret. Actual staged blobs are reviewed
 against the same scope and working contents before the authorized commit.
+
+## M-007B.2B internal session lifecycle — 2026-11-10
+
+Baseline main HEAD efaaec134bd8ddc08c3522f33aec7b0dac5019ad, initially clean.
+Read AGENTS/source-of-truth and actual auth models/DDL, credential transaction/KDF
+path and guarded fixture harness. Existing 0003_auth supports this bounded service;
+no migration/model/constraint or TeamService change was needed. Earlier owner
+51-pass credential and 78-pass storage results are historical, not session evidence.
+
+Implemented SessionService.login/validate/verify_csrf/revoke and fixed session
+error codes. No arbitrary UUID, registration result or constructible public
+identity can issue a session. login internally calls the approved real/dummy
+credential verification, captures a private verified hash fingerprint/timestamp
+snapshot and compares it against current credentials under user KEY SHARE then
+credential SHARE locks. Any relevant intervening change rejects before INSERT;
+the SHARE lock blocks hash/username/timestamp UPDATE or DELETE through commit.
+No KDF/network work occurs under those write-transaction locks. Public credential
+interfaces, Argon2 parameters and work budget remain unchanged; private factoring
+reuses the original verification rather than implementing another password check.
+
+Independent CSPRNG calls generate 32-byte session and CSRF values before locking.
+Only SHA-256(raw session) is a session SQL parameter; CSRF uses existing server-side
+storage. Sensitive result fields use SecretBytes, excluded from ordinary repr and
+returned only after commit. Database clock_timestamp supplies aware UTC creation
+and immutable eight-hour expiry. Fresh READ ONLY validation joins stored user and
+credential, checks active times/revocation/supported credential profile and derives
+the principal. No renewal. CSRF checks the active session and compare_digest.
+Revocation updates only NULL revoked_at, preserving terminal timestamps on repeat
+and concurrent calls. Malformed session bytes reject before DB access.
+
+The session facade deliberately reuses CredentialService's private transaction
+owner, actual synchronous psycopg AUTOCOMMIT-is-False guard, READ COMMITTED check,
+safe logging requirements, timeouts and sanitized error mapper. No caller-owned
+transaction/connection is accepted and Engine mode is never silently changed.
+The Python/Engine code boundary is trusted, not an unforgeable capability system;
+no external authentication snapshot/ticket or memory session store is exposed.
+No HTTP cookie/header/authentication policy, rate limiter, password-change service,
+idempotency/audit/outbox writer or authenticated team API was implemented.
+
+Actual commands from backend, Python 3.11.9 / SQLAlchemy 2.1.8 / psycopg 3.3.8:
+- `.\.venv\Scripts\python.exe -m pytest -q tests/test_sessions.py tests/test_credentials.py tests/test_passwords.py --tb=short`:
+  **102 passed in 4.37s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+  **222 passed, 32 deselected, one existing Starlette/HTTPX deprecation warning**,
+  5.94s, exit 0. Includes real approved Argon2 and existing team/credential guards.
+- `.\.venv\Scripts\python.exe -m pip check`: **No broken requirements found**,
+  exit 0. No package installation or dependency changes.
+- `.\.venv\Scripts\python.exe -m pytest session_tests --collect-only -q`:
+  **63 collected**, 0.05s, exit 0. No fixture execution.
+- Separate `pytest credential_tests --collect-only -q`, `pytest auth_schema_tests
+  --collect-only -q`, `pytest service_tests --collect-only -q` and `pytest
+  concurrency_tests --collect-only -q`, each using the same venv Python:
+  **51 / 78 / 48 / 45 collected**, respectively, each exit 0. Shared suite hooks
+  require separate invocations. No post-change live regression pass claimed.
+- `.\.venv\Scripts\python.exe -m test_support.concurrency --help`: exit 0;
+  actual CLI includes sessions with explicit revision support.
+
+Added 63 guarded session cases (21 parameter-expanded scenarios, three default
+repetitions): verified issuance/fresh service use; arbitrary identity/uncredentialed
+seed rejection; digest-only storage/redaction; independent secrets and CSRF;
+malformed/unknown/expired/revoked/future sessions; actual database expiry crossing
+without renewal; unsupported credential rejection; repeated/concurrent revoke;
+post-INSERT/pre-COMMIT failure rollback; actual AUTOCOMMIT no-service-SQL rejection;
+credential changes between verification and lock acquisition; and credential
+UPDATE blocked from final check through issuance commit. The last schedule requires
+pg_blocking_pids proof, not sleep-based overlap. Independent actual connections,
+bounded events/barriers/workers, strict outcomes and fresh scoped invariants are
+implemented. **Live outcomes, SQLSTATEs and PostgreSQL lock behavior remain
+UNVERIFIED for this new suite.** No test failure was observed in executed checks.
+
+Extended only the guarded fixed-suite selector/tests; sessions requires explicit
+--confirm-merge-test and --revision 0003_auth. Existing actual loopback/database/
+role/port checks and no-development-fallback remain intact before fixture writes.
+Fixture users/credentials/sessions are UUID-scoped and retained only in merge_test;
+no destructive cleanup. Private credential presence False and interactive stdin
+False were checked without printing values. No backend/.env or development
+credential was read/copied. **No PostgreSQL connection, test or migration was
+executed by Codex during this task; merge_dev was not accessed.**
+
+Pending owner command from backend:
+`.\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite sessions --revision 0003_auth --repetitions 3`.
+Full read-only preflight/private-prompt commands, existing guarded regression
+commands and retained-fixture caveats are in SESSION_SERVICES.md. Never supply
+passwords in chat, arguments, reports or transcripts. Current schema/migrations
+remain at committed 0003_auth; no migration is needed for this service.
+
+Known limitations: Python transient secrets/traceback locals cannot be zeroized;
+trusted logging/Engine hooks must not capture them. Validation is a point-in-time
+read and does not cancel in-flight authenticated work on logout. Existing sessions
+do not automatically revoke after a future valid password change; that workflow
+must revoke explicitly. Database clock must be trusted. A COMMIT transport loss
+can leave an unreachable committed row, without returning raw material; no blind
+retry/idempotency guarantee. The two-second initial expiry-test window can fail on
+a busy host; missing lock visibility/timeouts are failures, never successful
+validation. New live session and post-change auth/domain/team/credential regressions
+remain pending. No HTTP/authenticated 50-way race, CI/load/deployment or G1 closure.
+
+Updated AUTH_SCHEMA, CREDENTIAL_SERVICES, architecture/decisions, TEST_DATABASE and
+new SESSION_SERVICES contract with current evidence and trust boundaries. No
+frontend, role/permission/password, schema/model/migration, TeamService or HTTP
+change; no commit, remote creation or push. Final static evidence is recorded below.
+Owner exercise: trace stale verification rejection and explain why credential
+KEY SHARE would fail to block a non-key password UPDATE while SHARE does block it.
+
+Final static evidence: `git -c safe.directory=I:/Merge diff --check` passed (exit
+0; existing LF/CRLF conversion warnings). Read-only protected-baseline comparison
+`git ... diff --exit-code HEAD -- backend/alembic backend/app/models backend/app/services/teams.py backend/app/services/errors.py backend/app/services/credential_errors.py backend/app/db backend/app/core backend/app/main.py backend/test_support/database.py backend/test_alembic backend/pyproject.toml backend/requirements.lock frontend scripts .gitignore`
+passed with exit 0. All migrations 0001/0002/0003, models/domain code, TeamService,
+dependency pins, HTTP/frontend and test identity/migration safeguards are unchanged.
+Parsed the exact ten changed/new Python files with ast. Reviewed the exact
+17-file candidate allowlist: 11 modified tracked files, six new source/doc files,
+all unstaged. Source/path scan found zero actionable credential URL, literal real
+Argon2 encoding, private-key/provider-token or generated/private-file findings;
+the only two URL-literal exceptions are unchanged committed synthetic redaction
+fixtures. An initial scanner incorrectly matched an existing bare URL-prefix
+assertion; corrected the matcher to require an address and reran successfully.
+These checks supplement manual review, not a proof against all unknown secrets.
+Seven ignore checks passed for dotenv variants, virtualenv/cache and frontend
+node_modules/dist; backend/.env is not tracked and was never opened. Staging is
+empty, main HEAD remains efaaec134bd8ddc08c3522f33aec7b0dac5019ad.
+
+Executed missing-opt-in rejection check from backend:
+`.\.venv\Scripts\python.exe -m test_support.concurrency --suite sessions --revision 0003_auth`.
+It exited nonzero before credentials/DB access with required --confirm-merge-test
+missing. Automatic approval review rejected the separately proposed CLI check
+with confirmation but missing revision because it classified it as a possible
+live test run; that command was not executed. The same batch's read-only protected
+diff was initially blocked and then executed separately with the passing result
+above. No approval bypass or live retry. The already-passing database-free
+test_auth_suite_requires_explicit_revision_before_credentials[sessions] verifies
+the missing-revision parser gate without connection/password access. No remaining
+implementation blocker from these tooling checks; live validation stays owner-run.
+
+## M-007B.2B final review and checkpoint — 2026-11-10
+
+Owner-verified result: guarded merge_test / 0003_auth session suite,
+**63 passed in 51.63 seconds**, three repetitions requested. Fresh session
+committed-state invariants verified. Fixtures intentionally retained. This records
+the owner's PostgreSQL execution, not a Codex database rerun. No separate raw
+per-case transcript or additional post-change credential/auth/domain/team live
+regression result was supplied. Earlier pending-live preparation entries above
+remain historical; they are superseded for this session result only.
+
+Bounded objective: review and checkpoint the 17 pending session source/test/doc
+files against main efaaec134bd8ddc08c3522f33aec7b0dac5019ad. Read AGENTS,
+requirements/architecture/decisions/progress and both identity service contracts.
+No implementation change was needed. Reviewed login, validate, verify_csrf,
+revoke, credential handoff, error mapping and all 63 collected live cases (21
+parameter-expanded scenarios, three repetitions), including shared fixture,
+guarded runner and bounded worker behavior. No security or transaction-safety
+blocker found within this scope.
+
+Issuance accepts username/password only, invokes the approved real/dummy Argon2
+verification with its read connection closed before KDF, and cannot accept an
+arbitrary UUID or constructible identity as proof. The private fingerprint and
+timestamp snapshot is rechecked under user KEY SHARE then credential SHARE;
+non-key credential changes cannot pass between final check and session commit.
+Two independent secrets.token_bytes(32) calls precede write locks. Only the
+SHA-256 session-token digest reaches SQL/storage; independent CSRF material uses
+the existing server-side column. SecretBytes/repr redaction and return-after-
+commit preserve the documented internal secret boundary.
+
+Validation uses fresh READ ONLY storage, canonical credential/profile checks,
+database clock and exact eight-hour absolute lifetime; it never renews expiry.
+CSRF uses compare_digest after active-session validation. Revocation updates only
+NULL revoked_at, so repeat/concurrent revocation cannot rewrite terminal state.
+The shared transaction guard checks actual synchronous psycopg autocommit is
+False before isolation/service SQL, no active caller transaction, READ COMMITTED
+and safe Engine logging. Unsupported or ambiguous states fail closed; no silent
+mode changes. Database errors are sanitized after unwind, unexpected class-23
+faults remain integrity faults, and no blind retries are introduced.
+
+Live-test assertions require the intended fixed error or exact successful worker
+outcomes. Unexpected DBAPI/CredentialError failures, SQLSTATEs, integrity faults,
+barrier/worker/SQL deadlines and missing pg_blocking_pids evidence fail the tests.
+Injected rollback tests require the precise injected exception, proof of reaching
+INSERT and zero fresh committed sessions. Fresh guarded invariant observers run
+after failures too. No broad exception acceptance converts infrastructure faults
+into successful concurrency evidence.
+
+Actual checkpoint commands from backend (Windows PowerShell, Python 3.11.9,
+SQLAlchemy 2.1.8, psycopg 3.3.8), no database connections:
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **222 passed, 32 deselected, one existing Starlette/HTTPX warning in 7.49s**,
+  exit 0.
+- `.\.venv\Scripts\python.exe -m pip check`: **No broken requirements found**,
+  exit 0. No package installation or dependency changes.
+- `.\.venv\Scripts\python.exe -m pytest session_tests --collect-only -q`:
+  **63 collected in 0.04s**, exit 0; no fixtures executed.
+
+Read-only protected-baseline command from root:
+`git -c safe.directory=I:/Merge diff --exit-code efaaec134bd8ddc08c3522f33aec7b0dac5019ad -- backend/alembic backend/app/models backend/app/services/teams.py backend/app/services/errors.py backend/app/services/credential_errors.py backend/app/db backend/app/core backend/app/main.py backend/test_support/database.py backend/test_alembic backend/pyproject.toml backend/requirements.lock frontend scripts .gitignore`
+passed, exit 0. Migrations 0001/0002/0003, TeamService, schema/models, dependencies,
+runtime/HTTP/frontend and test target safeguards are unchanged. `git -c
+safe.directory=I:/Merge diff --check` passed, with existing LF/CRLF warnings.
+No configured Python linter/type-checker found; no lint pass is invented.
+
+Inline Python static audit via `.\backend\.venv\Scripts\python.exe -` parsed all
+10 Python candidates with ast and checked the exact 17-file allowlist for private/
+generated paths, credential URLs, literal real Argon2 encodings and private-key/
+provider-token signatures: zero actionable findings. Initial scan flagged a
+preexisting synthetic redaction URL fixture; manual review confirmed both exact
+placeholder URL occurrences unchanged against HEAD, and the corrected
+audit passed with precisely these two exceptions. Seven dotenv/virtualenv/cache/
+node_modules/dist ignore checks passed; no private/generated paths are tracked.
+Actual staged blobs were checked to match the reviewed working contents and pass
+the same audit before committing. These checks supplement manual review; they do not prove
+the absence of every possible secret. No local secret file was opened.
+
+Updated SESSION_SERVICES, CREDENTIAL_SERVICES, AUTH_SCHEMA, TEST_DATABASE,
+architecture/decisions and this evidence log with owner verification. Owner
+authorized exactly one local commit:
+`feat: implement secure session lifecycle services (M-007B.2B)`.
+The resulting full hash is reported from Git after commit rather than embedded
+in that same commit. No remote creation or push.
+
+Known limits: internal service only; HTTP endpoints/cookies/browser CSRF policy,
+durable rate limiting, password-change/reset invalidation and authenticated team
+integration remain future work. Validation is point-in-time, Python secrets/
+traceback locals cannot be reliably zeroized, trusted Engine/logging hooks must
+not capture secrets, database time must be trustworthy, and COMMIT transport loss
+can leave an unreachable committed row. No new live regressions, HTTP/50-way race,
+CI/load/deployment or G1 closure claimed. No merge_dev access, merge_test reset,
+fixture cleanup, database/role/permission changes, M-008 or migration execution.
+
+Owner exercise: explain why FOR SHARE blocks a non-key credential UPDATE while
+KEY SHARE does not, then change a snapshot timestamp in the database-free
+stale-credential test and verify authentication_changed with no session persisted.
 
 ## Daily work log template
 ```

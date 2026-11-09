@@ -1,5 +1,14 @@
 # Authentication storage — M-007B.1
 
+M-007B.2B implements internal session login/validation, session-bound CSRF and
+terminal revocation using this unchanged storage. Owner verified **63 passed in
+51.63s**, guarded merge_test / 0003_auth, three repetitions requested, fresh session
+invariants verified and fixtures retained. Codex: 222 database-free tests passed;
+no PostgreSQL rerun. No HTTP endpoints or cookie policy. Handoff,
+transaction/clock rules, limitations and reproducible private-
+prompt owner commands: [SESSION_SERVICES.md](SESSION_SERVICES.md). Historical
+storage-only descriptions below retain their original checkpoint scope.
+
 M-007B.2A now implements internal credential hashing/registration/verification.
 Owner verified 51 guarded live cases in 28.76s, three repetitions requested and
 fresh committed-state checks; Codex checkpoint: 175 database-free tests passed.

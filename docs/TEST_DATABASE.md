@@ -1,5 +1,15 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+M-007B.2B adds guarded --suite sessions, requiring explicit --revision 0003_auth.
+Owner verified **63 session cases passed in 51.63s**, guarded merge_test /
+0003_auth, three repetitions requested; fresh session invariants verified and
+fixtures retained. Codex checkpoint: **222 database-free tests**; no PostgreSQL
+rerun or additional post-change live regression result supplied.
+Every service connection and fresh observer checks actual test identity. Fixtures
+are retained only in merge_test; no cleanup/reset or migration is needed. Exact
+private-prompt commands and lifecycle/handoff/lock-test limitations:
+[SESSION_SERVICES.md](SESSION_SERVICES.md). Existing suites run separately.
+
 M-007B.2A adds guarded --suite credentials, requiring explicit --revision 0003_auth.
 Owner verified **51 credential cases passed in 28.76s**, three repetitions requested,
 fresh committed-state checks verified; fixtures intentionally retained without

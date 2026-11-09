@@ -4,6 +4,8 @@ Only fresh server-generated principals can be registered. Caller-owned sessions,
 connections, UUIDs and already-open transactions cannot split the operation.
 """
 from dataclasses import dataclass
+from datetime import datetime
+from hashlib import sha256
 import re
 from uuid import UUID, uuid4
 
@@ -23,6 +25,15 @@ _PASSWORDS = PasswordCodec()
 class CredentialIdentity:
     user_id: UUID
     username: str
+
+
+@dataclass(frozen=True, slots=True, repr=False)
+class _VerifiedCredential:
+    """Private lookup snapshot, never an externally accepted issuance ticket."""
+    identity: CredentialIdentity
+    password_fingerprint: bytes
+    created_at: datetime
+    updated_at: datetime
 
 
 def valid_username(value: object) -> bool:
@@ -106,11 +117,22 @@ class CredentialService:
         return self._execute(create)
 
     def verify_credentials(self, *, username: str, password: str) -> CredentialIdentity:
+        record = self._verify_record(username=username, password=password)
+        return CredentialIdentity(record.user_id, record.username)
+
+    def _verify_for_session(self, *, username: str, password: str) -> _VerifiedCredential:
+        # SessionService calls this internally, never accepts a supplied identity
+        # or snapshot. Keep public verify_credentials' original result unchanged.
+        record = self._verify_record(username=username, password=password)
+        return _VerifiedCredential(CredentialIdentity(record.user_id, record.username),
+            sha256(record.password_hash.encode('utf-8')).digest(), record.created_at, record.updated_at)
+
+    def _verify_record(self, *, username: str, password: str):
         if not valid_username(username) or not valid_password(password):
             raise CredentialError(CredentialCode.INVALID_CREDENTIALS)
 
         def lookup(c):
-            return _query(c, '''SELECT user_id,username,password_hash FROM public.account_credentials
+            return _query(c, '''SELECT user_id,username,password_hash,created_at,updated_at FROM public.account_credentials
                 WHERE username=:username''', username=username).one_or_none()
 
         record = self._execute(lookup, read_only=True)
@@ -120,4 +142,4 @@ class CredentialService:
         if record is None or not matched:
             raise CredentialError(CredentialCode.INVALID_CREDENTIALS)
         # No hash update, rehash, session, cookie or claimed HTTP authorization.
-        return CredentialIdentity(record.user_id, record.username)
+        return record

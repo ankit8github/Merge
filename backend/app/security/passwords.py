@@ -36,6 +36,11 @@ def valid_password(value: object) -> bool:
     return True
 
 
+def supported_hash(value: object) -> bool:
+    """Structural profile check only, never proof of a successful password check."""
+    return isinstance(value, str) and _ENCODED.fullmatch(value) is not None
+
+
 class PasswordCodec:
     def __init__(self):
         self._hasher = PasswordHasher(time_cost=ITERATIONS, memory_cost=MEMORY_KIB,
@@ -67,7 +72,7 @@ class PasswordCodec:
             return False
         # Hash data is database-owned, never a client-supplied parameter. Still
         # reject unexpected profiles before native code can allocate their costs.
-        supported = isinstance(encoded, str) and _ENCODED.fullmatch(encoded) is not None
+        supported = supported_hash(encoded)
         target = encoded if supported else self._dummy_hash
 
         def check():

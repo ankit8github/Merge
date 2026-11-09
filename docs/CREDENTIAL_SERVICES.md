@@ -7,6 +7,16 @@ Fixtures were intentionally retained; no cleanup performed. Codex checkpoint:
 registration/login, sessions/cookies, CSRF, rate-limit policy or TeamService changes.
 Uses unchanged 0003_auth storage. Does not close G1 or establish API authentication.
 
+M-007B.2B adds the separate internal SessionService facade. Owner verified
+63 session cases passed in 51.63s against guarded merge_test / 0003_auth, three
+repetitions requested, fresh session invariants verified and fixtures retained.
+Codex checkpoint: 222 database-free tests passed; no PostgreSQL rerun.
+Public credential interfaces and hashing policy remain unchanged. Session
+issuance invokes a private verified snapshot path, then rechecks it under a
+credential SHARE lock; no external identity/snapshot is accepted as login proof.
+Full security boundary, reproducible commands and limitations:
+[SESSION_SERVICES.md](SESSION_SERVICES.md).
+
 ## Interfaces and input contract
 
 ```python
@@ -91,9 +101,13 @@ trusted listeners must not mutate data or change connection mode.
 
 Each transaction sets 5s lock/15s statement deadlines. Verification uses a READ ONLY
 lookup, closes/commits that read transaction and releases the connection, then runs
-real/dummy Argon2. It never updates hashes or creates sessions. The returned identity
-reflects that lookup/check, not a session lease; future session issuance/password
-change invalidation must explicitly address concurrent credential changes.
+real/dummy Argon2. CredentialService itself never updates hashes or creates sessions.
+The returned public identity reflects that lookup/check, not a session lease or
+issuance capability. M-007B.2B factors this same verification into a private record
+path and snapshot for SessionService.login; public verify_credentials still returns
+the original CredentialIdentity. SessionService rechecks identity, username,
+timestamps and the verified hash fingerprint under locks before issuing. Future
+password-change invalidation of already-issued sessions remains separate work.
 
 | Condition | Fixed CredentialCode |
 |---|---|
