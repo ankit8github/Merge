@@ -1,5 +1,12 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+M-007B.2A adds guarded --suite credentials, requiring explicit --revision 0003_auth.
+Owner verified **51 credential cases passed in 28.76s**, three repetitions requested,
+fresh committed-state checks verified; fixtures intentionally retained without
+cleanup. Codex checkpoint: 175 database-free tests passed, no database rerun.
+Private-prompt instructions, retained fixtures and remaining regression work:
+[CREDENTIAL_SERVICES.md](CREDENTIAL_SERVICES.md). Existing suites run separately.
+
 M-007B.1 adds auth storage. Runner defaults remain 0002_domain; auth migration
 and verification require explicit --revision 0003_auth, auth tests also --suite auth.
 Do not expect older defaults to accept an upgraded DB. Private-prompt commands

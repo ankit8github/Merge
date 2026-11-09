@@ -1,6 +1,6 @@
 # Merge — Verified Progress, Risks & Next Actions
 
-**Last updated:** 2026-11-07
+**Last updated:** 2026-11-09
 **Competition:** Hack4Hack Crew Hiring Challenge 2026, PS1.
 **Official deadline:** 2026-11-15 23:59 IST.
 **Status policy:** Mark DONE only with recorded evidence. 'Planned', 'in progress', 'implemented', 'tested' and 'verified' are not interchangeable.
@@ -14,7 +14,7 @@
 - [x] Local Git repository at `I:/Merge` on `main`; initial verified commit `66d28b51728f466b3d0124de03f457dd190c22f1` created 2026-11-07 (M-004).
 - [ ] Remote connected — none configured; no push performed.
 - [x] Application code executed — FastAPI and Vite verified over local HTTP (M-002).
-- [x] Automated tests passed — latest M-006A verification: 46 backend tests (31 new schema cases plus 15 Phase 0 tests), plus 6 frontend tests; see evidence below. This is not a claim of 20 API tests or a verified 50-way race.
+- [x] Automated tests passed — M-007B.2A checkpoint: owner verified 51 live credential cases in 28.76s; Codex verified 175 database-free tests. Earlier domain/frontend evidence remains recorded below. This is not a claim of 20 API tests or a verified 50-way HTTP race.
 - [ ] Any public deployment exists — **not verified**.
 - [ ] PS1 submission completed — **not verified**.
 
@@ -1035,6 +1035,220 @@ after 0003, full legacy database tests, frontend/HTTP regressions, authenticated
 
 Owner exercise: find the exact 23514/constraint assertion for throttle expiration
 and explain why accepting any IntegrityError would make that test misleading.
+
+## M-007B.2A internal credential/registration services — 2026-11-09
+
+Started from clean main at 66d0e8fc53e9797e87f581b798767878a7e16cd8. Read source
+requirements/architecture/decisions/auth storage/test procedures and progress;
+inspected actual users/credentials/sessions, TeamService's transaction guard,
+schema constraints and guarded fixture infrastructure. No schema incompatibility
+found by inspection. Existing 0001/0002/0003, models and TeamService are preserved.
+This is an implemented/database-free-tested component, NOT live-service verified.
+
+New app/security/{__init__,passwords}.py and
+app/services/{credential_errors,credentials}.py implement canonical username and
+15–128-character password validation; fixed Argon2id hashing/verification; atomic
+new-principal registration; closed-read-transaction credential lookup followed by
+real/dummy verification. No caller UUID/actor input, user adoption, rehash or session.
+Engine-owned transactions reject actual DBAPI AUTOCOMMIT, ambiguous/unsupported
+drivers/isolation or caller transactions, and require READ COMMITTED. Parameters
+must be hidden and SQL echo/debug rows disabled. Hash before acquiring registration
+connections; no database transaction/lock during verification KDF. Return after
+commit; exact username unique constraint only maps to username_unavailable.
+Wrong/unknown credentials share invalid_credentials; errors have fixed codes,
+no native/DBAPI implicit exception context, and no password/hash result fields.
+Traceback-local capture/external instrumentation remain prohibited trusted config.
+
+Dependency/API sources reviewed: OWASP Password Storage Cheat Sheet and official
+argon2-cffi API/PyPI metadata (linked in CREDENTIAL_SERVICES.md). Pinned
+argon2-cffi 25.1.0; explicit Argon2id v19 / m=19456 KiB / t=2 / p=1 / random
+16-byte salt / 32-byte output. Meets OWASP's 19 MiB/two-iteration/one-lane minimum.
+Two nonblocking work slots shared across codec instances per process, including
+real/dummy verification. Saturation is hashing_busy, not a DB-backed rate limit.
+Stored verification profile is bounded exactly; malformed/unsupported encodings
+use dummy work and fail closed. No timing-equality, production resource sizing or
+password-strength/breach-list claim. No password normalization/truncation.
+
+Commands actually executed from root:
+- `uv pip compile backend/pyproject.toml --extra dev --python backend/.venv/Scripts/python.exe --output-file backend/requirements.lock --quiet`: exit 0.
+- `.\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements.lock --quiet --disable-pip-version-check`: exit 0.
+- `.\backend\.venv\Scripts\python.exe -m pip install --no-deps --no-build-isolation -e backend --quiet --disable-pip-version-check`: exit 0.
+Lock diff adds only argon2-cffi 25.1.0, bindings 26.1.0, cffi 2.1.1 and pycparser
+3.12; no existing version upgrades. Installed versions confirmed with package
+metadata, without any database connection.
+
+Actual database-free checks from backend:
+- Focused `python -m pytest -q tests/test_passwords.py tests/test_credentials.py --tb=short`
+  using .venv interpreter: first **6 failed, 49 passed**. Instrumentation attempted
+  to replace read-only PasswordHasher instance methods. Corrected test-only
+  wrappers by replacing the codec's private hasher reference with a spy/fake;
+  real Argon2 roundtrips and guard assertions were retained, no production weakening.
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+  next **173 passed, 32 deselected, one existing Starlette/HTTPX warning**, 4.68s.
+  After adding invalid-verification checks and removing raw exception context,
+  final **175 passed, 32 deselected, one existing warning**, exit 0, 3.81s.
+  Includes real Argon2 salt/profile/Unicode/passphrase/mismatch tests, bounded
+  shared work-gate synchronization, generic/dummy behavior, sanitization, fail-closed
+  AUTOCOMMIT/configuration and mocked full transaction rollback. No live DB proof.
+- `.\.venv\Scripts\python.exe -m pytest credential_tests --collect-only -q`:
+  **51 cases collected**, exit 0, 0.03s (17 scenarios at three repetitions).
+- Existing suites collected separately: `python -m pytest auth_schema_tests --collect-only -q`
+  **78 cases**; service_tests **48**; concurrency_tests **45**, each exit 0.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements, exit 0.
+- `.\.venv\Scripts\python.exe -m test_support.concurrency --help`: confirmed
+  --suite credentials, explicit revision choices and mandatory confirmation.
+
+Other command failures, corrected without infrastructure changes: invoking the
+test_support module from repo root failed ModuleNotFoundError; reran from backend
+successfully. A combined auth_schema_tests/service_tests/concurrency_tests
+collection failed because their preexisting shared pytest_addoption hooks register
+the same option repeatedly. Collected each suite in a separate process instead;
+the guarded runner already selects one suite per invocation. No test failure was
+counted as validation and no existing hooks/tests were weakened to hide it.
+
+New credential_tests/{conftest,test_credentials}.py uses only explicit guarded
+merge_test/0003 settings. All service Engine connections have actual identity and
+revision events; observers open fresh guarded connections. UUID user/name fixtures
+and runtime-generated test passwords; no destructive cleanup. Independent duplicate
+registrations synchronize after both uncommitted user inserts, then require exactly
+one successful account and actual 23505/uq_credentials_username for the loser.
+Other cases cover invalid/duplicate inputs, failures after each INSERT/before COMMIT,
+unclaimable existing users, hash preservation, wrong/unknown errors, malformed stored
+hashes and actual AUTOCOMMIT rejection with no domain statements. Fresh scoped user/
+credential counts and no-session/no-membership checks run after cases. SQLSTATE,
+live rollback/concurrency and actual AUTOCOMMIT outcomes remain UNVERIFIED.
+
+Private test credential availability False and interactive stdin False (presence
+only; no secret values printed). No development .env or credential was read/copied;
+no PostgreSQL connection or migration ran. Owner command from backend:
+`.\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite credentials --revision 0003_auth --repetitions 3`.
+Full private-prompt/read-only-preflight and existing regression procedures:
+CREDENTIAL_SERVICES.md. Do not expose passwords in chat/arguments/transcripts.
+No live pass for new services or post-change auth/domain/team regressions claimed.
+Earlier owner 78-pass storage evidence remains historical, not a rerun here.
+
+Updated auth/architecture/decision/test documentation and the guarded fixed-suite
+selector/tests. No HTTP routes, sessions/cookies, CSRF/rate-limit policy, TeamService,
+invitation/joining/authZ, schema/migration, roles/permissions or frontend changes.
+No merge_dev access, database reset/disposal, commits, remotes or pushes. G1 stays
+open. Live credential verification and existing guarded regressions require owner
+execution; no API/50-way HTTP/CI/load/deployment acceptance claimed. Registration
+availability disclosure, per-process resource limits and concurrent password-change/
+future session-issuance semantics are documented limitations, not solved features.
+
+Owner exercise: trace why the losing duplicate transaction cannot leave an orphan
+user, then inspect the dummy verification assertion and why a blanket IntegrityError
+mapping would conceal a real database fault. Static safety evidence follows below.
+
+Final static review: `git -c safe.directory=I:/Merge diff --check` passed, with
+LF/CRLF conversion warnings. Parsed all 11 changed/new Python files with ast;
+reviewed the exact 19-file candidate allowlist for private/generated paths,
+credential URLs, literal real Argon2 encodings, private-key/provider-token
+signatures and whitespace: zero findings. Two preexisting synthetic URL fixtures
+were verified unchanged against HEAD and kept as the only exact scan exception.
+Lockfile comparison confirmed all existing pins unchanged and precisely the four
+documented additions. These checks supplement manual review, not a proof against
+all possible secrets. No local secret file was opened for inspection.
+
+`git ... diff --exit-code HEAD -- backend/alembic backend/app/models backend/app/services/teams.py backend/app/services/errors.py backend/app/db backend/app/core backend/app/main.py backend/test_support/database.py backend/test_alembic frontend scripts .gitignore`
+passed: all existing migrations/constraints/models, TeamService, ordinary runtime
+configuration, test identity/migration guards and HTTP/frontend behavior unchanged.
+Ignore checks confirmed actual backend/.env, local dotenv variants, virtualenv,
+cache, node_modules and build output excluded; backend/.env is not tracked.
+Staging area is empty. Final HEAD remains
+66d0e8fc53e9797e87f581b798767878a7e16cd8 on main; 10 modified tracked and nine
+new source/doc files remain unstaged for owner review. No commit or push.
+
+## M-007B.2A final review and checkpoint — 2026-11-09
+
+Owner-verified execution: guarded merge_test / 0003_auth credential suite,
+**51 passed in 28.76 seconds**, three repetitions requested. Fresh credential
+committed-state checks verified. UUID-scoped fixtures intentionally retained;
+no cleanup performed. This records the owner's PostgreSQL execution, not a Codex
+database rerun. No separate raw per-case transcript or post-change auth/schema/
+TeamService live regression results were supplied; no additional results invented.
+The earlier pending-live entries remain historical preparation evidence.
+
+Reviewed the full 19-file pending source/test/dependency/documentation scope.
+CredentialService.register validates canonical usernames and 15–128-character
+passwords, hashes before connection acquisition, generates its own fresh UUID and
+owns one transaction through user + credential INSERT and COMMIT. No principal
+adoption, caller user_id, check-then-insert or partial commit. verify_credentials
+closes its read-only lookup before real/dummy verification, returns fixed
+invalid_credentials for wrong/unknown credentials and never updates hashes or
+issues sessions. Error mapping uses exact SQLSTATE/named uniqueness, after unwind;
+unexpected integrity errors stay faults. Native/DBAPI exception context is detached.
+
+Confirmed explicit Argon2id v19, 19456 KiB, two iterations, one lane, random
+16-byte salt and 32-byte output. Shared process-wide two-slot nonblocking budget
+covers hash and real/dummy verification; no DB locks during KDF, no unbounded work
+queue or cost allocation from untrusted stored parameters. Saturation is a fixed
+hashing_busy error. Other stored profiles require reviewed compatibility/rehash
+policy. No claimed constant timing or zeroization in Python. Caller logging/APM/
+Engine listeners remain a documented trusted boundary; secret capture is forbidden.
+
+Transaction guard requires sync PostgreSQL psycopg, actual DBAPI autocommit is
+False before isolation/service SQL, no caller transaction, READ COMMITTED and safe
+SQL parameter/echo configuration. It never silently changes Engine mode. Live
+tests cover actual AUTOCOMMIT zero-write rejection and pool reset, failures after
+each INSERT and before COMMIT, successful verification/hash preservation, no user
+adoption and generic wrong/unknown outcomes. Duplicate race uses independent
+connections and a bounded barrier after both private user inserts, then strictly
+requires one winner, actual 23505/uq_credentials_username and fresh (1 user,
+1 credential) counts. Unknown errors/timeouts, missing injected failure or invalid
+counts fail; the suite does not silently accept them. No blocker found in this
+bounded review; no implementation changes were needed for the checkpoint.
+
+Actual checkpoint commands executed from backend, with no database connection:
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+  **175 passed, 32 deselected, one existing Starlette/HTTPX deprecation warning**,
+  exit 0, 4.08s. Includes real Argon2 profile/salt/roundtrip/passphrase tests,
+  synchronized work-budget checks and database-free transaction/error regressions.
+- `.\.venv\Scripts\python.exe -m pip check`: **No broken requirements found**,
+  exit 0. No dependency installation or update in this checkpoint review.
+- `.\.venv\Scripts\python.exe -m pytest credential_tests --collect-only -q`:
+  **51 cases collected**, exit 0, 0.03s; no fixture execution.
+
+Protected-baseline diff against 66d0e8fc53e9797e87f581b798767878a7e16cd8 for
+backend/alembic (0001/0002/0003 + ordinary env), models, TeamService/errors,
+db/core/main.py, test database identity/migration guards, frontend, scripts and
+.gitignore exited 0. Initial staging area empty. Existing .gitignore confirmed
+backend/.env, backend/.env.local, virtualenv/cache, node_modules/dist excluded;
+tracked backend/.env query empty. No secret file opened. Only reviewed explicit
+source/test/documentation and pinned dependency files are commit candidates.
+Candidate/source and actual staged-blob checks must pass before committing.
+
+Updated CREDENTIAL_SERVICES, AUTH_SCHEMA, TEST_DATABASE, architecture/decisions
+and this evidence log with owner verification. Owner authorized one local commit:
+`feat: add secure credential and registration services (M-007B.2A)`.
+Its resulting hash is reported directly from Git, not embedded in the same commit.
+No database object/role/permission/password changes, merge_dev access, merge_test
+reset/disposal, fixture cleanup, HTTP endpoints, session issuance, remote creation
+or push in this checkpoint. Earlier failures/corrections remain documented above.
+
+Verified internal credential component only. G1 stays open. Sessions/cookies,
+CSRF, durable rate limits, registration/login endpoints, authorization, password
+change/reset/rehash, concurrent password-change/session-issuance semantics and
+timing-analysis remain future work. Two hash slots are per process, not global
+abuse control. Registration availability is intentionally a separate conflict.
+Commit connection loss can be ambiguous; no blind retry/idempotency claim.
+Auth/domain/team live regressions after this component, full legacy DB tests,
+frontend/HTTP/50-way authenticated race, CI/load/deployment were not rerun here.
+
+Owner exercise: find the exact named-constraint assertion in the duplicate race,
+then explain why hashing inside the database transaction would hold locks longer
+without improving the username uniqueness guarantee.
+
+Checkpoint static evidence: parsed all 11 Python candidates with ast; reviewed the
+exact 19-file source/doc/dependency allowlist and tracked path names for private
+environment files, generated artifacts, credential URLs, literal real Argon2
+encodings and private-key/provider-token signatures: zero actionable findings.
+Two unchanged committed synthetic redaction-test URL strings are the only exact
+scan exception. All prior dependency pins remain unchanged, with only the four
+documented Argon2-related additions. `git ... diff --check` passed; LF/CRLF
+conversion warnings remain. These checks supplement manual review rather than
+proving absence of every possible unknown secret. Actual staged blobs are reviewed
+against the same scope and working contents before the authorized commit.
 
 ## Daily work log template
 ```

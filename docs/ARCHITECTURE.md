@@ -52,7 +52,11 @@ Browser verification: Playwright → accessible mobile/keyboard flows
   auth_throttle_buckets. Owner verified additive 0003_auth/repeat on merge_test,
   preserved domain rows and 78 live auth schema cases in 11.75s (three repetitions
   requested); checkpoint database-free regressions: 116 passed.
-  See AUTH_SCHEMA.md. No auth endpoints/services or email/MFA claims.
+  See AUTH_SCHEMA.md. M-007B.2A adds internal credential services with bounded
+  Argon2id work and owned transactions; owner verified 51 guarded live cases in
+  28.76s, three repetitions requested and fresh credential committed-state checks.
+  Codex checkpoint regressions: 175 database-free tests. See
+  CREDENTIAL_SERVICES.md. No auth endpoints/session issuance or email/MFA claims.
 - `hackathons(id, name, min_team_size, max_team_size, ...)` with `min>=1`, `max>=min`.
 - `teams(id, hackathon_id, leader_user_id, min_team_size, max_team_size, version, deleted_at, ...)`. Member count is derived from rows; readiness is derived from count/minimum/deletion, with neither stored.
 - Active-only `memberships(hackathon_id, user_id, team_id, joined_at)` with **PRIMARY KEY `(hackathon_id,user_id)`**, composite team/hackathon FK and unique `(team_id,user_id)` for the deferred leader FK. History belongs in audit.

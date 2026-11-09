@@ -1,5 +1,12 @@
 # Authentication storage — M-007B.1
 
+M-007B.2A now implements internal credential hashing/registration/verification.
+Owner verified 51 guarded live cases in 28.76s, three repetitions requested and
+fresh committed-state checks; Codex checkpoint: 175 database-free tests passed.
+No storage DDL changes or PostgreSQL rerun by Codex.
+See [CREDENTIAL_SERVICES.md](CREDENTIAL_SERVICES.md). The storage-only checkpoint
+description below records the earlier M-007B.1 scope, not runtime authentication.
+
 Owner verified guarded merge_test migration/repeat, 0003_auth (head) and preserved
 domain row counts/fingerprints. Live auth schema suite: **78 passed in 11.75
 seconds**, three repetitions requested (2026-11-09). Codex checkpoint regressions:

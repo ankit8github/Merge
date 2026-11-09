@@ -81,8 +81,9 @@ def test_legacy_target_default_is_preserved():
     assert inspect.signature(database.verify).parameters['revision'].default == DOMAIN_REVISION
 
 
-def test_auth_suite_requires_explicit_revision_before_credentials(monkeypatch):
-    monkeypatch.setattr('sys.argv', ['runner', '--confirm-merge-test', '--suite', 'auth'])
+@pytest.mark.parametrize('suite', ['auth', 'credentials'])
+def test_auth_suite_requires_explicit_revision_before_credentials(monkeypatch, suite):
+    monkeypatch.setattr('sys.argv', ['runner', '--confirm-merge-test', '--suite', suite])
     monkeypatch.setattr(concurrency, 'getpass', lambda *a: pytest.fail('Credential prompt reached'))
     with pytest.raises(SystemExit) as result:
         concurrency.main()

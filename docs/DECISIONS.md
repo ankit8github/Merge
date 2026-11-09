@@ -140,3 +140,25 @@ this component. Owner checkpoint evidence (2026-11-09): guarded migration/repeat
 0003_auth (head), preserved domain counts/fingerprints and 78 live schema cases
 passed in 11.75s, three repetitions requested. Codex checkpoint: 116 database-free
 tests passed; no PostgreSQL rerun. Details/owner commands: AUTH_SCHEMA.md.
+
+### M-007B.2A bounded credential services — owner-scoped, 2026-11-09
+
+Implement internal registration/verification using unchanged 0003_auth. Username
+policy remains canonical ASCII; passwords are 15–128 characters without trimming
+or composition rules. Pin argon2-cffi 25.1.0; Argon2id v19, 19 MiB, two iterations,
+one lane, random 16-byte salts and 32-byte output. Shared two-slot nonblocking
+per-process hashing budget; no DB locks during hashing. This is a resource bound,
+not persistent rate limiting. Exact bounded stored profile only; no automatic
+rehash/adoption. Unknown-user dummy verification uses that same profile.
+
+Registration creates a new server UUID plus credential atomically; only the
+canonical username constraint maps to username_unavailable. Verification uses a
+closed read-only lookup before KDF and generic invalid_credentials for wrong or
+unknown accounts. Reject DBAPI AUTOCOMMIT/ambiguous isolation and unsafe SQL
+logging configuration, preserve READ COMMITTED and caller-independent ownership.
+No TeamService/schema changes, endpoints, sessions or rate-limit service. Explicit
+0003 guarded credentials suite, retained UUID fixtures. Owner checkpoint evidence:
+51 live cases passed in 28.76s, three repetitions requested, fresh committed-state
+checks verified and no fixture cleanup. Codex checkpoint: 175 database-free tests
+passed; no database rerun. No additional post-change live suite result supplied.
+Contract, reviewed trade-offs and sources: CREDENTIAL_SERVICES.md.
