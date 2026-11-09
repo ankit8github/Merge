@@ -9,8 +9,9 @@ if context.is_offline_mode():
 connection = context.config.attributes.get('merge_test_connection')
 if connection is None:
     raise RuntimeError('Use python -m test_support.database migrate --confirm-merge-test')
+if not connection.in_transaction():
+    raise RuntimeError('Dedicated runner must own the complete migration transaction')
 assert_test_identity(connection)
-connection.rollback()
 context.configure(connection=connection, target_metadata=Base.metadata, include_schemas=True)
 with context.begin_transaction():
     context.run_migrations()

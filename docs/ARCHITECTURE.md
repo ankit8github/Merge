@@ -47,7 +47,12 @@ Browser verification: Playwright → accessible mobile/keyboard flows
 **Critical rule:** Every route that changes member count or assignments enters one authoritative membership/domain service, never copies SQL business rules into handlers.
 
 ## 4. Data model proposal
-- `users(id, email UNIQUE, password_hash, display_name, timezone, skills, created_at, ...)`.
+- `users(id, display_name, created_at, ...)` remains the principal table. Approved
+  M-007B.1 storage is separate: account_credentials, opaque auth_sessions and
+  auth_throttle_buckets. Owner verified additive 0003_auth/repeat on merge_test,
+  preserved domain rows and 78 live auth schema cases in 11.75s (three repetitions
+  requested); checkpoint database-free regressions: 116 passed.
+  See AUTH_SCHEMA.md. No auth endpoints/services or email/MFA claims.
 - `hackathons(id, name, min_team_size, max_team_size, ...)` with `min>=1`, `max>=min`.
 - `teams(id, hackathon_id, leader_user_id, min_team_size, max_team_size, version, deleted_at, ...)`. Member count is derived from rows; readiness is derived from count/minimum/deletion, with neither stored.
 - Active-only `memberships(hackathon_id, user_id, team_id, joined_at)` with **PRIMARY KEY `(hackathon_id,user_id)`**, composite team/hackathon FK and unique `(team_id,user_id)` for the deferred leader FK. History belongs in audit.

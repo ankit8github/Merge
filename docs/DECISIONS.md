@@ -124,3 +124,19 @@ Codex checkpoint regressions: 94 database-free checks passed. The supported
 transaction contract is synchronous postgresql+psycopg, actual autocommit is False,
 READ COMMITTED and no active caller transaction; other/ambiguous states fail closed
 without silently changing Engine configuration. This does not close API/auth gates.
+
+### M-007B.1 auth storage — owner-approved, 2026-11-09
+
+Use canonical lowercase ASCII usernames and future Argon2id password hashes,
+PostgreSQL-backed opaque sessions with 32-byte SHA-256 digest identifiers, eight-hour
+absolute expiry and session CSRF secrets. Keep separate credential rows; no seeded
+user adoption/backfill. Sessions require both principal and credential FKs. Add
+minimal PostgreSQL throttle bucket storage without implementing its algorithm.
+Add 0003_auth after unchanged 0002; constrain lengths, finite times, immutable
+session identity/lifetime and terminal revocation. Do not claim cryptographic
+provenance or login from storage constraints. Preserve default guarded target 0002;
+auth support requires explicit --revision 0003_auth. No services/endpoints in
+this component. Owner checkpoint evidence (2026-11-09): guarded migration/repeat,
+0003_auth (head), preserved domain counts/fingerprints and 78 live schema cases
+passed in 11.75s, three repetitions requested. Codex checkpoint: 116 database-free
+tests passed; no PostgreSQL rerun. Details/owner commands: AUTH_SCHEMA.md.

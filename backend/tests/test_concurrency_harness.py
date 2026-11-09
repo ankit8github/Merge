@@ -68,11 +68,14 @@ def test_race_connections_reuse_only_guarded_test_helper(monkeypatch):
     assert calls == [settings]
 
 
-@pytest.mark.parametrize(('suite', 'expected'), [(None, 'concurrency_tests'), ('services', 'service_tests')])
+@pytest.mark.parametrize(('suite', 'expected'), [(None, 'concurrency_tests'), ('services', 'service_tests'), ('auth', 'auth_schema_tests')])
 def test_runner_has_fixed_suite_and_safe_pytest_options(monkeypatch, suite, expected):
     arguments = ['concurrency', '--confirm-merge-test', '--repetitions', '2']
     if suite is not None:
         arguments += ['--suite', suite]
+    revision = '0003_auth' if suite == 'auth' else '0002_domain'
+    if suite == 'auth':
+        arguments += ['--revision', revision]
     monkeypatch.setattr('sys.argv', arguments)
     monkeypatch.setenv('MERGE_TEST_DB_PASSWORD', 'synthetic-only')
     for name in ('PYTEST_DISABLE_PLUGIN_AUTOLOAD', 'PYTEST_ADDOPTS', 'PYTEST_PLUGINS'):
@@ -83,7 +86,7 @@ def test_runner_has_fixed_suite_and_safe_pytest_options(monkeypatch, suite, expe
         assert settings.database == 'merge_test' and settings.confirmed
         class Connection:
             def execute(self, statement):
-                return SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: ['0002_domain']))
+                return SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: [revision]))
         yield Connection()
 
     def fake_pytest(arguments, plugins):

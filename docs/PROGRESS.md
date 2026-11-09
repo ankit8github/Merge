@@ -884,6 +884,158 @@ Owner exercise: trace the actual DBAPI autocommit read before get_isolation_leve
 and explain why the FK/constraint-trigger failure at COMMIT rolls back the team
 insert instead of returning a partially successful result.
 
+## M-007B.1 authentication storage preparation — 2026-11-09
+
+Baseline: main HEAD 77e04fc1b9fbe307eeb6103d1d2b9fe002afb284. Implemented
+storage and guarded migration support; NOT applied or live-verified. G1 stays open.
+No database connection was opened in this task. A presence-only check found no
+private test credential and no interactive stdin; development credentials were
+not read or copied. Owner execution remains required.
+
+New models and frozen additive 0003_auth (down_revision 0002_domain):
+account_credentials, auth_sessions and auth_throttle_buckets. Named checks cover
+canonical 3–32 ASCII usernames, hash-format marker, 32-byte session digest/CSRF,
+finite timestamps, exact eight-hour lifetime, revocation and throttle storage.
+Sessions require an existing credential row as well as a user. No principal
+backfill/adoption or domain DML. Identity/lifetime UPDATE guards, terminal
+revocation and TRUNCATE guards are included. No password hashing, issuance,
+session verification, CSRF validation, throttle algorithm, endpoints or new
+dependencies. Storage cannot establish token randomness/hash provenance or that
+a real Argon2id hash/login exists. See AUTH_SCHEMA.md for decisions and commands.
+
+Guarded migration support is explicit and separately tested: default remains
+0002_domain; --revision 0003_auth requires current 0002 or 0003. No silent head
+upgrade, unknown-state adoption or downgrade. --suite auth also requires that
+explicit revision. Identity checks, fixed loopback/role/database and private
+password handling remain. Runner owns the DDL transaction; dedicated Alembic env
+no longer rolls back the caller's transaction. Bounded SHARE locks and aggregate
+before/after domain row counts/fingerprints detect changes before committing DDL.
+Fingerprints and row contents are not printed. Stop other merge_test writers;
+online behavior, including this preservation check, still needs live execution.
+
+Commands actually executed from backend using Python 3.11 virtual environment:
+
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+  final **116 passed, 32 deselected, one existing Starlette/HTTPX deprecation
+  warning**, exit 0, 2.34s. Includes offline PostgreSQL DDL rendering, mapper and
+  revision checks, explicit-target rejection, migration commit/rollback ownership
+  fakes and prior database-free regressions. These are not live PostgreSQL tests.
+- `.\.venv\Scripts\python.exe -m pytest auth_schema_tests --collect-only -q`:
+  **78 cases collected**, exit 0, 0.41s; no fixture execution. Covers uniqueness,
+  username policy, digest/CSRF lengths, user/credential FKs, expiration/revocation,
+  immutable identities, relationships, throttle storage, unchanged users and
+  metadata comparison. Fixtures are UUID-scoped, rollback-only with savepoints.
+- `python -m test_support.database --help` and
+  `python -m test_support.concurrency --help`: confirmed implemented CLI flags.
+
+Initial offline run: one failure compiling auth-only test metadata without its
+referenced users table; 110 passed. Corrected the test metadata to include all
+referenced tables, without weakening constraints. Next run: 111 passed. Added
+five explicit verify-revision cases; final 116-pass result above supersedes it.
+No SQLSTATE, online migration, repeat-upgrade, database metadata drift, preservation
+or auth-schema live pass is claimed. Existing live service/concurrency results
+remain historical evidence, not reruns after 0003. Frontend/HTTP checks not rerun
+because this component has no route/frontend changes. Legacy ordinary database
+tests still target merge_dev and were deliberately not executed.
+
+Protected baseline review: git diff --exit-code HEAD for existing 0001/0002,
+domain.py, services, db/core, main.py and dependency files exited 0. Ignore checks
+confirmed backend/.env, venv, pytest cache, node_modules and dist excluded;
+tracked backend/.env query empty. Local .env files were not read. No schema,
+roles, privileges, ownership, passwords or live database contents modified.
+No commit, push or remote creation. Full final diff/static safety evidence follows
+the final check below; owner-run migration/repeat/verification and auth plus
+service/domain live regression commands are documented in AUTH_SCHEMA.md.
+
+Owner explanation/exercise: explain why an uncredentialed seeded user cannot
+receive a session, then locate the exact check for eight-hour lifetime. Explain
+why the future auth service must still validate expiry/revocation on every request.
+
+Final static review: `git -c safe.directory=I:/Merge diff --check` exited 0 with
+LF/CRLF conversion warnings. Parsed all 12 changed/new Python files with ast;
+reviewed 18 source/doc candidates for private/generated paths, credential URL,
+private key and access-token signatures and trailing whitespace: zero findings.
+These scans supplement manual review, not a proof that all possible secrets can
+be detected. Final Git state is 11 modified tracked files and seven new files,
+all unstaged; HEAD remains 77e04fc1b9fbe307eeb6103d1d2b9fe002afb284.
+
+## M-007B.1 final review and checkpoint — 2026-11-09
+
+Owner-verified live evidence: guarded merge_test migration to 0003_auth completed,
+repeat completed, verification returned **0003_auth (head)**, and existing domain
+row counts/fingerprints were preserved. Authentication schema suite: **78 passed
+in 11.75 seconds**, three repetitions requested. Owner explicitly reported the
+expected **23514 / ck_throttle_expiration** rejection. This is owner-executed
+PostgreSQL evidence, not a Codex database rerun. No additional per-case SQLSTATE
+transcript, service/domain regression after 0003 or HTTP result was supplied.
+Earlier pending-live entries above remain historical preparation evidence.
+
+Reviewed all 18 pending source/test/documentation candidates, including the frozen
+0003 DDL, auth ORM registry, explicit revision support, caller-owned Alembic
+transaction and rollback-only live fixtures. Username/hash/digest/CSRF/time/FK
+checks, credential/session relationships, lifetime immutability and terminal
+revocation are consistent with the bounded storage contract. No existing users
+are backfilled/adopted. SECURITY INVOKER function has fixed catalog/temp search
+path; new TRUNCATE guards reuse the unchanged domain function. No blocking
+correctness/security issue identified for this storage scope. No implementation,
+migration, schema or permission changes were made during checkpoint review.
+
+Expected-rejection tests require IntegrityError AND exact SQLSTATE AND allowlisted
+constraint names inside savepoints. Unknown-user sessions allow either of the
+two valid user/credential FK names; arbitrary FK failures are not accepted. Other
+exceptions, missed rejections, metadata differences or assertion failures fail the
+suite. Guarded runner rejects optimized assertion mode and uses fail-fast/no
+exception dumps. Private credentials are hidden; direct fixture use without
+runner settings/opt-in fails before writes. Each physical connection verifies
+merge_test / merge_app, loopback address/port and READ COMMITTED. Default target
+remains 0002; explicit 0003 selection is required. No development fallback.
+
+Actual checkpoint commands from backend, with no credentials/database connection:
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+  **116 passed, 32 deselected, one existing Starlette/HTTPX deprecation warning**,
+  exit 0, 2.10s. Includes mapper/metadata and offline PostgreSQL migration render,
+  revision graph/selection, identity guards and transaction ownership fake checks.
+- `.\.venv\Scripts\python.exe -m pytest auth_schema_tests --collect-only -q`:
+  **78 cases collected**, exit 0, 0.22s; fixtures were not executed.
+- `git -c safe.directory=I:/Merge diff --check`: exit 0; LF/CRLF warnings remain.
+- Protected baseline diff against 77e04fc1b9fbe307eeb6103d1d2b9fe002afb284 for
+  0001/0002, ordinary Alembic env, domain models/services, db/core, main.py,
+  dependency files, frontend, scripts and .gitignore: exit 0. Existing staging
+  area was empty before this checkpoint. No HTTP route changes; only GET /health
+  exists in the application. No new dependencies or M-007B.2 implementation.
+
+Git safety review includes explicit candidate allowlisting, secret/generated-path
+scan and actual staged-blob review before commit. Ignore checks confirmed
+backend/.env, backend/.env.local, venv/cache, node_modules and dist excluded;
+tracked backend/.env query empty. No local secret file was opened. Fixed local
+host/database/role labels and deliberately synthetic test values are nonsecret
+configuration/fixtures. No password or complete database URL belongs in this
+checkpoint. Signature scans supplement manual review, not proof against every
+unknown secret. Candidate scan parsed all 12 Python files and reviewed the exact
+18-file allowlist with no actionable findings. A broader URL check initially
+flagged two intentionally synthetic redaction-test strings in the preexisting
+harness; verified both full lines match the committed baseline and contain no
+credentials. They are not live database URLs; no new URL fixture was introduced.
+The final scan retained only that exact baseline fixture exception. Owner
+authorized exactly one local commit:
+`feat: add authentication schema and session storage (M-007B.1)`.
+The resulting hash is reported directly from Git rather than embedded in its own
+commit. No remote creation/push, database connection/migration/reset, merge_dev
+access, merge_test disposal, roles/privileges/password changes in this review.
+
+Updated AUTH_SCHEMA, SCHEMA, TEST_DATABASE, architecture/decisions and this log
+with owner evidence and current revision instructions. Storage schema checkpoint
+is verified within its stated scope; G1 remains open. Runtime password hashing,
+token issuance/verification, request-time expiry/revocation/CSRF checks, rate-limit
+algorithm, auth endpoints and authorization remain unimplemented. Storage checks
+cannot prove hash validity or entropy. Auth TRUNCATE guards have static DDL
+coverage; this 78-case suite does not execute TRUNCATE. Service/domain live suites
+after 0003, full legacy database tests, frontend/HTTP regressions, authenticated
+50-way HTTP race, CI/load/deployment acceptance were not run in this checkpoint.
+
+Owner exercise: find the exact 23514/constraint assertion for throttle expiration
+and explain why accepting any IntegrityError would make that test misleading.
+
 ## Daily work log template
 ```
 ### YYYY-MM-DD — [component/task ID]

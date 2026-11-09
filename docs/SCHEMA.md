@@ -1,5 +1,11 @@
 # PostgreSQL domain schema — M-006A
 
+M-007B.1 adds authentication storage in additive 0003_auth. Owner verified guarded
+merge_test migration/repeat, 0003_auth (head), preserved domain row counts and
+fingerprints, and 78 live auth schema cases in 11.75s (three repetitions requested).
+Codex checkpoint checks are database-free. Existing 0001/0002 and domain guards remain unchanged.
+Exact storage decisions and explicit owner commands: [AUTH_SCHEMA.md](AUTH_SCHEMA.md).
+
 This is the approved schema foundation, not an implementation of team APIs,
 authentication, idempotency services, audit generation or event delivery.
 Verification commands and measured results are in `PROGRESS.md`.

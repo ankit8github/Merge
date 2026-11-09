@@ -9,6 +9,7 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import URL, create_engine, text
+from test_support.revisions import AUTH_REVISION, DOMAIN_REVISION, TARGET_REVISIONS, domain_snapshot, validate_migration_start
 
 
 class DiagnosticFailure(ValueError):
@@ -106,7 +107,9 @@ def test_connection(settings):
         engine.dispose()
 
 
-def verify(connection):
+def verify(connection, revision=DOMAIN_REVISION):
+    if revision not in TARGET_REVISIONS:
+        raise DiagnosticFailure('migration-state')
     with diagnostic_stage('verification'):
         connection.execute(text('SET TRANSACTION READ ONLY'))
     with diagnostic_stage('identity'):
@@ -121,26 +124,27 @@ def verify(connection):
     with diagnostic_stage('migration-state'):
         exists = connection.execute(text("SELECT to_regclass('public.alembic_version') IS NOT NULL")).scalar_one()
         revisions = connection.execute(text('SELECT version_num FROM public.alembic_version')).scalars().all() if exists else []
-        if revisions not in ([], ['0002_domain']):
+        allowed = ([], [DOMAIN_REVISION]) if revision == DOMAIN_REVISION else ([AUTH_REVISION],)
+        if revisions not in allowed:
             raise DiagnosticFailure('migration-state')
     print('Verified merge_test / merge_app, READ COMMITTED, CONNECT and schema USAGE/CREATE')
-    print('Alembic revision:', revisions[0] if revisions else 'base (no recorded revision)')
+    print('Alembic revision:', (revisions[0] + (' (head)' if revisions[0] == AUTH_REVISION else '')) if revisions else 'base (no recorded revision)')
     connection.rollback()
 
 
-def migrate(connection):
+def migrate(connection, revision=DOMAIN_REVISION):
     assert_test_identity(connection)
     # A fresh target must contain no application objects. Existing head is repeatable.
     exists = connection.execute(text("SELECT to_regclass('public.alembic_version') IS NOT NULL")).scalar_one()
     if exists:
         revisions = connection.execute(text('SELECT version_num FROM public.alembic_version')).scalars().all()
-        if revisions != ['0002_domain']:
-            raise ValueError('Unexpected migration state; stop for review')
     else:
+        revisions = []
         count = connection.execute(text("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public'")).scalar_one()
         routines = connection.execute(text("SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'")).scalar_one()
         if count or routines:
             raise ValueError('Unexpected objects in fresh test database')
+    validate_migration_start(revisions, revision)
     connection.rollback()
     root = Path(__file__).resolve().parents[1]
     config = Config()
@@ -148,7 +152,15 @@ def migrate(connection):
     config.set_main_option('script_location', str(root / 'test_alembic'))
     config.set_main_option('version_locations', str(root / 'alembic' / 'versions'))
     config.attributes['merge_test_connection'] = connection
-    command.upgrade(config, '0002_domain')
+    # This transaction owns both DDL and preservation validation. The dedicated
+    # Alembic env must never commit/rollback this caller-owned transaction itself.
+    with connection.begin():
+        before = domain_snapshot(connection) if revision == AUTH_REVISION else None
+        command.upgrade(config, revision)
+        if before is not None and domain_snapshot(connection) != before:
+            raise ValueError('Domain rows changed during auth migration; rolling back DDL')
+    if before is not None:
+        print('Existing domain row counts/fingerprints preserved')
     print('Test migration command completed')
 
 
@@ -156,6 +168,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('verify', 'migrate'))
     parser.add_argument('--confirm-merge-test', action='store_true', required=True)
+    parser.add_argument('--revision', choices=TARGET_REVISIONS, default=DOMAIN_REVISION)
     args = parser.parse_args()
     password = os.environ.get('MERGE_TEST_DB_PASSWORD')
     if password is None:
@@ -167,7 +180,7 @@ def main():
     try:
         with test_connection(TestDatabaseSettings(confirmed=args.confirm_merge_test, password=password)) as connection:
             stage = 'verification' if args.action == 'verify' else 'migration'
-            (verify if args.action == 'verify' else migrate)(connection)
+            (verify if args.action == 'verify' else migrate)(connection, revision=args.revision)
     except Exception as error:
         print(safe_failure_message(error, stage))
         raise SystemExit(1) from None

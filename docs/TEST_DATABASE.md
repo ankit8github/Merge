@@ -1,5 +1,19 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+M-007B.1 adds auth storage. Runner defaults remain 0002_domain; auth migration
+and verification require explicit --revision 0003_auth, auth tests also --suite auth.
+Do not expect older defaults to accept an upgraded DB. Private-prompt commands
+and preservation checks: [AUTH_SCHEMA.md](AUTH_SCHEMA.md).
+
+Current owner-verified target (2026-11-09): merge_test at **0003_auth (head)**.
+Auth migration and repeat succeeded; existing domain counts/fingerprints were
+preserved. **78 auth schema cases passed in 11.75s**, three repetitions requested;
+expected 23514 / ck_throttle_expiration rejection reported. Codex checkpoint:
+116 database-free tests passed; no database rerun. Older default-0002 commands
+below document the original setup and intentionally refuse the current target.
+Use explicit --revision 0003_auth for current verification and guarded suites.
+Post-0003 service/domain live regressions were not reported and remain pending.
+
 Owner verified provisioning, guarded migration/repeat to 0002_domain and the
 M-006B concurrency run on 2026-11-08: **45 passed in 39.72 seconds**, three
 repetitions, fresh committed-state invariants verified. These are owner-reported
