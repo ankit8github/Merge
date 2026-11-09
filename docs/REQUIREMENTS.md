@@ -24,7 +24,7 @@
 | R-07 | OFFICIAL | Race-proof last-seat join | 50 distinct authenticated callers, one available seat: exactly 1 success, 49 safe rejections, capacity never exceeded, rerunnable against real DB | PENDING |
 | R-08 | OFFICIAL | Idempotent retries for join/team creation | Same idempotency key/payload produces one effect; retry returns stable outcome | PENDING |
 | R-09 | OFFICIAL | Realtime board and team updates, no refresh, via SSE or WebSockets | Two browser sessions see updates on changes without manual refresh | PENDING |
-| R-10 | OFFICIAL | Authentication and leader-only accept/decline/remove | AuthN/AuthZ negative cases plus user/leader end-to-end flows | PARTIAL — owner verified 54 guarded HTTP auth API cases (HTTP_AUTH.md); throttling, browser/deployed HTTPS verification and leader/team authorization pending |
+| R-10 | OFFICIAL | Authentication and leader-only accept/decline/remove | AuthN/AuthZ negative cases plus user/leader end-to-end flows | PARTIAL — owner verified durable auth throttling and updated API/session regressions: 165 passed in 110.69s (AUTH_THROTTLING.md); browser/deployed HTTPS and leader/team authorization pending |
 | R-11 | OFFICIAL | Invite codes resistant to brute force; rate limits; validated inputs | Entropy rationale; repeated bad attempts throttled; malformed inputs rejected | PENDING |
 | R-12 | OFFICIAL | Audit log for every team change: who/what/when | Audit entries exist for every committed mutation; none for rollbacks | PENDING |
 | R-13 | OFFICIAL | Teammate ranking by complementary skills and time zone, explained | Deterministic endpoint, explanation and ranking tests | PENDING |

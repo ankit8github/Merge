@@ -5,6 +5,7 @@ Requires frontend npm ci. Starts and stops only its own child processes.
 """
 import json
 import os
+import secrets
 from pathlib import Path
 import socket
 import subprocess
@@ -14,6 +15,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
+THROTTLE_TEST_SECRET = secrets.token_hex(32)
 
 
 def get(path: str, timeout: float = 2) -> tuple[int, bytes]:
@@ -38,7 +40,8 @@ def wait_for(path: str) -> bytes:
 
 def start(command: list[str], directory: Path) -> subprocess.Popen:
     environment = {**os.environ, 'MERGE_AUTH_MODE': 'development',
-                   'MERGE_AUTH_ORIGIN': 'http://127.0.0.1:5173'}
+                   'MERGE_AUTH_ORIGIN': 'http://127.0.0.1:5173',
+                   'MERGE_AUTH_THROTTLE_SECRET': THROTTLE_TEST_SECRET}
     return subprocess.Popen(
         command,
         cwd=directory,
@@ -66,7 +69,7 @@ def main() -> None:
             if probe.connect_ex(("127.0.0.1", port)) == 0:
                 raise RuntimeError(f"Port {port} is occupied; stop your dev server manually first")
     api = frontend = None
-    api_command = [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000"]
+    api_command = [sys.executable, '-m', 'app.serve', '--host', '127.0.0.1', '--port', '8000']
     try:
         api = start(api_command, ROOT / "backend")
         frontend = start(["node", "node_modules/vite/bin/vite.js", "--host", "127.0.0.1"], ROOT / "frontend")

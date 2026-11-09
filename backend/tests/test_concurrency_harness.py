@@ -68,13 +68,13 @@ def test_race_connections_reuse_only_guarded_test_helper(monkeypatch):
     assert calls == [settings]
 
 
-@pytest.mark.parametrize(('suite', 'expected'), [(None, 'concurrency_tests'), ('services', 'service_tests'), ('auth', 'auth_schema_tests'), ('credentials', 'credential_tests'), ('sessions', 'session_tests'), ('auth-api', 'auth_api_tests')])
+@pytest.mark.parametrize(('suite', 'expected'), [(None, 'concurrency_tests'), ('services', 'service_tests'), ('auth', 'auth_schema_tests'), ('credentials', 'credential_tests'), ('sessions', 'session_tests'), ('auth-api', 'auth_api_tests'), ('throttles', 'throttle_tests')])
 def test_runner_has_fixed_suite_and_safe_pytest_options(monkeypatch, suite, expected):
     arguments = ['concurrency', '--confirm-merge-test', '--repetitions', '2']
     if suite is not None:
         arguments += ['--suite', suite]
-    revision = '0003_auth' if suite in ('auth', 'credentials', 'sessions', 'auth-api') else '0002_domain'
-    if suite in ('auth', 'credentials', 'sessions', 'auth-api'):
+    revision = '0003_auth' if suite in ('auth', 'credentials', 'sessions', 'auth-api', 'throttles') else '0002_domain'
+    if suite in ('auth', 'credentials', 'sessions', 'auth-api', 'throttles'):
         arguments += ['--revision', revision]
     monkeypatch.setattr('sys.argv', arguments)
     monkeypatch.setenv('MERGE_TEST_DB_PASSWORD', 'synthetic-only')

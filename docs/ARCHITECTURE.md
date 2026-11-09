@@ -69,8 +69,14 @@ Browser verification: Playwright → accessible mobile/keyboard flows
   separate production/development cookies. No lifecycle transaction changes.
   Owner verified 78 expanded session cases in 72.48s and 54 guarded API cases in
   40.90s against merge_test / 0003_auth (head), with fresh committed-state
-  invariants. Shared throttling and browser/deployed HTTPS verification remain
-  pending. See HTTP_AUTH.md. No team mutation API or production-readiness claim.
+  invariants. M-007B.3B now implements durable PostgreSQL fixed-window HTTP auth
+  admission for review, with independent short transactions before KDF, HMAC
+  identifiers and explicit actual-peer/single-hop proxy trust. Owner verified
+  33 throttle cases in 31.42s, 54 updated API cases in 30.94s and 78 session
+  cases in 48.33s: 165 passes in 110.69s, three repetitions requested and fresh
+  committed-state invariants verified. Codex did not rerun PostgreSQL.
+  See AUTH_THROTTLING.md and HTTP_AUTH.md.
+  Browser/deployed HTTPS remains unverified; no team API or production-readiness claim.
 - `hackathons(id, name, min_team_size, max_team_size, ...)` with `min>=1`, `max>=min`.
 - `teams(id, hackathon_id, leader_user_id, min_team_size, max_team_size, version, deleted_at, ...)`. Member count is derived from rows; readiness is derived from count/minimum/deletion, with neither stored.
 - Active-only `memberships(hackathon_id, user_id, team_id, joined_at)` with **PRIMARY KEY `(hackathon_id,user_id)`**, composite team/hackathon FK and unique `(team_id,user_id)` for the deferred leader FK. History belongs in audit.

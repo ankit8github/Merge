@@ -1,8 +1,16 @@
 # Internal credential services — M-007B.2A
 
+M-007B.3B adds durable HTTP admission before registration hashing and login
+verification. CredentialService and the shared Argon2 budget remain unchanged.
+The independent throttle transaction commits before KDF/credential/session work;
+429 or storage failure performs no such work. Direct internal service calls do
+not acquire HTTP limits. [AUTH_THROTTLING.md](AUTH_THROTTLING.md) has policy,
+configuration and owner-verified guarded results (165 throttle/API/session passes
+in 110.69s). Earlier scope below is historical.
+
 M-007B.3A-R1 adds strict HTTP adapters around the existing credential/session
 services; no hashing policy, credential interface or transaction change.
-Registration does not create a session. Shared throttling is still pending;
+Registration does not create a session. Shared throttling was pending at that checkpoint;
 routes are not production-ready. [HTTP_AUTH.md](HTTP_AUTH.md) records current
 HTTP/browser contracts and owner-verified live evidence (78 expanded sessions in
 72.48s, 54 HTTP API cases in 40.90s; fresh invariants verified). Earlier component scope

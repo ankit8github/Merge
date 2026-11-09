@@ -14,7 +14,7 @@
 - [x] Local Git repository at `I:/Merge` on `main`; initial verified commit `66d28b51728f466b3d0124de03f457dd190c22f1` created 2026-11-07 (M-004).
 - [ ] Remote connected — none configured; no push performed.
 - [x] Application code executed — FastAPI and Vite verified over local HTTP (M-002).
-- [x] Automated tests passed — M-007B.3A checkpoint: owner verified 78 expanded sessions in 72.48s and 54 HTTP API cases in 40.90s (132 live executions), guarded merge_test / 0003_auth (head), fresh committed-state invariants verified. Codex reran 349 database-free tests in 17.49s plus six frontend tests/typecheck/build. Standalone API/Vite outage/recovery passed on rerun; intermittent concurrent and standalone auth-proxy timeouts remain open. This is not a claim of 20 API tests in CI, browser HTTPS security or a verified 50-way HTTP race.
+- [x] Automated tests passed — M-007B.3B final checkpoint: owner verified 33 throttles in 31.42s, 54 updated API cases in 30.94s and 78 session cases in 48.33s; 165 passed in 110.69s, three repetitions requested and fresh committed-state invariants verified. Codex reran 546 database-free checks in 8.52s, dependency/static and controlled-launcher HTTP/Vite checks; all passed. Existing Starlette/HTTPX warning and earlier proxy timing flakiness remain. No CI, deployed HTTPS/browser or 50-way team-race claim.
 - [ ] Any public deployment exists — **not verified**.
 - [ ] PS1 submission completed — **not verified**.
 
@@ -24,7 +24,7 @@
 |---|---|---|---|
 | G0 | Repository and local integration | Commit hash, README, backend health, React build, PostgreSQL connectivity, migration, smoke test | DONE — local checks recorded in M-003; initial commit `66d28b51728f466b3d0124de03f457dd190c22f1`; closed 2026-11-07 |
 | G1 | Transactional team core | Real PostgreSQL 50-way last-seat race, cross-team race, idempotency; repeatable tests | PARTIAL — schema/guards verified in M-006A; services and multi-connection/API races pending |
-| G2 | Business flows and security | Team lifecycle, invites, requests, leader succession, audit, authorization negative tests | PARTIAL — owner verified guarded HTTP authentication; shared throttling, browser/deployed HTTPS and domain authorization/flows pending |
+| G2 | Business flows and security | Team lifecycle, invites, requests, leader succession, audit, authorization negative tests | PARTIAL — durable auth throttle and updated API/session suites owner-verified (165 passes); browser/deployed HTTPS and domain flows remain open |
 | G3 | Frontend and realtime | Complete React flows, SSE between two clients, mobile/keyboard browser tests, scoring | NOT STARTED |
 | G4 | Acceptance performance and CI | >=20 API tests in passing GitHub Actions, 10k/2k seed, k6 100 VUs, measured board p95 <200ms | NOT STARTED |
 | G5 | Deployment and competition submission | Public URL, repo, one-page doc, load report, <=5-minute video, submitted links | NOT STARTED |
@@ -1706,6 +1706,279 @@ acceptance or G1/G2 closure. Other post-change live suites remain unreported.
 
 Owner exercise: explain why the GET returns CSRF from the same validated snapshot,
 then omit X-Merge-Request from login and confirm 403 without credential mutation.
+
+## M-007B.3B durable PostgreSQL auth throttling — 2026-11-10
+
+Baseline main 05db480b1d128e6a3c2b382227de86b080f6ab43, initially clean. Read AGENTS,
+requirements/architecture/decisions/progress and HTTP_AUTH, AUTH_SCHEMA,
+credential/session services and TEST_DATABASE; inspected actual 0003_auth DDL,
+models and HTTP adapter. Proposed the bounded contract in DECISIONS before coding.
+The existing throttle PK/counter/expiry supports it without schema changes.
+Prior owner 54 HTTP / 78 session passes remain pre-throttling evidence only.
+
+Implemented a separate ThrottleService using the existing credential transaction
+owner and exact AUTOCOMMIT-is-False / READ COMMITTED guard. Aligned DB-clock
+date_bin windows and atomic INSERT ON CONFLICT updates saturate attempts at N+1
+without overflow. Defaults: 300 seconds, login canonical-account 5, login IP 30,
+registration IP 5. HTTP config ranges: window 60–3600, account 1–100, login IP
+1–500, registration IP 1–50. No disabled/unlimited option. Charge IP before account;
+skip account creation on IP denial, preserve the IP charge on account denial.
+Return the decision and commit before raising 429; KDF/session/registration work
+starts only after throttle commit. Narrow lock/statement timeouts: 1s/2s. Storage,
+integrity/configuration or unexpected failure gives sanitized 503 and no KDF.
+No route SQL/commit, password hashing duplication or session lifecycle changes.
+
+Domain-separated HMAC-SHA256 keys use a required explicit private 32-byte secret
+(64 lowercase hex); raw username/IP/secret never reaches limiter SQL or public
+responses/errors. Existing canonical ASCII account validation remains unchanged.
+Secret/settings must match all workers/restarts, with no random runtime fallback.
+Responses use existing structured errors plus 429 rate_limited and bounded
+Retry-After from database time, ceil/clamp 1..window, auth no-store headers.
+Successful and failed valid requests consume budget; no success-based reset.
+
+Actual-peer client identity rejects untrusted/ambiguous forwarding and normalizes
+IPv4-mapped IPv6. Explicit single-hop proxy mode requires an allowed literal peer,
+one overwritten literal XFF and one exact http/https XFP. Alternative headers,
+chains, duplicates, malformed peers and wildcard(/0) trust fail closed. Independent
+review found a mapped-/0 startup-validation mismatch; it was corrected and tested.
+The new app.serve launcher fixes proxy_headers=False/forwarded_allow_ips='' and
+disables access logs, preventing stock Uvicorn loopback trust from rewriting the
+peer before app policy. README, HTTP_AUTH and the local HTTP runner use it.
+The reverse proxy/alternative ASGI host remains trusted deployment configuration;
+actual public TLS/proxy/browser security is not claimed verified.
+
+Added 80 database-free throttle-service cases using the real transaction owner
+with queued fake SQL results, 84 actual-peer policy cases and HTTP throttle/error/
+configuration/launcher tests. These do not prove PostgreSQL atomicity. Existing
+HTTP/health tests now supply explicit synthetic secret/literal peers and a typed
+limiter double; real API regression fixtures inject the real limiter with a
+unique per-case private fixture key. They still execute the actual default limits
+and services, with no runtime bypass. HTTP AUTOCOMMIT regression now captures the
+earliest limiter guard; independent unchanged session cases retain lifecycle guard
+coverage. No existing test deleted or weakened.
+
+Dedicated guarded --suite throttles / explicit 0003_auth collects 33 cases at
+three repetitions: first N/saturation/committed denial, separate account/IP
+budgets, account and IP races over eight actual concurrent PostgreSQL connections
+with eight backend PIDs required, DB-clock expiry/reset with retained old bucket,
+shared two-app login/registration, wrong/unknown credentials consuming quotas,
+real lock failure requiring exact 55P03 plus zero hashing/accounts/extra charge,
+and actual driver AUTOCOMMIT True with fixed configuration failure/zero service
+SQL. Other faults/timeouts become failures, never expected 429/503 successes.
+Fresh observers recheck revision and scoped throttle/session/credential invariants
+after cases, including failure paths. No cleanup, reset or trigger disabling.
+Independent read-only review found no remaining security/transaction blocker.
+
+Executed checks (Windows PowerShell, existing backend Python 3.11.9, SQLAlchemy
+2.1.8 / psycopg 3.3.8):
+- Backend `.\.venv\Scripts\python.exe -m pytest -q tests/test_auth_http.py tests/test_auth_throttle_http.py tests/test_health.py --tb=short`:
+  **140 passed in 9.41s**, one existing Starlette/HTTPX warning, exit 0.
+- Backend `.\.venv\Scripts\python.exe -m pytest -q tests/test_client_identity.py --tb=short`:
+  **84 passed in 0.31s**, exit 0 (independent component verification).
+- Backend `.\.venv\Scripts\python.exe -m pytest -q tests/test_throttling.py --tb=short`:
+  **80 passed in 1.48s**, exit 0 (independent component verification).
+- Backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **546 passed, 32 deselected, one existing warning in 17.56s**, exit 0.
+- Backend `.\.venv\Scripts\python.exe -m pip check`: **No broken requirements
+  found**, exit 0. No package installs or dependency updates.
+- Separate backend `.\.venv\Scripts\python.exe -m pytest throttle_tests --collect-only -q`,
+  `... -m pytest auth_api_tests --collect-only -q`, and
+  `... -m pytest session_tests --collect-only -q`: **33 / 54 / 78 collected**,
+  exit 0, fixtures not executed. Throttle collection repeated after strengthening
+  the actual connection schedule: 33 in 0.02s; no live run.
+- Root `.\backend\.venv\Scripts\python.exe scripts/check_local_http.py`: exit 0;
+  controlled-server health, frontend HTML, /health and /auth missing-cookie 401
+  proxy, outage error and restart recovery all passed. No database access. Earlier
+  proxy timing failures remain an open limitation; no timeout was accepted or
+  deadline weakened. Frontend code unchanged; frontend build/tests were not rerun
+  in this bounded backend task (previous six-test/build evidence is historical).
+- AST parsing and `git -c safe.directory=I:/Merge diff --check` passed (existing
+  LF/CRLF conversion warnings). Full candidate/path/secret/whitespace review and
+  protected-baseline checks are part of the final source review; no Python linter
+  is configured and no lint pass is invented.
+
+Private test credential availability False and interactive hidden input False
+were checked without printing values. No database connection/test/migration was
+executed by Codex, no merge_dev access or backend/.env read/copied. Guarded live
+throttle and updated HTTP/session outcomes remain UNVERIFIED. Exact owner-run
+read-only verify and three fixed-suite hidden-password commands are documented
+in AUTH_THROTTLING.md. Test fixture secrets are ephemeral and retained rows scoped;
+only the deliberate multi-instance tests share keys. No production key generated,
+persisted in source, printed or changed by Codex.
+
+Known limits: fixed-window boundary bursts (up to 2N), pre-wait window assignment,
+account-denial abuse, shared NAT budgets, exact IPv6 address rotation, distributed
+IPs, required identical settings/secret, and retained expired-row/storage growth.
+No automatic cleanup or background worker; retention needs later owner review.
+One-second expiry and near-hour-boundary test schedules can fail on busy hosts;
+they are failed tests, not proofs. HMAC is pseudonymization, not anonymity.
+No deployed proxy/TLS/browser E2E, timing equality, production readiness, global
+DDoS control or per-user immunity is claimed. Existing Python secret retention,
+clock trust, point-in-time logout and ambiguous COMMIT caveats remain.
+
+No changes to migrations 0001/0002/0003, models/domain constraints, TeamService,
+credential/session/KDF implementations, DB settings/roles/permissions, core
+dependencies or frontend. No team/invite/request endpoints, M-008,
+idempotency/audit/outbox, CI/load/deployment acceptance or gate closure. No staging,
+commit, remote creation or push. Stop after implementation for owner review.
+
+Owner exercise: trace why throttle denial must be raised after commit. Change the
+account limit from 5 to 3 consistently across app instances, then predict the
+fourth valid login request's 429 and why rotating IP cannot bypass that account
+budget. Contract and full changed-file inventory: AUTH_THROTTLING.md.
+
+Final static evidence: inline Python via
+`.\backend\.venv\Scripts\python.exe -` checked the exact 30-file candidate
+allowlist (21 modified tracked, nine new), parsed all 19 Python files and scanned
+all source/doc contents and paths for whitespace, private/generated artifacts,
+database/basic-auth credential URLs, real Argon2 encodings, private keys and
+provider tokens. Zero actionable findings; only the unchanged committed synthetic
+redaction/rejected-origin URL fixtures were excepted. Seven ignore checks passed;
+backend/.env is untracked/ignored and was not opened. HTTP adapter AST has no SQL
+or commit access; HEAD unchanged and index empty. This supplements manual review,
+not proof against every possible unknown secret. No staging/commit was performed.
+
+Protected-baseline command from root passed, exit 0:
+`git -c safe.directory=I:/Merge diff --exit-code 05db480b1d128e6a3c2b382227de86b080f6ab43 -- backend/alembic backend/app/models backend/app/services/teams.py backend/app/services/credentials.py backend/app/services/credential_errors.py backend/app/services/sessions.py backend/app/services/session_errors.py backend/app/security/passwords.py backend/app/db backend/app/core/config.py backend/test_support/database.py backend/test_alembic backend/pyproject.toml backend/requirements.lock frontend scripts/*.sql scripts/configure_backend_env.py .gitignore`.
+The subsequent `git -c safe.directory=I:/Merge diff --check` also passed. SQL
+provisioning/permission scripts and existing test-target guards remain unchanged;
+no external database/role state was queried or mutated. Final source status is
+intentionally dirty for owner review on main, HEAD
+05db480b1d128e6a3c2b382227de86b080f6ab43, with no remote/push action.
+
+## M-007B.3B final review and local commit checkpoint - 2026-11-10
+
+Owner-verified live evidence supplied for this review, guarded merge_test /
+0003_auth suites, three repetitions requested:
+
+| Suite | Result | Duration |
+|---|---|---|
+| Throttles | 33 passed | 31.42s |
+| Updated authentication API | 54 passed | 30.94s |
+| Session regressions | 78 passed | 48.33s |
+| Combined | 165 passed | 110.69s |
+
+Fresh committed-state invariants verified; existing Starlette/HTTPX deprecation
+warning remains. This records owner execution, not a Codex PostgreSQL rerun.
+No separate per-case transcript was supplied. These results supersede earlier
+pending-live M-007B.3B statements for these three suites only; other historical
+results and outstanding acceptance gates retain their original scope.
+Reproduction commands from backend (not executed by Codex):
+
+    .\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite throttles --revision 0003_auth --repetitions 3
+    .\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite auth-api --revision 0003_auth --repetitions 3
+    .\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite sessions --revision 0003_auth --repetitions 3
+
+Reviewed all 30 candidate files against baseline
+05db480b1d128e6a3c2b382227de86b080f6ab43, including all dedicated throttle
+scenarios, updated API cases, unchanged session regressions, fixtures and guarded
+runner. Read AGENTS, relevant requirements/architecture/decisions/progress and
+AUTH_THROTTLING, HTTP_AUTH, TEST_DATABASE contracts. No blocking correctness or
+security issue found within this bounded scope. No implementation, dependency,
+migration, role or permission change was needed during final review; only
+checkpoint documentation was refreshed.
+
+Confirmed database-clock aligned fixed windows and one parameterized atomic
+UPSERT per scope. The existing unique key serializes competing connections;
+LEAST(existing_attempts,limit)+1 saturates before addition. The independent owned
+READ COMMITTED transaction commits its decision before ThrottleExceeded becomes
+HTTP 429, including IP charge on account denial. IP denial skips account insertion.
+KDF/service work begins only after admission commit. Persistent storage/commit/
+configuration/integrity or unexpected failures return sanitized 503 and never
+bypass enforcement; ambiguous commit loss cannot authorize work. No in-memory
+admission authority or retry loop.
+
+Confirmed required environment-only shared 32-byte HMAC key, redacted settings,
+no hardcoded runtime key, logging or random runtime fallback. Scope plus NUL
+domain separation distinguishes login IP/account and registration IP; only the
+digest/fixed scope reaches counter SQL. Synthetic unit keys and unique private
+per-case integration keys are fixtures. All workers/restarts must reuse matching
+key/policy. Actual-peer normalization and explicit immediate-proxy checks reject
+untrusted, duplicate, chained or alternative forwarding. The controlled launcher
+disables upstream header rewriting and access logs. Proxy overwrite/ingress/TLS
+configuration remains a deployment trust boundary.
+
+Race assertions require eight distinct backend PIDs and exactly three admissions/
+five denials, then inspect committed saturation. Denial, expiry/reset, multi-app
+sharing and wrong/unknown-credential tests inspect fresh state. Deliberate lock
+failure requires exact 55P03, no hashing/accounts/extra committed charge.
+AUTOCOMMIT cases require actual driver True, fixed configuration failure and
+zero service SQL. Other database errors remain CredentialError, distinct from
+intended throttle/session denial; worker infrastructure errors/deadlines fail.
+The HTTP guard moved to the earliest throttle boundary; unchanged direct session
+AUTOCOMMIT cases retain lifecycle coverage. No tests were weakened for this review.
+
+Executed final checks, Windows PowerShell, Python 3.11.9 / SQLAlchemy 2.1.8 /
+psycopg 3.3.8, existing frontend Node/Vite installation:
+
+- Backend database-free regressions: **546 passed, 32 deselected, one existing
+  warning in 8.52s**, exit 0.
+- Backend dependency check: **No broken requirements found**, exit 0.
+- Separate guarded-suite collection: **33 throttles in 0.02s / 54 API in 0.03s /
+  78 sessions in 0.03s**, all exit 0; fixtures not executed.
+- Root controlled-launcher HTTP/Vite regression: **PASS**, exit 0; health,
+  frontend HTML, Vite health proxy, missing-session 401, actual outage HTTP error
+  and restart recovery. No database access. This pass does not resolve prior
+  proxy timing flakiness.
+- Diff whitespace check: exit 0; existing LF/CRLF conversion warnings only.
+- Inline Python source audit: exact 30-file allowlist, 19 Python ASTs, HTTP
+  adapter without SQL/private transaction access, path/secret-pattern/whitespace
+  scan and seven ignores; no actionable findings. One candidate credential-URL
+  match was the unchanged committed synthetic rejected-origin fixture. No
+  private environment file opened. This supplements manual review, not a proof
+  against every possible secret. Repeat audit and inspect staged contents before
+  commit.
+- No configured Python linter; no lint pass claimed. Frontend unchanged;
+  standalone frontend typecheck/unit/build not rerun. No installs/updates.
+
+Exact commands from backend:
+
+    .\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short
+    .\.venv\Scripts\python.exe -m pip check
+    .\.venv\Scripts\python.exe -m pytest throttle_tests --collect-only -q
+    .\.venv\Scripts\python.exe -m pytest auth_api_tests --collect-only -q
+    .\.venv\Scripts\python.exe -m pytest session_tests --collect-only -q
+    .\.venv\Scripts\python.exe -c "import platform, sqlalchemy, psycopg; print('Python', platform.python_version(), '/ SQLAlchemy', sqlalchemy.__version__, '/ psycopg', psycopg.__version__)"
+
+Exact root commands (source audit supplied inline to Python):
+
+    .\backend\.venv\Scripts\python.exe scripts/check_local_http.py
+    .\backend\.venv\Scripts\python.exe -
+    git -c safe.directory=I:/Merge diff --check
+    git -c safe.directory=I:/Merge diff --exit-code 05db480b1d128e6a3c2b382227de86b080f6ab43 -- backend/alembic backend/app/models backend/app/services/teams.py backend/app/services/credentials.py backend/app/services/credential_errors.py backend/app/services/sessions.py backend/app/services/session_errors.py backend/app/security/passwords.py backend/app/db backend/app/core/config.py backend/test_support/database.py backend/test_alembic backend/pyproject.toml backend/requirements.lock frontend scripts/*.sql scripts/configure_backend_env.py .gitignore
+
+Protected-baseline check passed, exit 0. Migrations 0001/0002/0003, models/domain
+constraints, TeamService, credential/session/KDF implementations, DB settings/
+identity guards, provisioning/privilege scripts, dependency pins and frontend are
+unchanged. Codex opened no database connection, queried no external role/ACL state,
+performed no migration, reset/drop/cleanup, role/permission or credential change.
+No merge_dev access. Sandbox initialization failed; approved elevated local
+execution was used for review/check commands. No global settings changed.
+
+Updated current summaries in README, AUTH_THROTTLING, HTTP_AUTH, TEST_DATABASE,
+AUTH_SCHEMA, CREDENTIAL_SERVICES, SESSION_SERVICES, ARCHITECTURE, DECISIONS,
+REQUIREMENTS and this log; preparation entries remain historical.
+Owner authorized one local commit after successful review:
+
+    feat: add durable authentication throttling (M-007B.3B)
+
+The full resulting hash and final Git status are read from Git and reported after
+commit; the commit cannot embed its own hash. No remote creation or push.
+
+Remaining: production HTTPS/trusted proxy/browser E2E/cache/logging verification,
+prior proxy timing flakiness, coordinated key/policy provisioning and retained
+bucket storage monitoring/owner-approved retention. Fixed-window edge bursts,
+pre-wait window assignment, account denial, NAT sharing, IPv6/distributed IP
+rotation and HMAC pseudonymization caveats remain. Existing session/clock/secret
+retention/ambiguous-COMMIT limits persist. No production-readiness claim, M-008,
+team mutation endpoints, invite/request authorization, audit/outbox, 50-way
+authenticated team race, CI/load/deployment acceptance or gate closure.
+
+Owner explanation/exercise: PostgreSQL serializes charges at the unique bucket
+row; returning a decision lets the transaction commit before HTTP denial.
+Explain why raising inside that transaction would undo the charge. Change the
+login account limit consistently from 5 to 3 across instances and predict why
+the fourth valid request gets 429 even after changing IP.
 
 ## Daily work log template
 ```

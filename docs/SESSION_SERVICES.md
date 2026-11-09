@@ -1,5 +1,14 @@
 # Internal session lifecycle — M-007B.2B
 
+M-007B.3B performs a separate durable admission transaction before HTTP login.
+This session service, its actual driver/isolation guard, validated snapshots,
+absolute lifetime and lifecycle transactions are unchanged. No direct internal
+service caller is implicitly HTTP-rate-limited. Owner verified 78 post-change
+session cases in 48.33s, alongside 33 throttle / 54 updated API passes (165
+combined in 110.69s); three repetitions requested and fresh committed-state
+invariants verified. [AUTH_THROTTLING.md](AUTH_THROTTLING.md) records the boundary.
+Codex did not rerun PostgreSQL; production HTTPS/browser verification is pending.
+
 M-007B.3A-R1 adds the owner-approved read-only public
 `validate_with_csrf(token) -> ValidatedSession(principal, csrf_token: SecretBytes)`.
 The frozen/slotted result excludes CSRF from repr and carries no bearer, hash or

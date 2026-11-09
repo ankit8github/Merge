@@ -1,5 +1,16 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+M-007B.3B adds fixed `--suite throttles`, explicit --revision 0003_auth. Codex
+collected 33 dedicated cases; updated real-service HTTP/session suites collect
+54/78. Owner verified 33 throttles in 31.42s, 54 updated API cases in 30.94s
+and 78 session cases in 48.33s: 165 passed in 110.69s, three repetitions
+requested, fresh committed-state invariants verified. Existing Starlette/HTTPX
+warning remains. This is owner execution, not a Codex PostgreSQL rerun.
+Fixtures use unique private test keys to scope retained rows, deliberately
+sharing keys across service/app instances for races; they never initialize ordinary Settings or read backend/.env.
+Actual per-connection identity guards and fresh invariants remain in force.
+Exact hidden-password commands: [AUTH_THROTTLING.md](AUTH_THROTTLING.md).
+
 M-007B.3A-R1 adds fixed guarded `--suite auth-api`, requiring explicit
 `--revision 0003_auth`. Real credential/session services are injected into the
 HTTP app with the guarded Engine; ordinary runtime Settings are never loaded.

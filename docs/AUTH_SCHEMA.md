@@ -1,5 +1,11 @@
 # Authentication storage — M-007B.1
 
+M-007B.3B reuses auth_throttle_buckets for durable fixed-window auth admission.
+No schema/migration/role/permission change; row charges use atomic UPSERTs and
+private HMAC keys. Owner verified 33 throttle / 54 updated API / 78 session
+passes (165 in 110.69s); exact timings, policy and reproduction commands: [AUTH_THROTTLING.md](AUTH_THROTTLING.md). Earlier storage/checkpoint
+descriptions below retain their historical scope.
+
 M-007B.3A-R1 HTTP authentication uses unchanged 0003_auth through public services.
 No migration, role, permission or constraint change. HTTP/CSRF/cookie controls
 and owner-verified guarded results (78 sessions in 72.48s; 54 API cases in

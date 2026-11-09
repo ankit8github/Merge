@@ -1,12 +1,24 @@
 # HTTP authentication — M-007B.3A-R1
 
+M-007B.3B now adds durable login account/IP and registration IP throttling,
+owner-verified on guarded merge_test / 0003_auth, 2026-11-10: 33 throttle cases
+in 31.42s, 54 updated API cases in 30.94s and 78 session cases in 48.33s;
+165 passes in 110.69s, three repetitions requested, fresh committed-state
+invariants verified. The existing Starlette/HTTPX warning remains. This records
+owner execution, not a Codex PostgreSQL rerun. Production HTTPS/browser
+verification remains outstanding.
+Startup additionally requires a shared throttle secret and the controlled
+`python -m app.serve` launcher. Actual-peer/explicit single-hop proxy policy and
+429/Retry-After contract: [AUTH_THROTTLING.md](AUTH_THROTTLING.md). Earlier
+no-throttling checkpoint descriptions below retain their historical scope.
+
 Owner-verified checkpoint, 2026-11-10: guarded merge_test / 0003_auth (head),
 **78 session cases passed in 72.48s** and **54 HTTP API cases passed in 40.90s**,
 132 live executions total. Fresh committed-state invariants verified; one existing
 Starlette/HTTPX warning. This is owner execution, not a Codex database rerun.
-No throttling algorithm exists yet; M-007B.3B must add shared enforcement before
-production use. See PROGRESS.md for checkpoint checks and the unresolved proxy
-timing limitation. Unchanged 0003_auth, no TeamService mutations, no migration/dependency
+At that M-007B.3A checkpoint, shared throttling was still pending; the
+M-007B.3B results above now cover it. See PROGRESS.md for final checkpoint checks
+and the unresolved proxy timing limitation. Unchanged 0003_auth, no TeamService mutations, no migration/dependency
 additions, no route-owned transactions or commits.
 
 ## Approved session interface extension and trust boundary
@@ -108,7 +120,8 @@ Local startup from backend (public configuration only):
 ```powershell
 $env:MERGE_AUTH_MODE = 'development'
 $env:MERGE_AUTH_ORIGIN = 'http://127.0.0.1:5173'
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log
+# Privately provision/reuse MERGE_AUTH_THROTTLE_SECRET first; see AUTH_THROTTLING.md.
+.\.venv\Scripts\python.exe -m app.serve --host 127.0.0.1 --port 8000
 ```
 
 Vite proxies /health and /auth to 127.0.0.1:8000. Open the frontend at exactly
@@ -175,7 +188,8 @@ fast, suppresses assertion/local dumps and rechecks actual merge_test/merge_app/
 loopback/port/revision on service connections and fresh observers. Existing live
 credential/auth-schema/team/domain regressions remain separate and pending.
 
-Limitations: no shared throttling yet; no claim of production readiness, browser
+Limitations: durable throttling is locally owner-verified; no claim of production
+readiness, browser
 E2E, deployed TLS/proxy validation, CI acceptance, timing equality, password-change
 revocation, 50-way authenticated team race or gate closure. Logout cannot cancel
 work already authenticated elsewhere. Stolen bearer tokens remain bearer tokens.

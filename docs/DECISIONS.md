@@ -1,5 +1,38 @@
 # Merge — Architecture Decision Records (ADRs)
 
+### M-007B.3B — owner-scoped durable auth throttling, 2026-11-10
+
+Implementation contract proposed before coding: reuse unchanged
+auth_throttle_buckets with actual DB-clock aligned fixed-window keys; atomic
+UPSERTs serialize independent workers and saturate at limit + 1. Default 300s
+window: login account 5, login IP 30, register IP 5. Charge IP first, skip account
+creation after IP denial, and commit consumed counters even on a denial before
+returning 429. KDF/session work starts only after this independent transaction
+commits. Reuse the credential transaction owner/actual driver guard; storage or
+configuration failure must give fixed 503 with no authentication work.
+
+Use domain-separated HMAC-SHA256 keys with one explicitly configured 32-byte
+secret shared by workers/restarts; no raw usernames/IPs in storage or logs. The
+account identifier is the existing canonical ASCII username; do not change HTTP
+username validation. Require shared window/limit/secret configuration, bounded
+positive settings, no disabled mode or random runtime fallback.
+
+Trust actual socket identity, no proxies by default. Support only an explicitly
+configured immediate proxy with one overwritten X-Forwarded-For literal IP and
+one X-Forwarded-Proto http/https; reject ambiguous/chained/alternative/untrusted
+forwarding. A controlled Uvicorn entry point disables its header rewriting so
+application checks see the actual peer. Keep Origin/CSRF checks unchanged.
+
+Trade-offs: fixed-window edge bursts, account denial/NAT sharing, IPv6 address
+rotation and retained expired rows need documentation. No automatic cleanup or
+background process. No change to credentials/session boundaries, schema,
+TeamService, roles/permissions, dependencies, team endpoints or M-008 scope.
+Owner verified guarded throttles: 33 passed in 31.42s; updated API: 54 passed
+in 30.94s; sessions: 78 passed in 48.33s. Combined 165 passed in 110.69s,
+three repetitions requested, fresh committed-state invariants verified.
+Existing Starlette/HTTPX warning remains; Codex did not rerun PostgreSQL.
+This verifies the bounded local schedules, not deployed HTTPS/browser security.
+
 **Status:** Initial decisions for review. **Date:** 2026-11-06.
 
 This file explains **why** we are building the system a particular way. `docs/REQUIREMENTS.md` explains **what** must be true. `docs/ARCHITECTURE.md` explains **how** we intend to achieve it.
@@ -18,7 +51,7 @@ This file explains **why** we are building the system a particular way. `docs/RE
 | ADR-008 | SSE with post-commit outbox, client state refetch | PROPOSED | Simpler push than WebSocket; multi-replica fanout unresolved |
 | ADR-009 | Deterministic skill/timezone matching | ACCEPTED | Explainable and easy to test; no LLM needed |
 | ADR-010 | GitHub Actions, pytest, Playwright, k6 | ACCEPTED | Strong reproducible evidence; setup/testing time cost |
-| ADR-011 | Cookie sessions with CSRF protection | ACCEPTED FOR M-007B.3A-R1 | Exact-origin same-origin HTTP adapter; deployed proxy/TLS and throttling pending |
+| ADR-011 | Cookie sessions with CSRF protection | ACCEPTED FOR M-007B.3A-R1 | Exact-origin same-origin HTTP adapter; durable throttling owner-verified M-007B.3B; deployed proxy/TLS/browser pending |
 | ADR-012 | Soft deletion for teams | PROPOSED | Preserves audit; must still satisfy organizer's 'deletes the team' semantics |
 | ADR-013 | No speculative infrastructure | ACCEPTED | Add Redis/queue/services only if requirements or measurements justify |
 | ADR-014 | Realtime deployment topology | OPEN | Single instance initially; multi-instance needs shared fanout |

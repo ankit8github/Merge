@@ -16,6 +16,7 @@ from app.services.credentials import CredentialIdentity, CredentialService
 from app.services.credential_errors import CredentialCode, CredentialError
 from app.services.sessions import IssuedSession, SessionPrincipal, SessionService, ValidatedSession
 from app.services.session_errors import SessionCode, SessionError
+from app.services.throttling import ThrottleService
 
 ORIGIN = 'https://merge.example'
 HEADERS = {'Origin': ORIGIN, 'X-Merge-Request': '1'}
@@ -31,10 +32,10 @@ def api():
     credentials.register.return_value = CredentialIdentity(principal.user_id, principal.username)
     sessions.login.return_value = issued
     sessions.validate_with_csrf.return_value = ValidatedSession(principal, issued.csrf_token)
-    services = AuthServices(credentials, sessions)
-    app = create_app(AuthSettings(origin=ORIGIN))
+    services = AuthServices(credentials, sessions, MagicMock(spec=ThrottleService))
+    app = create_app(AuthSettings(origin=ORIGIN, throttle_secret='a'*64))
     app.dependency_overrides[get_services] = lambda: services
-    with TestClient(app, base_url=ORIGIN) as client:
+    with TestClient(app, base_url=ORIGIN, client=('192.0.2.1', 50000)) as client:
         yield SimpleNamespace(app=app, client=client, services=services, issued=issued)
 
 
@@ -232,20 +233,21 @@ def test_unexpected_error_never_logs_or_exposes_details(api, caplog):
                                    {'origin': ORIGIN+'/path'}, {'origin': 'https://user:pass@merge.example'},
                                    {'origin': ORIGIN+':70000'}, {'mode': 'development', 'origin': ORIGIN}])
 def test_insecure_configuration_rejected(change):
-    with pytest.raises(ValidationError): AuthSettings(**change)
+    with pytest.raises(ValidationError): AuthSettings(throttle_secret='a'*64, **change)
 
 
 def test_startup_rejects_missing_production_origin(monkeypatch):
     monkeypatch.delenv('MERGE_AUTH_ORIGIN', raising=False)
     monkeypatch.setenv('MERGE_AUTH_MODE', 'production')
+    monkeypatch.setenv('MERGE_AUTH_THROTTLE_SECRET', 'a'*64)
     with pytest.raises(RuntimeError, match='Invalid authentication configuration'):
         with TestClient(create_app()): pass
 
 
 def test_explicit_loopback_development_cookie_policy(api):
-    app = create_app(AuthSettings(mode='development', origin='http://127.0.0.1:5173'))
+    app = create_app(AuthSettings(mode='development', origin='http://127.0.0.1:5173', throttle_secret='a'*64))
     app.dependency_overrides[get_services] = lambda: api.services
-    with TestClient(app, base_url='http://127.0.0.1:5173') as client:
+    with TestClient(app, base_url='http://127.0.0.1:5173', client=('127.0.0.1', 50000)) as client:
         r = client.post('/auth/login', headers={'Origin': 'http://127.0.0.1:5173', 'X-Merge-Request': '1'}, json=BODY)
         assert r.status_code == 200
         cookie = r.headers['set-cookie']

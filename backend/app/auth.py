@@ -12,11 +12,13 @@ from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 
 from app.security.auth_policy import AuthSettings
+from app.security.client_identity import ClientIdentityError, get_client_identity
 from app.security.passwords import valid_password
 from app.services.credentials import CredentialService, valid_username
 from app.services.credential_errors import CredentialCode, CredentialError
 from app.services.sessions import SessionService, ValidatedSession
 from app.services.session_errors import SessionCode, SessionError
+from app.services.throttling import ThrottleExceeded, ThrottlePolicy, ThrottleService
 
 
 class AuthFailure(Exception):
@@ -69,7 +71,9 @@ class AuthBoundary:
             await send(message)
 
         try:
-            if policy.secure and scope.get('scheme') != 'https':
+            identity = get_client_identity(scope, policy.trusted_proxies)
+            scope.setdefault('state', {})['auth_client_ip'] = identity.ip
+            if policy.secure and identity.scheme != 'https':
                 raise AuthFailure(403, 'https_required', 'HTTPS is required.')
             origins = request.headers.getlist('origin')
             sites = request.headers.getlist('sec-fetch-site')
@@ -88,6 +92,8 @@ class AuthBoundary:
             await self.app(scope, receive, private_send)
         except AuthFailure as error:
             await error_response(error.status, error.code, error.message, error.retryable)(scope, receive, private_send)
+        except ClientIdentityError:
+            await error_response(403, 'client_identity_rejected', 'Client identity is not trusted.')(scope, receive, private_send)
         except Exception:
             if started:
                 raise
@@ -155,6 +161,7 @@ class ErrorResponse(BaseModel):
 class AuthServices:
     credentials: CredentialService
     sessions: SessionService
+    throttle: ThrottleService
 
 
 def get_services(request: Request) -> AuthServices:
@@ -166,7 +173,12 @@ def get_services(request: Request) -> AuthServices:
             from app.db.session import build_engine
             engine = build_engine(Settings())
             request.app.state.auth_engine = engine
-            request.app.state.auth_services = AuthServices(CredentialService(engine), SessionService(engine))
+            policy = request.app.state.auth_policy
+            throttle = ThrottleService(engine,
+                secret=SecretBytes(bytes.fromhex(policy.throttle_secret.get_secret_value())),
+                policy=ThrottlePolicy(policy.throttle_window_seconds, policy.login_account_limit,
+                                      policy.login_ip_limit, policy.register_ip_limit))
+            request.app.state.auth_services = AuthServices(CredentialService(engine), SessionService(engine), throttle)
         return request.app.state.auth_services
 
 
@@ -201,12 +213,13 @@ def public_session(validated) -> SessionResponse:
 
 
 router = APIRouter(prefix='/auth', tags=['authentication'], responses={
-    status: {'model': ErrorResponse} for status in (401, 403, 409, 415, 422, 503)
+    status: {'model': ErrorResponse} for status in (401, 403, 409, 415, 422, 429, 503)
 })
 
 
 @router.post('/register', status_code=201, response_model=AccountResponse)
-def register(body: RegisterBody, services: AuthServices = Depends(get_services)):
+def register(body: RegisterBody, request: Request, services: AuthServices = Depends(get_services)):
+    services.throttle.check(operation='register', client_ip=request.state.auth_client_ip)
     identity = services.credentials.register(username=body.username, password=body.password.get_secret_value(),
                                              display_name=body.display_name)
     return AccountResponse(user_id=identity.user_id, username=identity.username)
@@ -214,6 +227,7 @@ def register(body: RegisterBody, services: AuthServices = Depends(get_services))
 
 @router.post('/login', response_model=SessionResponse)
 def login(body: LoginBody, request: Request, response: Response, services: AuthServices = Depends(get_services)):
+    services.throttle.check(operation='login', client_ip=request.state.auth_client_ip, username=body.username)
     issued = services.sessions.login(username=body.username, password=body.password.get_secret_value())
     policy = request.app.state.auth_policy
     response.set_cookie(policy.cookie_name, encode_token(issued.session_token.get_secret_value()),
@@ -245,6 +259,12 @@ def logout(body: StrictBody, request: Request, auth: AuthenticatedSession = Depe
 
 async def auth_failure_handler(request, error):
     return error_response(error.status, error.code, error.message, error.retryable)
+
+
+async def throttle_handler(request, error: ThrottleExceeded):
+    response = error_response(429, 'rate_limited', 'Too many authentication attempts.', True)
+    response.headers['Retry-After'] = str(max(1, min(3600, error.retry_after)))
+    return response
 
 
 async def validation_handler(request, error: RequestValidationError):

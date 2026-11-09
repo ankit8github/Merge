@@ -7,10 +7,11 @@ from pydantic import ValidationError
 from starlette.exceptions import HTTPException
 
 from app.auth import (AuthBoundary, AuthFailure, auth_failure_handler, credential_handler,
-                      http_handler, router, session_handler, validation_handler)
+                      http_handler, router, session_handler, validation_handler, throttle_handler)
 from app.security.auth_policy import AuthSettings
 from app.services.credential_errors import CredentialError
 from app.services.session_errors import SessionError
+from app.services.throttling import ThrottleExceeded
 
 
 def create_app(policy: AuthSettings | None = None) -> FastAPI:
@@ -21,7 +22,7 @@ def create_app(policy: AuthSettings | None = None) -> FastAPI:
         except ValidationError:
             selected = None
         if selected is None:
-            raise RuntimeError('Invalid authentication configuration; set an exact HTTPS production origin or explicit loopback development mode.')
+            raise RuntimeError('Invalid authentication configuration; configure origin, mode and a shared throttle secret.')
         app.state.auth_policy = selected
         app.state.auth_services = None
         app.state.auth_engine = None
@@ -37,6 +38,7 @@ def create_app(policy: AuthSettings | None = None) -> FastAPI:
     app.add_exception_handler(AuthFailure, auth_failure_handler)
     app.add_exception_handler(CredentialError, credential_handler)
     app.add_exception_handler(SessionError, session_handler)
+    app.add_exception_handler(ThrottleExceeded, throttle_handler)
     app.add_exception_handler(RequestValidationError, validation_handler)
     app.add_exception_handler(HTTPException, http_handler)
     app.include_router(router)

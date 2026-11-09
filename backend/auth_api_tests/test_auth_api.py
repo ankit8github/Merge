@@ -8,6 +8,8 @@ from sqlalchemy import event
 from app.auth import encode_token
 from app.services.credential_errors import CredentialCode, CredentialError
 from app.services.sessions import SessionService
+from app.services.throttling import ThrottlePolicy, ThrottleService
+from pydantic import SecretBytes
 from session_tests.test_sessions import seeded_session
 from test_support.races import sql
 
@@ -120,25 +122,27 @@ def test_real_autocommit_rejected_at_http_boundary(client, environment, account,
     from app.services.credentials import CredentialService
     env = environment
     unsafe = env.engine.execution_options(isolation_level='AUTOCOMMIT')
-    services = AuthServices(CredentialService(unsafe), SessionService(unsafe))
+    services = AuthServices(CredentialService(unsafe), SessionService(unsafe),
+                           ThrottleService(unsafe, secret=SecretBytes(secrets.token_bytes(32)), policy=ThrottlePolicy()))
     client.app.dependency_overrides[get_services] = lambda: services
     statements, actual, failures = [], [], []
-    original_login = services.sessions.login
+    original_check = services.throttle.check
 
     def capture_failure(**values):
         try:
-            return original_login(**values)
+            return original_check(**values)
         except CredentialError as error:
             failures.append(error.code)
             raise
 
-    monkeypatch.setattr(services.sessions, 'login', capture_failure)
+    monkeypatch.setattr(services.throttle, 'check', capture_failure)
 
     def state(c):
         actual.append(c.connection.dbapi_connection.autocommit)
 
     def observe(c, cursor, statement, parameters, context, many):
-        if 'public.account_credentials' in statement or 'public.auth_sessions' in statement or statement.startswith('SET LOCAL'):
+        if ('public.account_credentials' in statement or 'public.auth_sessions' in statement
+                or 'public.auth_throttle_buckets' in statement or statement.startswith('SET LOCAL')):
             statements.append('unexpected-service-sql')
 
     event.listen(unsafe, 'before_cursor_execute', observe)

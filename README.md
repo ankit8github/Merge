@@ -181,7 +181,11 @@ Terminal 1:
 Set-Location I:\Merge\backend
 $env:MERGE_AUTH_MODE = 'development'
 $env:MERGE_AUTH_ORIGIN = 'http://127.0.0.1:5173'
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log
+if (-not $env:MERGE_AUTH_THROTTLE_SECRET) {
+    $env:MERGE_AUTH_THROTTLE_SECRET = & .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
+    if ($LASTEXITCODE -ne 0) { throw 'Throttle secret generation failed.' }
+}
+.\.venv\Scripts\python.exe -m app.serve --host 127.0.0.1 --port 8000
 ```
 
 Terminal 2:
@@ -197,7 +201,14 @@ Auth configuration is explicit and environment-only: default production mode
 requires an exact HTTPS `MERGE_AUTH_ORIGIN`; insecure/missing configuration rejects
 startup. The local commands opt into a separate development cookie on loopback.
 Four auth endpoints are implemented for review, with no login UI or team APIs.
-Shared rate limiting is still pending M-007B.3B; these routes are not production-ready.
+M-007B.3B PostgreSQL auth throttling is owner-verified locally: 33 throttle,
+54 updated API and 78 session passes (165 in 110.69s). Production HTTPS/browser
+verification remains outstanding. A shared private 32-byte hex throttle secret
+is required at startup.
+Reuse the same key/settings across restarts/workers; regenerating it resets the
+budget. Use app.serve to preserve actual peer identity; default Uvicorn proxy
+middleware is unsupported. Limits, trusted-proxy policy and exact owner tests:
+[AUTH_THROTTLING.md](docs/AUTH_THROTTLING.md). Routes are not production-ready.
 Contracts, cookie/CSRF/Origin policy and guarded merge_test commands:
 [HTTP_AUTH.md](docs/HTTP_AUTH.md). Never run ordinary merge_dev tests for auth verification.
 
