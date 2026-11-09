@@ -14,7 +14,7 @@
 - [x] Local Git repository at `I:/Merge` on `main`; initial verified commit `66d28b51728f466b3d0124de03f457dd190c22f1` created 2026-11-07 (M-004).
 - [ ] Remote connected — none configured; no push performed.
 - [x] Application code executed — FastAPI and Vite verified over local HTTP (M-002).
-- [x] Automated tests passed — M-007B.2B checkpoint: owner verified 63 guarded live session cases in 51.63s, three repetitions requested, fresh committed-state invariants verified and fixtures retained. Codex verified 222 database-free tests in 7.49s. Earlier M-007B.2A owner evidence: 51 live credential cases in 28.76s. Domain/frontend evidence remains recorded below. This is not a claim of 20 API tests or a verified 50-way HTTP race.
+- [x] Automated tests passed — M-007B.3A checkpoint: owner verified 78 expanded sessions in 72.48s and 54 HTTP API cases in 40.90s (132 live executions), guarded merge_test / 0003_auth (head), fresh committed-state invariants verified. Codex reran 349 database-free tests in 17.49s plus six frontend tests/typecheck/build. Standalone API/Vite outage/recovery passed on rerun; intermittent concurrent and standalone auth-proxy timeouts remain open. This is not a claim of 20 API tests in CI, browser HTTPS security or a verified 50-way HTTP race.
 - [ ] Any public deployment exists — **not verified**.
 - [ ] PS1 submission completed — **not verified**.
 
@@ -24,7 +24,7 @@
 |---|---|---|---|
 | G0 | Repository and local integration | Commit hash, README, backend health, React build, PostgreSQL connectivity, migration, smoke test | DONE — local checks recorded in M-003; initial commit `66d28b51728f466b3d0124de03f457dd190c22f1`; closed 2026-11-07 |
 | G1 | Transactional team core | Real PostgreSQL 50-way last-seat race, cross-team race, idempotency; repeatable tests | PARTIAL — schema/guards verified in M-006A; services and multi-connection/API races pending |
-| G2 | Business flows and security | Team lifecycle, invites, requests, leader succession, audit, authorization negative tests | NOT STARTED |
+| G2 | Business flows and security | Team lifecycle, invites, requests, leader succession, audit, authorization negative tests | PARTIAL — owner verified guarded HTTP authentication; shared throttling, browser/deployed HTTPS and domain authorization/flows pending |
 | G3 | Frontend and realtime | Complete React flows, SSE between two clients, mobile/keyboard browser tests, scoring | NOT STARTED |
 | G4 | Acceptance performance and CI | >=20 API tests in passing GitHub Actions, 10k/2k seed, k6 100 VUs, measured board p95 <200ms | NOT STARTED |
 | G5 | Deployment and competition submission | Public URL, repo, one-page doc, load report, <=5-minute video, submitted links | NOT STARTED |
@@ -1477,6 +1477,235 @@ fixture cleanup, database/role/permission changes, M-008 or migration execution.
 Owner exercise: explain why FOR SHARE blocks a non-key credential UPDATE while
 KEY SHARE does not, then change a snapshot timestamp in the database-free
 stale-credential test and verify authentication_changed with no session persisted.
+
+## M-007B.3A-R1 interface gate and HTTP authentication — 2026-11-10
+
+Baseline main 09a064678361315df9870c5be3ed3a8569bedcf9, clean. Read AGENTS and
+requirements/architecture/decisions/progress plus AUTH_SCHEMA, credential/session/
+team service contracts and TEST_DATABASE. Previous task stopped without changes
+because validate() could not return CSRF. Owner explicitly approved the narrow
+read-only extension, then continuation of the four HTTP authentication routes.
+
+Interface gate: inspected installed Pydantic SecretBytes implementation and
+added frozen/slotted ValidatedSession(principal, csrf_token: SecretBytes), with
+CSRF excluded from repr, and validate_with_csrf(token). One existing _read_active
+snapshot supplies both fields, using unchanged active-account/expiry/revocation
+validation, READ ONLY transaction and actual driver/isolation guard. No bearer,
+credential hash or raw row escapes, no rotation/renewal/write. Existing methods
+remain AST-identical against HEAD. Before HTTP implementation, from backend:
+- `.\.venv\Scripts\python.exe -m pytest -q tests/test_sessions.py tests/test_credentials.py tests/test_passwords.py --tb=short`:
+  **118 passed in 10.68s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest session_tests --collect-only -q`:
+  **75 collected in 0.08s**, exit 0; no fixtures executed.
+- Inline Python ast.parse of the three interface/service test files passed.
+Gate passed available unit/static checks; no live interface verification claimed.
+Final session collection increased to 78 after adding the new method to actual
+AUTOCOMMIT regression coverage. The earlier owner 63-pass result is historical.
+
+Implemented POST /auth/register (201, identity only, no session), POST /auth/login
+(200, identity/expiry/CSRF and opaque HttpOnly cookie), GET /auth/session (200,
+existing validated principal/CSRF without renewal), POST /auth/logout (JSON {},
+active cookie plus session-bound CSRF, 204 and cookie deletion). HTTP adapters
+call only public services; no route SQL/commit, lifecycle transaction change or
+hash/storage duplication. The real authentication dependency derives identity
+from validated storage, never submitted UUIDs or leader flags. All mutations
+require strict JSON models and exact Origin; register/login also X-Merge-Request:
+1, logout X-CSRF-Token. Fetch Metadata rejects cross-site/same-site/unknown values
+when present. Canonical base64url token encoding, duplicate security-header/cookie
+rejection, no permissive CORS and no-store auth responses/errors.
+
+Production defaults require explicit HTTPS origin at startup and HTTPS ASGI
+requests, __Host-merge_session with Secure/HttpOnly/SameSite=Lax/Path=/, no Domain.
+Explicit loopback development mode uses merge_session_dev, Secure=False. Startup
+does not initialize a database; the runtime dependency creates/disposes its Engine
+lazily. Missing cookie rejects before that dependency. AuthSettings reads only
+MERGE_AUTH_* environment, never backend/.env. Ordinary database Settings retain
+their existing local merge_dev guard; no development connection was opened here.
+Vite forwards /auth without origin rewriting, alongside /health; README and the
+local HTTP runner explicitly select loopback development mode. No frontend UI
+redesign. Fixed {error:{code,message,retryable}} responses include sanitized 401/
+403/409/415/422/503 mapping and no validation input or driver text. Unknown and
+ambiguous COMMIT failures do not advertise automatic retry.
+
+Final executed checks (Windows PowerShell; backend venv Python 3.11.9,
+SQLAlchemy 2.1.8 / psycopg 3.3.8; Node/npm from existing frontend installation):
+- Backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **349 passed, 32 deselected, one existing Starlette/HTTPX warning in 14.98s**,
+  exit 0. Earlier adapter-only run: 107 passed in 5.32s; intermediate full run:
+  346 passed in 11.16s. Final count includes additional no-runtime-DB/error/OpenAPI
+  checks; no test was deleted/weakened.
+- Backend `.\.venv\Scripts\python.exe -m pytest -q tests/test_auth_http.py --tb=short`:
+  **109 passed, one existing warning in 5.61s**, exit 0, after adding exact
+  retryable-flag assertions. The guarded AUTOCOMMIT API case was also strengthened
+  to require actual driver state True plus the captured fixed
+  transaction_configuration error, so arbitrary infrastructure 503s cannot pass
+  as transaction-safety evidence; its live execution remains pending.
+- Backend `.\.venv\Scripts\python.exe -m pip check`: no broken requirements,
+  exit 0; no package installs or dependency changes.
+- Backend `.\.venv\Scripts\python.exe -m pytest session_tests --collect-only -q`
+  and `.\.venv\Scripts\python.exe -m pytest auth_api_tests --collect-only -q`:
+  **78 / 54 collected**, respectively, exit 0. Collection opens no database.
+- Frontend `npm.cmd run typecheck`, `npm.cmd test`, `npm.cmd run build`: exit 0;
+  **6 tests passed**, production build completed (Vite 6.4.5).
+- Root `.\backend\.venv\Scripts\python.exe scripts/check_local_http.py`:
+  passed API health, frontend HTML, /health proxy, /auth missing-cookie 401 proxy,
+  real API outage error and restart recovery. No database used. The new /auth
+  proxy check first exceeded its existing two-second request timeout while run
+  concurrently with backend regressions. Standalone rerun passed all assertions;
+  timeout was a failed run, not a success, and the assertion/deadline was retained.
+
+Private test credential presence False and interactive input False were checked
+without printing values. No backend/.env read/copied or PostgreSQL connection,
+test, migration, reset, DROP, fixture cleanup or merge_dev access by Codex. Added
+dedicated fixed --suite auth-api with explicit --revision 0003_auth and tests for
+the parser gate/selection. Its real-service fixtures reuse actual per-connection
+merge_test/merge_app/loopback/port/revision guards and fresh scoped committed
+invariants. Unique users/credentials/sessions are retained. Exact successes/error
+codes are required; unexpected SQLSTATEs, integrity faults/timeouts fail. Safe
+owner commands (read-only verify, extended sessions, auth-api) are in HTTP_AUTH.md.
+No new live pass is claimed; prior owner 63-pass session evidence is not a rerun.
+
+Static review: `git -c safe.directory=I:/Merge diff --check` passed (LF/CRLF
+conversion warnings). Inline Python parsed 14 changed/new Python files, compared
+all original SessionService methods against baseline AST, rejected private
+service/SQL/commit access in the HTTP adapter and scanned candidate paths/content
+for private/generated files, real Argon2 encodings, database credential URLs,
+private keys and provider tokens. No actionable findings; only the two unchanged
+synthetic redaction URL fixtures are excepted. Seven environment/cache/venv/
+node_modules/dist ignore checks passed. These supplement manual review, not proof
+against every possible secret. No Python linter is configured; no lint pass claimed.
+
+Protected baseline diff command (root) passed, exit 0:
+`git -c safe.directory=I:/Merge diff --exit-code 09a064678361315df9870c5be3ed3a8569bedcf9 -- backend/alembic backend/app/models backend/app/services/teams.py backend/app/services/credentials.py backend/app/services/credential_errors.py backend/app/services/errors.py backend/app/security/passwords.py backend/app/db backend/app/core/config.py backend/test_support/database.py backend/test_alembic backend/pyproject.toml backend/requirements.lock .gitignore`.
+Migrations 0001/0002/0003, models/constraints, TeamService, credentials/KDF, DB
+configuration and test identity/migration guards are unchanged. Source-of-truth
+contracts/ADR-011/requirements/progress and README now describe implemented versus
+verified scope. No staging, commits, remotes or pushes; owner review requested.
+
+Limitations: shared throttling deferred to M-007B.3B; routes are not production-
+ready. Live API/extended session/other post-change guarded regressions, browser
+E2E, deployed HTTPS/trusted-proxy/logging/DB-role setup and cache policy remain
+unverified. Existing per-process KDF budget is not abuse prevention. Registration
+availability disclosure, stolen bearers, XSS, database clock trust, Python secret
+retention, point-in-time validation and ambiguous COMMIT loss remain documented.
+No password reset/change policy, team mutation/authZ, invitation/request API,
+idempotency/audit/outbox, M-008, 50-way authenticated HTTP race, CI/load/deployment
+acceptance or G1 closure.
+
+Owner exercise: explain the single validated read snapshot, then omit the login
+custom header and try another session's CSRF at logout; both must reject before
+the requested mutation. Contracts and exact commands: HTTP_AUTH.md.
+
+## M-007B.3A final review and commit checkpoint — 2026-11-10
+
+Owner-verified live results: merge_test at **0003_auth (head)**; expanded session
+suite **78 passed in 72.48 seconds**, HTTP API suite **54 passed in 40.90 seconds**,
+**132 passing live executions** total. Fresh committed-state invariants verified;
+one existing Starlette/HTTPX deprecation warning. This records owner execution,
+not a Codex PostgreSQL rerun. No separate per-case transcript or additional
+post-change credential/auth-schema/domain/team live suite result was supplied.
+Earlier pending-live preparation entries remain historical; these results
+supersede them for the expanded sessions and HTTP API suite only.
+
+Review scope: all 26 pending source/test/config/doc files against main baseline
+09a064678361315df9870c5be3ed3a8569bedcf9. Read AGENTS and relevant source-of-truth
+requirements/architecture/decisions/progress, HTTP_AUTH, SESSION_SERVICES,
+AUTH_SCHEMA, TEST_DATABASE and credential/team contracts. No implementation
+change was required. Reviewed all four routes, single-snapshot CSRF extension,
+logging/error boundaries, configuration, shared service transaction owner and
+all 54 live API cases (18 expanded scenarios, three repetitions), their fixtures,
+runner and relevant extended session cases. No security or transaction-safety
+blocker found within this bounded scope.
+
+validate_with_csrf calls the unchanged active READ ONLY lookup once, returning
+only frozen/slotted principal and repr-excluded SecretBytes CSRF. It does not
+return a bearer, hash or database row or extend expiry. All original session
+methods remain AST-identical against baseline. Protected identity comes from
+validated storage; strict request models forbid actor_id/user_id/identity/leader
+fields. Registration cannot authenticate or create a session. Login invokes the
+existing credential-verified session facade and returns no bearer in JSON.
+Logout checks active state and session-bound CSRF through public services before
+revocation; no route SQL/commit or transaction-boundary changes. Actual DBAPI
+AUTOCOMMIT and READ COMMITTED guards remain unchanged.
+
+Confirmed production-only __Host-merge_session, Secure, HttpOnly, SameSite=Lax,
+Path=/, no Domain and matching deletion attributes. Explicit loopback development
+mode uses a separate cookie without Secure; production defaults reject insecure
+or missing origin configuration at startup. JSON-only mutations require exact
+configured Origin, register/login custom header and logout CSRF; supplied Fetch
+Metadata rejects non-same-origin values. No reflected/permissive credentialed CORS.
+No-store headers cover auth responses/errors. Passwords use redacted request
+fields; response models omit bearer/hash/connection data. Validation and DB/native
+failures return fixed public errors and never format raw details. Trusted hosting,
+SQL/server logging, APM and traceback-local capture remain deployment boundaries.
+
+API assertions require exact successful statuses or intended rejection/error
+codes and fresh state counts. Unknown database errors/integrity faults/timeouts
+cannot stand in for credential, cookie or CSRF rejections. The deliberate
+AUTOCOMMIT HTTP 503 requires actual driver state True, captured fixed
+transaction_configuration failure, zero service SQL and zero committed sessions;
+an unrelated infrastructure 503 cannot satisfy it. Fixtures use guarded real
+services and fresh actual test connections; ordinary runtime Engine initialization
+is forbidden in the API fixture. No tests were changed or weakened for this review.
+
+Executed checkpoint checks (Windows PowerShell; Python 3.11.9 / SQLAlchemy 2.1.8 /
+psycopg 3.3.8, existing Node/npm installation):
+- Backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **349 passed, 32 deselected, one existing warning in 17.49s**, exit 0.
+- Backend `.\.venv\Scripts\python.exe -m pip check`: **No broken requirements
+  found**, exit 0. No dependency installation/update.
+- Backend `.\.venv\Scripts\python.exe -m pytest session_tests --collect-only -q`
+  and `.\.venv\Scripts\python.exe -m pytest auth_api_tests --collect-only -q`:
+  **78 in 0.08s / 54 in 0.05s collected**, exit 0, no fixtures executed.
+- Frontend `npm.cmd run typecheck`, `npm.cmd test`, `npm.cmd run build`: exit 0;
+  **six tests passed**, Vite 6.4.5 build completed in 3.96s.
+- Root `.\backend\.venv\Scripts\python.exe scripts/check_local_http.py`: initial
+  standalone run failed with a two-second timeout at the /auth/session proxy
+  assertion, after health/frontend checks passed. Separate timed no-database
+  diagnostic returned actual 401: direct 0.031s, first proxy 1.484s, next proxy
+  0.157s (diagnostic request deadline 10s). The unchanged ordinary script then
+  passed standalone: health/frontend, /auth missing-cookie 401, outage error and
+  restart recovery. No timeout counted as success; no deadline/assertion was
+  relaxed. Both earlier concurrent and current standalone flakiness remain open.
+
+Static evidence: `git -c safe.directory=I:/Merge diff --check` passed (existing
+LF/CRLF conversion warnings). Inline Python via
+`.\backend\.venv\Scripts\python.exe -` checked the exact 26-file allowlist,
+parsed all 14 Python files, verified original session-method AST equality and no
+HTTP private-service/SQL/commit access, inspected source/path/whitespace safety
+and required seven ignore checks. No actionable secret/generated/unrelated-file
+findings. Reviewed exact synthetic exceptions: two unchanged database-URL
+redaction fixtures and one rejected HTTP-origin user/password fixture. No secret
+file opened; backend/.env remains untracked/ignored. These checks supplement
+manual review and do not prove absence of every possible secret. No configured
+Python linter; no lint pass claimed. Staged blobs are checked against the same
+scope and reviewed working contents before committing.
+
+Protected baseline command passed, exit 0:
+`git -c safe.directory=I:/Merge diff --exit-code 09a064678361315df9870c5be3ed3a8569bedcf9 -- backend/alembic backend/app/models backend/app/services/teams.py backend/app/services/credentials.py backend/app/services/credential_errors.py backend/app/services/errors.py backend/app/services/session_errors.py backend/app/security/passwords.py backend/app/db backend/app/core/config.py backend/test_support/database.py backend/test_alembic backend/pyproject.toml backend/requirements.lock scripts/*.sql scripts/configure_backend_env.py .gitignore`.
+Migrations 0001/0002/0003, models/domain constraints, TeamService, credential/KDF
+code, DB runtime settings, guarded identity/migration support, provisioning/role/
+permission scripts and dependency pins are unchanged. No database connection or
+role/ACL mutation was performed by Codex; external role state was not queried.
+No merge_dev access, merge_test reset/drop/cleanup, migrations or live test rerun.
+
+Updated HTTP_AUTH, SESSION_SERVICES, AUTH_SCHEMA, TEST_DATABASE, credential,
+architecture/decision/requirement/progress docs with owner verification. Approved
+one local commit: `feat: add secure HTTP authentication endpoints (M-007B.3A)`.
+Full resulting hash is read/reported from Git after commit, not embedded in its
+own contents. No remote creation or push; no rate limiter or team API added.
+
+Outstanding: shared throttling (M-007B.3B), intermittent proxy timing failure,
+browser E2E/deployed HTTPS/trusted proxy/cache/logging verification and deployment
+DB-role topology. No production-readiness or browser HTTPS-security claim.
+Password-change invalidation, Python transient secret retention, XSS/stolen
+bearers, database time trust, point-in-time logout and ambiguous COMMIT transport
+loss remain documented. No team mutation/authZ, invitation/request API, M-008,
+idempotency/audit/outbox, 50-way authenticated team race, CI/load/deployment
+acceptance or G1/G2 closure. Other post-change live suites remain unreported.
+
+Owner exercise: explain why the GET returns CSRF from the same validated snapshot,
+then omit X-Merge-Request from login and confirm 403 without credential mutation.
 
 ## Daily work log template
 ```

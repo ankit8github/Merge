@@ -1,5 +1,13 @@
 # Internal team services — M-007A
 
+M-007B.3A-R1 exposes authentication only; TeamService and its transaction protocol
+are unchanged. No public create/join/leader/invite/request route exists. Future
+team actors must come from the real validated-session dependency described in
+[HTTP_AUTH.md](HTTP_AUTH.md), followed by server-side authorization. Public UUIDs,
+registration results and submitted actor_id/leader flags are never login proof.
+M-008's same-transaction idempotency/audit/outbox integration remains required
+before public team mutations. Authentication alone does not supply that behavior.
+
 Owner verified the expanded M-007A-R1 suite: **48 service tests passed in 37.23
 seconds** against guarded merge_test, with three repetitions requested. This
 includes real AUTOCOMMIT rejection, zero-write and rollback regressions as well as

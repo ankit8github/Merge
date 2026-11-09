@@ -18,7 +18,7 @@ This file explains **why** we are building the system a particular way. `docs/RE
 | ADR-008 | SSE with post-commit outbox, client state refetch | PROPOSED | Simpler push than WebSocket; multi-replica fanout unresolved |
 | ADR-009 | Deterministic skill/timezone matching | ACCEPTED | Explainable and easy to test; no LLM needed |
 | ADR-010 | GitHub Actions, pytest, Playwright, k6 | ACCEPTED | Strong reproducible evidence; setup/testing time cost |
-| ADR-011 | Cookie sessions with CSRF protection | PROPOSED | Consider auth integration constraints in deployment |
+| ADR-011 | Cookie sessions with CSRF protection | ACCEPTED FOR M-007B.3A-R1 | Exact-origin same-origin HTTP adapter; deployed proxy/TLS and throttling pending |
 | ADR-012 | Soft deletion for teams | PROPOSED | Preserves audit; must still satisfy organizer's 'deletes the team' semantics |
 | ADR-013 | No speculative infrastructure | ACCEPTED | Add Redis/queue/services only if requirements or measurements justify |
 | ADR-014 | Realtime deployment topology | OPEN | Single instance initially; multi-instance needs shared fanout |
@@ -196,3 +196,39 @@ Owner checkpoint: 63 guarded session cases passed in 51.63s against merge_test /
 and fixtures retained. Codex checkpoint: 222 database-free passes; no database
 connection or migration ran during Codex review. No additional post-change live
 regression result supplied. Security boundary, errors, tests: SESSION_SERVICES.md.
+
+### ADR-011 refinement — M-007B.3A-R1, owner-approved 2026-11-10
+
+Owner approved the narrow session interface extension before the previously
+authorized four HTTP authentication routes. validate_with_csrf returns a frozen,
+sensitive principal/SecretBytes CSRF result from the existing validated read
+snapshot. It never exposes a bearer/hash/raw row or changes expiry/transaction
+boundaries. Unit/static verification is required before the HTTP adapter proceeds.
+
+Use same-origin requests, exact configured Origin on mutations, JSON-only strict
+bodies and X-Merge-Request: 1 for register/login. Logout checks the active cookie
+and session-bound X-CSRF-Token through existing services before revoke. Fetch
+Metadata rejects non-same-origin values when present. No permissive CORS. Strict
+canonical base64url encoding for cookie/CSRF. Auth responses/errors are no-store
+and sanitized, including validation inputs and unexpected service failures.
+
+Production defaults require explicit HTTPS origin at startup and use only
+__Host-merge_session, Secure, HttpOnly, SameSite=Lax, Path=/, no Domain. Explicit
+loopback development mode uses merge_session_dev without Secure and Vite /auth
+proxying. Configuration is environment-only; runtime database construction stays
+lazy and uses existing local Settings. Guarded API tests inject real services on
+the fixed merge_test Engine, with no development-settings fallback.
+
+Alternatives rejected: route SQL or private-row access for CSRF retrieval,
+client-submitted identities as proof, reflected origins/cross-origin credentialed
+CORS, default insecure cookies, route-owned commits and session renewal on reads.
+Consequences: startup now needs explicit browser-origin configuration; README
+and local regression runner set it. No frontend redesign, domain API, schema or
+dependency change. Shared throttling is deliberately deferred to M-007B.3B;
+production readiness, browser E2E and deployed TLS/proxy correctness remain open.
+Owner checkpoint: 78 expanded session cases passed in 72.48s and 54 HTTP API
+cases passed in 40.90s on guarded merge_test / 0003_auth (head), 132 live
+executions total, fresh committed-state invariants verified, one existing
+Starlette/HTTPX warning. Codex did not rerun PostgreSQL. Shared throttling and
+browser/deployed HTTPS correctness remain unverified; the proxy timing flake
+remains open. Exact contracts, failure semantics and reproduction: HTTP_AUTH.md.

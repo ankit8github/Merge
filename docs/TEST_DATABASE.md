@@ -1,5 +1,14 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+M-007B.3A-R1 adds fixed guarded `--suite auth-api`, requiring explicit
+`--revision 0003_auth`. Real credential/session services are injected into the
+HTTP app with the guarded Engine; ordinary runtime Settings are never loaded.
+Owner verified the expanded session suite **78 passed in 72.48s** and HTTP API
+suite **54 passed in 40.90s**, 132 live executions total on merge_test /
+0003_auth (head). Fresh committed-state invariants verified; one existing
+Starlette/HTTPX warning. Codex did not rerun PostgreSQL. Private-prompt commands and
+retained-fixture/invariant policy: [HTTP_AUTH.md](HTTP_AUTH.md).
+
 M-007B.2B adds guarded --suite sessions, requiring explicit --revision 0003_auth.
 Owner verified **63 session cases passed in 51.63s**, guarded merge_test /
 0003_auth, three repetitions requested; fresh session invariants verified and

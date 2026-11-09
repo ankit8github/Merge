@@ -1,5 +1,21 @@
 # Internal session lifecycle — M-007B.2B
 
+M-007B.3A-R1 adds the owner-approved read-only public
+`validate_with_csrf(token) -> ValidatedSession(principal, csrf_token: SecretBytes)`.
+The frozen/slotted result excludes CSRF from repr and carries no bearer, hash or
+raw row. Principal and existing CSRF come from one _read_active snapshot through
+the unchanged READ ONLY transaction/validation/driver guard. No rotation, writes
+or renewal. Existing interfaces retain their behavior. Unit/static gate passed
+before HTTP work. Owner subsequently verified **78 passed in 72.48s** against
+guarded merge_test / 0003_auth (head), including the new method's actual
+AUTOCOMMIT case; fresh committed-state invariants verified. The HTTP API suite
+also passed **54 in 40.90s**. Codex did not rerun PostgreSQL. The original 63-pass owner
+result below remains historical evidence for the committed pre-extension service.
+
+HTTP register/login/session/logout now adapt public service methods; contract,
+browser checks and cookie configuration: [HTTP_AUTH.md](HTTP_AUTH.md). Shared
+throttling is not implemented. Earlier scope descriptions below are historical.
+
 Owner-verified checkpoint, 2026-11-10: **63 passed in 51.63 seconds** against
 guarded merge_test / 0003_auth, three repetitions requested. Fresh session
 committed-state invariants verified; fixtures intentionally retained. This is the
@@ -21,6 +37,8 @@ material = service.login(username=username, password=password)
 raw_session = material.session_token.get_secret_value()
 raw_csrf = material.csrf_token.get_secret_value()
 principal = service.validate(raw_session)
+validated = service.validate_with_csrf(raw_session)
+# Sensitive: validated.csrf_token requires deliberate unwrapping.
 principal = service.verify_csrf(raw_session, raw_csrf)
 service.revoke(raw_session)
 ```

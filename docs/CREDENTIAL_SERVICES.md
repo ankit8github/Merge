@@ -1,5 +1,13 @@
 # Internal credential services — M-007B.2A
 
+M-007B.3A-R1 adds strict HTTP adapters around the existing credential/session
+services; no hashing policy, credential interface or transaction change.
+Registration does not create a session. Shared throttling is still pending;
+routes are not production-ready. [HTTP_AUTH.md](HTTP_AUTH.md) records current
+HTTP/browser contracts and owner-verified live evidence (78 expanded sessions in
+72.48s, 54 HTTP API cases in 40.90s; fresh invariants verified). Earlier component scope
+descriptions below retain their historical meaning.
+
 Owner verified **51 passed in 28.76 seconds** against guarded merge_test / 0003_auth,
 three repetitions requested, fresh credential committed-state checks verified.
 Fixtures were intentionally retained; no cleanup performed. Codex checkpoint:

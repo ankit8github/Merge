@@ -1,5 +1,12 @@
 # Authentication storage — M-007B.1
 
+M-007B.3A-R1 HTTP authentication uses unchanged 0003_auth through public services.
+No migration, role, permission or constraint change. HTTP/CSRF/cookie controls
+and owner-verified guarded results (78 sessions in 72.48s; 54 API cases in
+40.90s, fresh committed-state invariants verified): [HTTP_AUTH.md](HTTP_AUTH.md).
+Codex did not rerun PostgreSQL. Throttle storage
+still has no enforcement algorithm; production readiness is not claimed.
+
 M-007B.2B implements internal session login/validation, session-bound CSRF and
 terminal revocation using this unchanged storage. Owner verified **63 passed in
 51.63s**, guarded merge_test / 0003_auth, three repetitions requested, fresh session

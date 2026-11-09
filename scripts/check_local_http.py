@@ -37,9 +37,12 @@ def wait_for(path: str) -> bytes:
 
 
 def start(command: list[str], directory: Path) -> subprocess.Popen:
+    environment = {**os.environ, 'MERGE_AUTH_MODE': 'development',
+                   'MERGE_AUTH_ORIGIN': 'http://127.0.0.1:5173'}
     return subprocess.Popen(
         command,
         cwd=directory,
+        env=environment,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
@@ -71,6 +74,10 @@ def main() -> None:
         assert b"<title>Merge" in wait_for("http://127.0.0.1:5173/")
         assert json.loads(wait_for("http://127.0.0.1:5173/health")) == {"status": "ok"}
         print("PASS: API health, frontend HTML and Vite proxy")
+        # Missing cookie must fail before the ordinary database dependency runs.
+        assert get('http://127.0.0.1:8000/auth/session')[0] == 401
+        assert get('http://127.0.0.1:5173/auth/session')[0] == 401
+        print('PASS: auth proxy forwards missing-session 401 without database access')
         stop(api)
         # Allow the proxy to finish detecting the stopped upstream on Windows.
         # Still require an actual HTTP failure; a client timeout is not a pass.

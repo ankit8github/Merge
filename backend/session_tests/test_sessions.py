@@ -204,7 +204,7 @@ def test_issuance_failure_rolls_back_all_session_state(environment, account, pha
     assert env.session_count() == 0
 
 
-@pytest.mark.parametrize('operation', ['login', 'validate', 'revoke'])
+@pytest.mark.parametrize('operation', ['login', 'validate', 'validate_with_csrf', 'revoke'])
 def test_actual_autocommit_rejected_before_session_sql(environment, account, operation):
     env = environment
     material = login(env, account)
@@ -312,3 +312,32 @@ def test_credential_share_lock_protects_check_through_session_commit(environment
     finally:
         event.remove(env.engine, 'after_cursor_execute', hold)
     assert env.session_count() == 1
+
+
+def test_validate_with_csrf_returns_only_bound_sensitive_snapshot(environment, account):
+    from dataclasses import fields
+    env = environment
+    first, second = login(env, account), login(env, account)
+    saved = stamp(env, first)
+    result = SessionService(env.engine).validate_with_csrf(token(first))
+    assert result.principal == first.principal
+    assert result.csrf_token == first.csrf_token and result.csrf_token != second.csrf_token
+    assert {f.name for f in fields(result)} == {'principal', 'csrf_token'}
+    rendered = (repr(result)+str(result)+repr(result.csrf_token)).encode()
+    assert token(first) not in rendered and result.csrf_token.get_secret_value() not in rendered
+    assert stamp(env, first) == saved and env.session_count() == 2
+
+
+@pytest.mark.parametrize('kind', ['unknown', 'expired', 'revoked'])
+def test_validate_with_csrf_rejects_inactive(environment, account, kind):
+    env = environment
+    if kind == 'expired':
+        raw, _, _ = seeded_session(env, account, timedelta(hours=9))
+    else:
+        material = login(env, account)
+        raw = token(material)
+        if kind == 'unknown': raw = secrets.token_bytes(32)
+        else: env.sessions.revoke(raw)
+    with pytest.raises(SessionError) as error:
+        env.sessions.validate_with_csrf(raw)
+    assert error.value.code == SessionCode.INVALID_SESSION

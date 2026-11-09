@@ -37,6 +37,13 @@ class IssuedSession:
     csrf_token: SecretBytes = field(repr=False)
 
 
+@dataclass(frozen=True, slots=True)
+class ValidatedSession:
+    """Sensitive read result; no bearer, credential hash or database row escapes."""
+    principal: SessionPrincipal
+    csrf_token: SecretBytes = field(repr=False)
+
+
 def _utc(value: datetime) -> datetime:
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
         raise SessionError(SessionCode.CLOCK_CONFIGURATION)
@@ -123,6 +130,14 @@ class SessionService:
     def validate(self, session_token: bytes) -> SessionPrincipal:
         row = self._read_active(session_token)
         return SessionPrincipal(row.user_id, row.username, _utc(row.expires_at))
+
+    def validate_with_csrf(self, session_token: bytes) -> ValidatedSession:
+        """Read principal and existing CSRF from one active snapshot; never renew."""
+        row = self._read_active(session_token)
+        return ValidatedSession(
+            SessionPrincipal(row.user_id, row.username, _utc(row.expires_at)),
+            SecretBytes(row.csrf_token),
+        )
 
     def verify_csrf(self, session_token: bytes, csrf_token: bytes) -> SessionPrincipal:
         row = self._read_active(session_token)

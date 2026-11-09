@@ -6,7 +6,10 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    proxy: { '/health': 'http://127.0.0.1:8000' },
+    proxy: {
+      '/health': 'http://127.0.0.1:8000',
+      '/auth': 'http://127.0.0.1:8000',
+    },
   },
   test: { environment: 'jsdom', restoreMocks: true },
 });

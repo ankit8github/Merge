@@ -1,6 +1,7 @@
 """PYTEST_DONT_REWRITE: no token/hash values in assertion introspection."""
 from contextlib import contextmanager
 from copy import deepcopy
+from dataclasses import FrozenInstanceError, fields
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -231,7 +232,7 @@ def test_invalid_stored_sessions_fail_closed_without_renewal(setup, kind):
 
 
 @pytest.mark.parametrize('kind', ['none', 'text', 'short', 'long', 'mutable'])
-@pytest.mark.parametrize('operation', ['validate', 'revoke'])
+@pytest.mark.parametrize('operation', ['validate', 'validate_with_csrf', 'revoke'])
 def test_malformed_token_rejected_before_database(setup, kind, operation):
     s, c, engine = setup
     supplied = {'none': None, 'text': 'x'*32, 'short': b'x'*31,
@@ -288,7 +289,7 @@ def test_failure_after_issuance_mutation_rolls_back_and_detaches_driver_error(se
 
 
 @pytest.mark.parametrize('state', [True, None, 0, 'False'])
-@pytest.mark.parametrize('operation', ['login', 'validate', 'revoke'])
+@pytest.mark.parametrize('operation', ['login', 'validate', 'validate_with_csrf', 'revoke'])
 def test_actual_autocommit_or_ambiguous_driver_rejected_before_sql(setup, state, operation):
     s, c, engine = setup
     c.connection.dbapi_connection.autocommit = state
@@ -312,3 +313,46 @@ def test_naive_database_clock_and_entropy_failure_fail_closed(setup, monkeypatch
     with pytest.raises(SessionError) as error: login(s)
     assert error.value.code == SessionCode.ENTROPY_FAILURE and error.value.__context__ is None
     assert not c.store
+
+
+def test_validated_session_is_sensitive_immutable_and_one_read_snapshot(setup):
+    s, c, engine = setup
+    first, second = login(s), login(s)
+    before = deepcopy(c.store)
+    c.statements.clear()
+    engine.connect.reset_mock()
+    result = s.validate_with_csrf(raw(first))
+    assert result.principal == first.principal
+    assert result.csrf_token == first.csrf_token and result.csrf_token != second.csrf_token
+    assert {f.name for f in fields(result)} == {'principal', 'csrf_token'}
+    assert not hasattr(result, '__dict__')
+    with pytest.raises(FrozenInstanceError):
+        result.principal = second.principal
+    rendered = repr(result) + str(result) + repr(result.csrf_token)
+    assert repr(raw(first)) not in rendered and c.account.password_hash not in rendered
+    assert repr(result.csrf_token.get_secret_value()) not in rendered
+    assert engine.connect.call_count == 1 and c.store == before
+    assert c.statements.count('SET TRANSACTION READ ONLY') == 1
+    assert sum('FROM public.auth_sessions s' in q for q in c.statements) == 1
+    assert not any(word in q for q in c.statements for word in ('INSERT ', 'UPDATE ', 'DELETE '))
+
+
+@pytest.mark.parametrize('kind', ['unknown', 'expired', 'revoked'])
+def test_validate_with_csrf_rejects_inactive_session(setup, kind):
+    s, c, engine = setup
+    material = login(s)
+    if kind == 'unknown': c.store.clear()
+    elif kind == 'expired': c.clock = material.principal.expires_at
+    else: s.revoke(raw(material))
+    with pytest.raises(SessionError) as error:
+        s.validate_with_csrf(raw(material))
+    assert error.value.code == SessionCode.INVALID_SESSION
+
+
+@pytest.mark.parametrize('isolation', ['REPEATABLE READ', 'SERIALIZABLE', None])
+def test_validate_with_csrf_rejects_unsupported_isolation_before_sql(setup, isolation):
+    s, c, engine = setup
+    c.get_isolation_level = lambda: isolation
+    with pytest.raises(CredentialError) as error:
+        s.validate_with_csrf(b'x'*32)
+    assert error.value.code == CredentialCode.TRANSACTION_CONFIGURATION and not c.statements

@@ -179,7 +179,9 @@ Terminal 1:
 
 ```powershell
 Set-Location I:\Merge\backend
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+$env:MERGE_AUTH_MODE = 'development'
+$env:MERGE_AUTH_ORIGIN = 'http://127.0.0.1:5173'
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log
 ```
 
 Terminal 2:
@@ -189,7 +191,15 @@ Set-Location I:\Merge\frontend
 npm.cmd run dev
 ```
 
-Open <http://127.0.0.1:5173>. Vite proxies the page's `/health` request to <http://127.0.0.1:8000/health>, which returns `{"status":"ok"}`. The page shows loading, success, or a generic error, with a five-second timeout and retry button. Stop the API and press **Check again** to verify failure; restart it and retry to verify recovery. Stop both servers with Ctrl+C.
+Open <http://127.0.0.1:5173>. Vite proxies `/health` and `/auth` to the API. `/health` returns `{"status":"ok"}`. The page shows loading, success, or a generic error, with a five-second timeout and retry button. Stop the API and press **Check again** to verify failure; restart it and retry to verify recovery. Stop both servers with Ctrl+C.
+
+Auth configuration is explicit and environment-only: default production mode
+requires an exact HTTPS `MERGE_AUTH_ORIGIN`; insecure/missing configuration rejects
+startup. The local commands opt into a separate development cookie on loopback.
+Four auth endpoints are implemented for review, with no login UI or team APIs.
+Shared rate limiting is still pending M-007B.3B; these routes are not production-ready.
+Contracts, cookie/CSRF/Origin policy and guarded merge_test commands:
+[HTTP_AUTH.md](docs/HTTP_AUTH.md). Never run ordinary merge_dev tests for auth verification.
 
 `/health` is public process liveness; it makes no database-readiness claim. The frontend uses a relative URL, so no CORS middleware or frontend secrets are needed. Vite's proxy is development-only: a future deployment must explicitly configure same-origin API routing. Production hosting is out of scope.
 

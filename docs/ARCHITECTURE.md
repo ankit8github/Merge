@@ -63,7 +63,14 @@ Browser verification: Playwright → accessible mobile/keyboard flows
   0003_auth, three repetitions requested; fresh session invariants verified and
   fixtures retained. Codex checkpoint: 222 database-free tests; no PostgreSQL
   rerun. See SESSION_SERVICES.md for the trusted handoff, transaction
-  authority and remaining limitations. No auth endpoints/cookies or email/MFA claims.
+  authority and remaining limitations. M-007B.3A-R1 adds owner-approved
+  validate_with_csrf plus four HTTP auth endpoints, strict JSON bodies, exact
+  Origin/custom-header/Fetch Metadata checks, session-bound logout CSRF and
+  separate production/development cookies. No lifecycle transaction changes.
+  Owner verified 78 expanded session cases in 72.48s and 54 guarded API cases in
+  40.90s against merge_test / 0003_auth (head), with fresh committed-state
+  invariants. Shared throttling and browser/deployed HTTPS verification remain
+  pending. See HTTP_AUTH.md. No team mutation API or production-readiness claim.
 - `hackathons(id, name, min_team_size, max_team_size, ...)` with `min>=1`, `max>=min`.
 - `teams(id, hackathon_id, leader_user_id, min_team_size, max_team_size, version, deleted_at, ...)`. Member count is derived from rows; readiness is derived from count/minimum/deletion, with neither stored.
 - Active-only `memberships(hackathon_id, user_id, team_id, joined_at)` with **PRIMARY KEY `(hackathon_id,user_id)`**, composite team/hackathon FK and unique `(team_id,user_id)` for the deferred leader FK. History belongs in audit.
