@@ -1,0 +1,142 @@
+"""Atomic internal creation/join operations. Identity is trusted, not authenticated.
+
+No idempotency, authorization, audit or outbox generation. Do not expose directly
+as public mutations. Engine ownership prevents caller-controlled partial commits.
+"""
+from dataclasses import dataclass
+from uuid import UUID, uuid4
+
+from sqlalchemy import text
+from sqlalchemy.engine import Connection, Engine
+from sqlalchemy.exc import DBAPIError
+
+from app.services.errors import DomainError, ErrorCode, map_database_error
+
+
+@dataclass(frozen=True)
+class TeamResult:
+    team_id: UUID
+    hackathon_id: UUID
+    user_id: UUID
+    member_count: int  # Actual rows at mutation time, not a persistent/cached field.
+
+
+def _uuid(value: UUID) -> None:
+    if not isinstance(value, UUID):
+        raise DomainError(ErrorCode.INVALID_INPUT)
+
+
+def _query(c: Connection, statement: str, **parameters):
+    return c.execute(text(statement), parameters)
+
+
+class TeamService:
+    def __init__(self, engine: Engine):
+        if not isinstance(engine, Engine):
+            raise TypeError('TeamService requires an Engine, never a caller transaction/session')
+        self._engine = engine
+
+    def create_team(self, *, hackathon_id: UUID, actor_id: UUID, name: str) -> TeamResult:
+        _uuid(hackathon_id)
+        _uuid(actor_id)
+        # Match the existing DB name contract, without a new naming policy.
+        if not isinstance(name, str) or not 1 <= len(name) <= 120 or not name.strip(' '):
+            raise DomainError(ErrorCode.INVALID_INPUT)
+        team_id = uuid4()
+
+        def operation(c):
+            hackathon = self._lock_subject(c, hackathon_id, actor_id)
+            self._require_unassigned(c, hackathon_id, actor_id)
+            _query(c, '''INSERT INTO public.teams
+                (id,hackathon_id,name,min_team_size,max_team_size,leader_user_id,created_by)
+                VALUES (:team,:hackathon,:name,:minimum,:maximum,:actor,:actor)''',
+                team=team_id, hackathon=hackathon_id, name=name,
+                minimum=hackathon.min_team_size, maximum=hackathon.max_team_size, actor=actor_id)
+            # The new team is owned by this transaction. No preexisting team lock needed.
+            self._insert_membership(c, hackathon_id, team_id, actor_id)
+            return TeamResult(team_id, hackathon_id, actor_id, self._count(c, team_id))
+
+        return self._execute(operation)
+
+    def join_team(self, *, hackathon_id: UUID, team_id: UUID, actor_id: UUID) -> TeamResult:
+        for value in (hackathon_id, team_id, actor_id):
+            _uuid(value)
+
+        def operation(c):
+            self._lock_subject(c, hackathon_id, actor_id)
+            team = _query(c, '''SELECT id,deleted_at,max_team_size FROM public.teams
+                WHERE id=:team AND hackathon_id=:hackathon FOR NO KEY UPDATE''',
+                team=team_id, hackathon=hackathon_id).one_or_none()
+            if team is None:
+                raise DomainError(ErrorCode.TEAM_NOT_FOUND)
+            if team.deleted_at is not None:
+                raise DomainError(ErrorCode.TEAM_DELETED)
+            self._require_unassigned(c, hackathon_id, actor_id)
+            # Fresh statement after parent lock: no ORM identity-map count reuse.
+            if self._count(c, team_id) >= team.max_team_size:
+                raise DomainError(ErrorCode.TEAM_FULL)
+            self._insert_membership(c, hackathon_id, team_id, actor_id)
+            return TeamResult(team_id, hackathon_id, actor_id, self._count(c, team_id))
+
+        return self._execute(operation)
+
+    def _execute(self, operation):
+        try:
+            with self._engine.connect() as c:
+                self._require_transactional_connection(c)
+                with c.begin():
+                    _query(c, "SET LOCAL lock_timeout='5s'")
+                    _query(c, "SET LOCAL statement_timeout='15s'")
+                    result = operation(c)
+                # Deferred FK/constraint-trigger failures at COMMIT are caught too.
+            return result
+        except DBAPIError as error:
+            raise map_database_error(error) from None
+
+    @staticmethod
+    def _require_transactional_connection(c: Connection) -> None:
+        # SQLAlchemy's get_isolation_level() explicitly does NOT report DBAPI
+        # AUTOCOMMIT. Use its documented pool-proxy DBAPI accessor and psycopg's
+        # actual bool property before any service SQL, including SET LOCAL.
+        if (getattr(c.dialect, 'name', None) != 'postgresql'
+                or getattr(c.dialect, 'driver', None) != 'psycopg'
+                or getattr(c.dialect, 'is_async', None) is not False):
+            raise DomainError(ErrorCode.TRANSACTION_CONFIGURATION)
+        try:
+            autocommit = c.connection.dbapi_connection.autocommit
+        except Exception:
+            # An absent/unreadable state is not evidence of transaction safety.
+            raise DomainError(ErrorCode.TRANSACTION_CONFIGURATION) from None
+        if autocommit is not False or c.in_transaction():
+            raise DomainError(ErrorCode.TRANSACTION_CONFIGURATION)
+        # This metadata query can run only after autocommit has been ruled out.
+        if c.get_isolation_level() != 'READ COMMITTED':
+            raise DomainError(ErrorCode.TRANSACTION_CONFIGURATION)
+
+    @staticmethod
+    def _lock_subject(c, hackathon_id, actor_id):
+        hackathon = _query(c, '''SELECT min_team_size,max_team_size FROM public.hackathons
+            WHERE id=:hackathon FOR SHARE''', hackathon=hackathon_id).one_or_none()
+        if hackathon is None:
+            raise DomainError(ErrorCode.HACKATHON_NOT_FOUND)
+        user = _query(c, 'SELECT id FROM public.users WHERE id=:actor FOR NO KEY UPDATE', actor=actor_id).one_or_none()
+        if user is None:
+            raise DomainError(ErrorCode.USER_NOT_FOUND)
+        return hackathon
+
+    @staticmethod
+    def _require_unassigned(c, hackathon_id, actor_id):
+        membership = _query(c, '''SELECT team_id FROM public.memberships
+            WHERE hackathon_id=:hackathon AND user_id=:actor''',
+            hackathon=hackathon_id, actor=actor_id).one_or_none()
+        if membership is not None:
+            raise DomainError(ErrorCode.ALREADY_ASSIGNED)
+
+    @staticmethod
+    def _insert_membership(c, hackathon_id, team_id, actor_id):
+        _query(c, '''INSERT INTO public.memberships(hackathon_id,team_id,user_id)
+            VALUES (:hackathon,:team,:actor)''', hackathon=hackathon_id, team=team_id, actor=actor_id)
+
+    @staticmethod
+    def _count(c, team_id):
+        return _query(c, 'SELECT count(*) FROM public.memberships WHERE team_id=:team', team=team_id).scalar_one()

@@ -106,3 +106,21 @@ do not load backend/.env, change ordinary Settings or edit frozen migrations.
 This avoids durable test tombstones in merge_dev without weakening guards.
 No DROP is authorized/executed here; disposal requires separate approval. See
 TEST_DATABASE.md for commands, partial-provisioning risks and cleanup design.
+
+### M-007A bounded internal create/join services — owner-scoped, 2026-11-09
+
+Owner scoped creation/join to internal trusted-actor services, with no public
+endpoints or authentication/idempotency/audit/outbox writers. Schema inspection
+confirmed those support records are not required for team/membership commits;
+their own forward FKs/triggers do not imply mandatory reverse records. This does
+not waive the final atomic outcome/audit/outbox architecture. The Engine-owned
+facade commits each complete operation and cannot be composed by adding records
+in an outer transaction afterward; M-008 must integrate them before public use.
+Use hackathon SHARE -> user NO KEY UPDATE -> team NO KEY UPDATE, fresh row counts,
+strict named-constraint error mapping and complete rollback. No automatic retry
+or schema change. See TEAM_SERVICES.md. Final owner verification: 48 expanded
+PostgreSQL cases passed in 37.23s, including R1 actual DBAPI AUTOCOMMIT rejection;
+Codex checkpoint regressions: 94 database-free checks passed. The supported
+transaction contract is synchronous postgresql+psycopg, actual autocommit is False,
+READ COMMITTED and no active caller transaction; other/ambiguous states fail closed
+without silently changing Engine configuration. This does not close API/auth gates.

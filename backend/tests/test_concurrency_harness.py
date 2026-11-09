@@ -68,8 +68,12 @@ def test_race_connections_reuse_only_guarded_test_helper(monkeypatch):
     assert calls == [settings]
 
 
-def test_runner_has_fixed_suite_and_safe_pytest_options(monkeypatch):
-    monkeypatch.setattr('sys.argv', ['concurrency', '--confirm-merge-test', '--repetitions', '2'])
+@pytest.mark.parametrize(('suite', 'expected'), [(None, 'concurrency_tests'), ('services', 'service_tests')])
+def test_runner_has_fixed_suite_and_safe_pytest_options(monkeypatch, suite, expected):
+    arguments = ['concurrency', '--confirm-merge-test', '--repetitions', '2']
+    if suite is not None:
+        arguments += ['--suite', suite]
+    monkeypatch.setattr('sys.argv', arguments)
     monkeypatch.setenv('MERGE_TEST_DB_PASSWORD', 'synthetic-only')
     for name in ('PYTEST_DISABLE_PLUGIN_AUTOLOAD', 'PYTEST_ADDOPTS', 'PYTEST_PLUGINS'):
         monkeypatch.setenv(name, '')
@@ -83,7 +87,7 @@ def test_runner_has_fixed_suite_and_safe_pytest_options(monkeypatch):
         yield Connection()
 
     def fake_pytest(arguments, plugins):
-        assert Path(arguments[0]).name == 'concurrency_tests'
+        assert Path(arguments[0]).name == expected
         assert '--tb=no' in arguments and '--assert=plain' in arguments and '-x' in arguments
         assert '--confirm-merge-test' in arguments and '--race-repetitions=2' in arguments
         assert 'synthetic-only' not in ' '.join(arguments)

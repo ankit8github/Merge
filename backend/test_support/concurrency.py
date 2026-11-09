@@ -22,6 +22,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--confirm-merge-test', action='store_true', required=True)
     parser.add_argument('--repetitions', type=int, choices=range(1, 11), default=3)
+    parser.add_argument('--suite', choices=('schema', 'services'), default='schema')
     args = parser.parse_args()
     if not __debug__:
         parser.error('Python optimization must be disabled so invariant assertions execute')
@@ -42,12 +43,14 @@ def main():
     except Exception as error:
         print(safe_failure_message(error, 'connection'))
         raise SystemExit(1) from None
-    directory = Path(__file__).resolve().parents[1] / 'concurrency_tests'
+    root = Path(__file__).resolve().parents[1]
+    directories = {'schema': [root / 'concurrency_tests'],
+                   'services': [root / 'service_tests']}[args.suite]
     # Fixed suite, fail fast, no exception/local-variable dumps or third-party autoload.
     os.environ['PYTEST_DISABLE_PLUGIN_AUTOLOAD'] = '1'
     os.environ.pop('PYTEST_ADDOPTS', None)
     os.environ.pop('PYTEST_PLUGINS', None)
-    result = pytest.main([str(directory), '-q', '-s', '-x', '--tb=no',
+    result = pytest.main([*(str(directory) for directory in directories), '-q', '-s', '-x', '--tb=no',
                           '--assert=plain', '-o', 'addopts=', '-p', 'no:cacheprovider',
                           '--confirm-merge-test', f'--race-repetitions={args.repetitions}'],
                          plugins=[PrivateTestPlugin(settings)])

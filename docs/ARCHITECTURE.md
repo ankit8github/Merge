@@ -1,6 +1,6 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
-**Status:** PHASE 0 VERIFIED / M-006A DOMAIN SCHEMA IMPLEMENTED; domain services/APIs not implemented. Concrete schema and database guards: `docs/SCHEMA.md`. Source requirements: `docs/REQUIREMENTS.md`. Decisions: `docs/DECISIONS.md`. Verification: `docs/PROGRESS.md`.
+**Status:** PHASE 0 VERIFIED / M-006A DOMAIN SCHEMA IMPLEMENTED; M-007A internal create/join services and R1 AUTOCOMMIT rejection implemented. Owner verified 48 expanded PostgreSQL cases in 37.23s; Codex verified 94 database-free checks. No domain APIs; G1 remains open for later acceptance work. Concrete schema and database guards: `docs/SCHEMA.md`; bounded service contract: `docs/TEAM_SERVICES.md`. Source requirements: `docs/REQUIREMENTS.md`. Decisions: `docs/DECISIONS.md`. Verification: `docs/PROGRESS.md`.
 
 ## 1. Goals and constraints
 - Solve PS1 with a **correct-by-design membership core**, not an application-server mutex.

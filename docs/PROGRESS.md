@@ -622,6 +622,268 @@ Owner explanation/exercise: explain why a deadlock victim must roll back its
 earlier membership insert, and identify the strict 40P01 assertion that would
 reject a lock-timeout substitute.
 
+## M-007A internal transactional creation/join — 2026-11-09
+
+Started from clean main at defb6b9ed0f3dc8e2236c6a3a57e7857afcbbaa7.
+Read required source documents, SQLAlchemy domain models, frozen 0002 DDL,
+transaction configuration and guarded concurrency harness. Critical dependency
+check passed by static inspection: no team/membership FK or trigger requires an
+idempotency/audit/outbox row. Audit's forward operation FK, outbox's forward audit
+FK and deferred pending-idempotency validation constrain records when present;
+they do not mandate reverse records. No fake support records or schema relaxation.
+The complete public mutation/audit/idempotency contract remains future M-008 work.
+
+Added app/services/{__init__,errors,teams}.py, service_tests/{conftest,test_teams}.py,
+tests/test_team_services.py and docs/TEAM_SERVICES.md. Extended existing guarded
+runner with --suite schema (unchanged default) / --suite services and extended its
+database-free suite-selection tests. Updated architecture/decisions/TEST_DATABASE
+and this log. No new dependencies, migrations, model/constraint or frontend changes.
+
+TeamService accepts an Engine, never caller Connection/Session, and owns each
+connection/transaction through commit before returning frozen TeamResult. Requires
+PostgreSQL READ COMMITTED and no active supplied transaction; applies local 5s
+lock/15s statement deadlines. Lock order is hackathon SHARE -> actor NO KEY UPDATE
+-> exact team NO KEY UPDATE for joins; creation inserts its new team under subject
+locks. Eligibility/membership/count queries happen after locks. Counts come from
+actual rows, not identity-map/persistent counters. UUID/name validation precedes
+connection acquisition. Deferred COMMIT failures unwind before mapping to safe
+DomainError codes. Only named expected integrity conflicts map to business errors;
+unknown class-23 faults remain integrity_fault. Deadlock/serialization and lock
+deadline errors are marked retryable, with no implicit retry loop. No network
+calls other than database I/O inside transactions. No authentication/authorization,
+public routes, invitations/departures, idempotency/audit/outbox generation added.
+
+Real PostgreSQL service suite has 14 scenarios / 42 cases at three repetitions:
+founder atomicity; statement failure after team INSERT; deferred COMMIT rollback;
+successful join/count; full/deleted rejection; same-hackathon assignment/repeat
+conflicts; cross-hackathon permission; competing final-seat, same-user join and
+same-user create races; wrong-hackathon team and missing-subject cases. Fault
+injection uses test-only Engine events; no production hooks or database changes.
+Per-connection Engine events verify actual test target/isolation before service
+queries. Fresh invariant checks reuse the existing UUID-scoped committed fixture
+harness; fixtures remain only in merge_test. No destructive cleanup.
+
+Actual executed commands from backend (no database connections):
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+  first 68 passed, 32 deselected, one existing HTTPX warning. Added explicit
+  service-suite selection and active-transaction rejection checks; final run
+  **70 passed, 32 deselected, one existing Starlette/HTTPX warning**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q`:
+  42 cases collected, exit 0; no fixture execution.
+- `.\.venv\Scripts\python.exe -m pytest concurrency_tests --collect-only -q`:
+  original 45 schema cases collected, exit 0; no fixture execution.
+- `.\.venv\Scripts\python.exe -m test_support.concurrency --help`: exit 0,
+  confirms --suite {schema,services}, --confirm-merge-test and --repetitions 1..10.
+- Python presence-only check: Private test credential available False;
+  Interactive stdin False; exit 0. No development credential/dotenv read or copied.
+- `git -c safe.directory=I:/Merge diff --check`: passed (LF/CRLF warnings remain).
+  `git ... diff --exit-code HEAD -- backend/alembic backend/app/models backend/app/db backend/app/core backend/requirements.lock backend/pyproject.toml`:
+  exit 0, schema/migrations/model/config/dependency baseline unchanged.
+
+Owner-run real integration command, NOT executed here:
+`.\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite services --repetitions 3`
+from backend, existing merge_app password via hidden interactive prompt. Stop and
+review any failure; never weaken guards. No real service tests, SQLSTATE/lock
+results, full database suite, frontend/build or HTTP regression executed. No
+merge_dev access, database writes/migrations/roles/ACL/password changes, commits
+or pushes by Codex. Existing M-006B owner 45-pass evidence is historical, not
+reused as proof of the new services. G1 remains open pending real service tests
+and later API acceptance.
+
+Risks: unverified PostgreSQL service behavior; raw writers may still deadlock with
+services (whole-transaction conflict classification, not automatic retries);
+counts are mutation-time snapshots; COMMIT connection loss has an ambiguous
+durable outcome, so database_failure must not be blindly retried without future
+idempotency. This committing facade cannot be wrapped in an outer transaction to
+append outcome/audit/outbox later; M-008 must integrate those into the same owned
+transaction before public use. Current trusted actor inputs provide no API auth.
+No 50-way HTTP or deployment/CI/load compliance claimed.
+
+Owner explanation/exercise: trace hackathon/user/team locking in join_team; explain
+why moving COUNT before the team lock is unsafe, and inspect the deferred-COMMIT
+fault test to show why no partial team should survive.
+
+## M-007A final review — checkpoint stopped, 2026-11-09
+
+Owner-verified result: guarded merge_test service suite **42 passed in 33.12s**,
+three repetitions requested, fresh committed-state invariants verified and expected
+domain rejection cases reported. This is owner evidence, not a Codex PostgreSQL
+run. No HTTP/authentication claim. Existing tests strictly assert business outcomes,
+single committed winners and post-failure state; unexpected service error codes
+or worker failures are not accepted as successful races.
+
+Blocking transaction-configuration issue found before staging/commit:
+TeamService._execute checks get_isolation_level() == READ COMMITTED and
+in_transaction(), but does not check/disable DBAPI autocommit. Read the installed
+SQLAlchemy Connection.get_isolation_level docstring and PGDialect_psycopg isolation
+reader/setter through inspect.getdoc/getsource in a credential-free Python command.
+The documented API explicitly never reports AUTOCOMMIT; it is independent of actual
+isolation. The psycopg setter sets autocommit=True for AUTOCOMMIT. Therefore an
+AUTOCOMMIT Engine can pass the current check, while c.begin() alone does not restore
+DBAPI transaction semantics. Statement-level commits can release locks separately
+and invalidate atomic team+membership creation. Normal configured test Engine
+results do not establish safety for this Engine configuration.
+
+Additional credential-free reproduction reused the existing FakeConnection and
+service_for helper, supplied a synthetic driver_connection.autocommit=True, and
+called create_team. Output reported current service accepted configuration True.
+This is a mocked guard-coverage reproduction only, not an actual database write or
+proof of a persisted partial team. No credentials or DB URLs printed/read.
+
+Proposed correction for owner review, NOT implemented: explicitly establish owned
+connection transactional READ COMMITTED before any SQL and/or fail closed on
+DBAPI autocommit, then add database-free AUTOCOMMIT rejection/configuration tests
+and guarded real-PostgreSQL fault/rollback tests with an AUTOCOMMIT-configured
+Engine. Preserve the same lock order, constraints and complete transaction boundary.
+No schema change is needed. Service code left unchanged for this review stop.
+
+Executed `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`
+from backend: 70 passed, 32 deselected, one existing HTTPX warning; exit 0.
+These passing tests lack AUTOCOMMIT coverage; they do not close the blocker.
+Baseline diff check against HEAD for backend/alembic, models, main/API paths and
+dependency files returned exit 0: 0001/0002 and HTTP routes unchanged.
+Ignore checks confirmed local backend/.env, venv/caches/node_modules/dist excluded;
+tracked backend/.env query empty. No public mutation endpoints introduced.
+
+Stopped before commit as instructed. HEAD remains
+defb6b9ed0f3dc8e2236c6a3a57e7857afcbbaa7; pending service/test/documentation changes
+remain unstaged. No databases accessed, no merge_dev changes, no migrations,
+roles/permissions/password changes, resets/disposal, remotes, commits or pushes.
+G1 remains open. Owner exercise: explain why READ COMMITTED and DBAPI autocommit
+are independent, and why a Python transaction context is insufficient in that mode.
+
+## M-007A-R1 explicit DBAPI AUTOCOMMIT rejection — 2026-11-09
+
+Owner authorized fail-closed boundary correction, not silent isolation changes.
+Read AGENTS/TEAM_SERVICES/SCHEMA/progress and exact service/tests. Inspected
+installed SQLAlchemy 2.1.8 and psycopg 3.3.8 via Python inspect, without database
+access: Connection.connection documented pool proxy, ManagesConnection's annotated
+dbapi_connection/driver_connection interfaces, psycopg Connection.autocommit bool
+getter and dialect isolation setter. get_isolation_level explicitly excludes DBAPI
+AUTOCOMMIT. One initial documentation inspection command exited 1 because the
+annotated driver_connection attribute has no class-level descriptor; inspected
+documented dbapi_connection/annotations and actual source successfully afterward.
+No credentials or server queried during inspection.
+
+Changed app/services/teams.py: _require_transactional_connection accepts only
+synchronous PostgreSQL psycopg and actual DBAPI autocommit is False through
+SQLAlchemy's documented connection.connection.dbapi_connection accessor. Missing/
+unreadable/non-bool/True state fails with transaction_configuration. Preserves
+no-active-transaction and actual READ COMMITTED checks, same service interfaces,
+locking, transaction ownership and error mapping. Guard runs before begin(),
+isolation metadata query, SET LOCAL and all domain SQL. No mode setter or Engine
+execution_options added to production service. Connection initialization/test
+identity hooks may issue metadata reads only, not service/domain writes.
+
+Changed tests/test_team_services.py with mocked AUTOCOMMIT create/join rejection
+before any SQL/transaction/isolation read; missing/ambiguous/unreadable state and
+unsupported/missing dialect/isolation rejection; normal False state accepted and
+unchanged. Existing statement/COMMIT rollback tests remain. Added guarded live
+create/join AUTOCOMMIT OptionEngine scenarios to service_tests/test_teams.py.
+They inherit actual test identity guards, observe actual autocommit True on the
+service connection, reject without domain/SET LOCAL statements, compare fresh
+counts/roster, preserve original Engine options and verify original autocommit
+False after pool return. Existing real injected-failure rollback test now explicitly
+checks False/READ COMMITTED. No new production fault hooks or schema changes.
+Updated TEAM_SERVICES/architecture/progress. Earlier pending M-007A files preserved.
+
+Actual database-free commands from backend:
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+  first 91 passed, 32 deselected, one existing HTTPX warning; added missing dialect
+  configuration checks; final **94 passed, 32 deselected, one existing HTTPX warning**,
+  exit 0. No failing test weakened/deleted.
+- `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q`:
+  expanded **48 cases collected**, exit 0; no fixtures executed.
+- Presence-only Python check: Private test credential available False;
+  Interactive stdin available False. No development dotenv/credentials read.
+
+Owner live command from backend (NOT executed here):
+`.\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite services --repetitions 3`.
+Uses existing hidden password prompt; do not put secrets in arguments, logs or chat.
+This reruns all existing service races/rollback cases plus new AUTOCOMMIT rejection.
+Original owner result 42 passed in 33.12s remains historical pre-R1 evidence only.
+No live R1 SQLSTATE/autocommit/rollback/race success claimed. A completed expanded
+owner run is still required before final checkpoint review.
+
+No database connections or fixture writes by Codex; merge_dev untouched. No schema,
+migration, constraints/triggers, credentials, roles, privileges, endpoints or service
+interfaces changed; no commit/push. No M-007B/M-008 work. Guard is driver-specific
+by design; other drivers fail closed until explicitly supported. Engine listeners
+and exclusive ownership of each driver connection remain trusted boundaries.
+Owner exercise: explain why READ COMMITTED with DBAPI autocommit True is unsafe,
+and find the test assertions that prove no service SQL precedes rejection.
+
+Final R1 static checks: `git -c safe.directory=I:/Merge diff --check` exited 0,
+with existing LF/CRLF warnings. Baseline diff against HEAD for backend/alembic,
+models, db/core configuration, main.py and dependency files exited 0. Parsed all
+changed Python sources with ast and scanned the 13 pending source/doc candidates
+for secret signatures/generated paths: zero findings. No secret file read.
+
+## M-007A final checkpoint review after R1 — 2026-11-09
+
+Owner-verified expanded live evidence: **48 passed in 37.23 seconds**, three
+repetitions requested, guarded merge_test. This records the owner's execution of
+the R1-expanded service suite, not a PostgreSQL rerun by Codex. The expanded suite
+includes actual AUTOCOMMIT create/join rejection with no domain SQL/unchanged
+scoped counts, injected statement/COMMIT rollback, existing service races,
+expected domain rejections and fresh committed-state invariant checks. Prior
+42-pass and blocked-review entries remain historical evidence, superseded for
+checkpoint readiness by R1 and this expanded run. No raw per-case transcript was
+supplied; no additional per-case measurements are invented.
+
+Reviewed all 13 pending source/test/doc candidates. TeamService acquires its own
+Engine connection and transaction; rejects non-PostgreSQL/non-synchronous-psycopg
+or unreadable/ambiguous actual DBAPI autocommit state, requiring is False before
+the isolation metadata query, begin(), SET LOCAL or domain SQL. Requires READ
+COMMITTED and no caller transaction; never changes Engine isolation. Creation
+and joining retain hackathon SHARE -> user NO KEY UPDATE -> team NO KEY UPDATE
+where applicable, fresh membership/count checks and parameterized public SQL.
+Deferred commit errors unwind before safe mapping. Only expected named constraints
+map to business conflicts; unknown integrity faults, timeouts or transaction
+conflicts are not accepted as normal successful race results. No remaining
+blocking transaction-safety issue identified within the documented supported-driver
+and trusted Engine-listener/exclusive-connection contract. No services changed
+during this checkpoint review.
+
+New checkpoint commands actually executed, from backend:
+- `.\.venv\Scripts\python.exe -m pytest -q -m "not database" --tb=short`:
+  **94 passed, 32 deselected, one existing Starlette/HTTPX warning**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q`:
+  **48 cases collected**, exit 0; no fixture execution.
+
+Git/safety checks: baseline diff against
+defb6b9ed0f3dc8e2236c6a3a57e7857afcbbaa7 for backend/alembic, models, db/core,
+main/API paths and dependency files exited 0. Existing 0001/0002, domain schema,
+configuration and HTTP routes unchanged. Ignore checks confirmed backend/.env,
+venv, pytest cache, node_modules and dist excluded; tracked backend/.env query
+empty. No local secret files were read. Review includes secret/generated-path
+scanning of intended source candidates and actual staged blobs before commit.
+`git ... diff --check` passed; LF/CRLF conversion warnings remain. Owner authorized
+one local commit exactly `feat: implement atomic team creation and joining services (M-007A)`;
+the actual resulting hash will be reported directly from Git.
+
+Updated TEAM_SERVICES, architecture, decisions and TEST_DATABASE to reflect
+owner-verified expanded results; appended this evidence without rewriting earlier
+failures. Includes all bounded M-007A/R1 service/test/runner/doc work; no new
+dependencies/migrations. No database access, merge_dev access, merge_test reset,
+roles/privileges/password changes, remote creation or push in this review. Real
+database tests were not rerun; full legacy database/frontend/HTTP regressions were
+not rerun and retain historical evidence only. No M-007B/M-008 implementation.
+
+M-007A is verified within its internal service scope. G1/API acceptance remains
+open: no authentication/authorization, public mutations, 50-way authenticated HTTP
+race, idempotency/audit/outbox generation or later lifecycle services. No automatic
+retries; ambiguous COMMIT connection loss still requires reconciliation/future
+idempotency rather than blind retry. Returned counts are mutation-time snapshots.
+The committing facade must be integrated with future transactional support writers
+inside the SAME owned transaction before public use. Driver support intentionally
+fails closed beyond sync psycopg. Tests cover specific local schedules, not every
+possible interleaving, isolation mode, production/CI or load outcome.
+
+Owner exercise: trace the actual DBAPI autocommit read before get_isolation_level,
+and explain why the FK/constraint-trigger failure at COMMIT rolls back the team
+insert instead of returning a partially successful result.
+
 ## Daily work log template
 ```
 ### YYYY-MM-DD — [component/task ID]

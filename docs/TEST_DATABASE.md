@@ -124,6 +124,14 @@ checkpoint review did not rerun database commands.
 
 ## Future fixtures and separately approved cleanup
 
+M-007A adds internal service integration tests through the same guarded runner:
+`--suite services` selects only backend/service_tests; `--suite schema` (default)
+keeps the existing schema suite. Both require --confirm-merge-test and the same
+private credential flow. Owner verified the expanded service suite: 48 passed in
+37.23s, three repetitions requested, including R1 AUTOCOMMIT rejection. Exact
+commands, service contract and evidence:
+[TEAM_SERVICES.md](TEAM_SERVICES.md). Do not run a broad development database suite.
+
 ### Implemented owner-run adversarial suite — M-006B.2B
 
 Owner verified all 45 cases passed in 39.72 seconds with three repetitions on
