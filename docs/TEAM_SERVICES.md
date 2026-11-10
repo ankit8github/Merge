@@ -1,5 +1,11 @@
 # Internal team services — M-007A
 
+M-012A uses only the composed create_team_idempotent entry point for its new
+authenticated HTTP route. Legacy facades and join remain internal; no service
+source or transaction protocol changes. See [TEAM_API.md](TEAM_API.md) for the
+HTTP contract and owner-verified 105-case / 140.81s result at guarded 0003_auth.
+Codex did not rerun PostgreSQL; older no-HTTP text is historical.
+
 ## M-008E bounded orchestration — owner-verified checkpoint
 
 Only composed create/join enter a maximum-three-attempt policy with one monotonic

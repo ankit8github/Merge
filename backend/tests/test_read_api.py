@@ -155,19 +155,21 @@ def test_read_production_http_and_cors_preflight_rejected(discovery):
     assert preflight.status_code == 405 and 'access-control-allow-origin' not in preflight.headers
 
 
-@pytest.mark.parametrize('method', ['POST','PUT','PATCH','DELETE'])
-@pytest.mark.parametrize('index', range(4))
-def test_no_mutation_routes(discovery, method, index):
+@pytest.mark.parametrize('method,index', [(method,index) for method in ('POST','PUT','PATCH','DELETE')
+                                        for index in range(4) if (method,index) != ('POST',1)])
+def test_no_other_mutation_routes(discovery, method, index):
     authenticate(discovery)
     result = discovery.api.client.request(method, discovery.paths[index], headers=HEADERS, json={})
     assert result.status_code == 405 and discovery.service.mock_calls == []
     assert_private(result)
 
 
-def test_read_openapi_types_only_get_operations(discovery):
+def test_read_openapi_types_preserved_alongside_create(discovery):
     schema = discovery.api.client.get('/openapi.json').json()
     paths = {k:v for k,v in schema['paths'].items() if k.startswith('/api/')}
-    assert len(paths) == 4 and all(set(operations)=={'get'} for operations in paths.values())
+    assert len(paths) == 4
+    assert all(set(operations)==({'get','post'} if path.endswith('/{hackathon_id}/teams') else {'get'})
+               for path,operations in paths.items())
     for operations in paths.values():
         assert {'401','403','404','422','503'} <= set(operations['get']['responses'])
 

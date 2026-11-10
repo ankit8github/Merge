@@ -1,5 +1,11 @@
 # Private idempotency primitives — M-008C
 
+M-012A adds the create-only HTTP adapter using this unchanged exact key and
+stored-reply contract. HTTP 201 replays and explicit outcome_uncertain same-key
+retry instructions are in [TEAM_API.md](TEAM_API.md). No primitive/schema change;
+the owner verified 105 HTTP cases in 140.81s at guarded 0003_auth. Codex did not
+rerun PostgreSQL. Earlier no-public-route text is historical.
+
 M-008E adds bounded retries and same-key ambiguous-COMMIT reconciliation around
 the M-008D composed operations. Owner verified 54 retry / 81 mutation / 57 service /
 60 idempotency cases, **252 passed in a 200.05s suite-time sum**, on guarded

@@ -401,3 +401,25 @@ proxy checks are not PostgreSQL or real-browser proof. Ordinary backend Settings
 still require merge_dev, so authenticated browser testing requires a separately
 approved guarded HTTP host, not weakening that guard. No schema, dependency,
 backend transaction, authentication model or deployment topology change. G1 open.
+
+### M-012A - owner-scoped authenticated team creation HTTP, 2026-11-10
+
+Expose only the owner's requested scoped create endpoint. Derive actor from the
+existing validated PostgreSQL cookie, require the existing session-bound CSRF and
+Origin/Fetch Metadata/peer/HTTPS policy, and accept only name plus one exact
+Idempotency-Key. The route calls create_team_idempotent once, never legacy create
+or direct SQL, and returns its stored 201 status/body/allowlisted headers with the
+existing no-store policy overlay. Matching replay is still authenticated/CSRF
+checked. Changed commands conflict; outcome_uncertain instructs unchanged same-key
+retry and claims neither failure nor success. No new transaction owner, separate
+audit/outbox write, schema, join authorization or dependency. See TEAM_API.md.
+
+Retain the existing reservation-first service semantics, including sanitized 503
+for a missing hackathon that fails the immediate reservation FK; do not add a
+check-then-write existence transaction or infer business absence from generic
+integrity errors. Unknown faults remain sanitized. The M-011A test browser host
+excludes the new router by identity and still fails closed if it is reintroduced;
+its manifest grants no team-write scope. Guarded HTTP tests have a separate fixed
+suite and retained scoped fixtures. The owner subsequently verified 105 HTTP
+cases in 140.81s at guarded 0003_auth. Codex did not rerun PostgreSQL. G1 remains
+open; browser/deployed HTTPS and other lifecycle authorization remain pending.

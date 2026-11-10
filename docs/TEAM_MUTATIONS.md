@@ -1,5 +1,11 @@
 # Atomic composed team mutations — M-008D
 
+M-012A exposes only create_team_idempotent through authenticated HTTP. The
+composed services, transaction/retry/lock/audit/outbox contracts remain unchanged.
+The owner verified 105 guarded HTTP cases in 140.81s at 0003_auth; Codex did not
+rerun PostgreSQL. Current contract/evidence: [TEAM_API.md](TEAM_API.md). Earlier
+no-HTTP statements retain milestone scope.
+
 Checkpoint against `d8cf343a50cfaec4e83c47d318bfac79d10072ea`: owner verified
 merge_test / merge_app, READ COMMITTED, **0003_auth (head)**. Composed mutations:
 **81 passed in 101.23s**; service regressions: **57 passed in 59.59s**; idempotency

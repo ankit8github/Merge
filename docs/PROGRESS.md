@@ -3977,6 +3977,348 @@ old response cannot repopulate the new session. In the existing shutdown fake,
 let the timed-out worker finish and observe that later successful verification
 still leaves the run failed. No live action is part of either offline exercise.
 
+## M-012A - authenticated idempotent team creation HTTP, 2026-11-10
+
+**Implemented and offline verified; guarded PostgreSQL HTTP execution pending.**
+Baseline HEAD remains `2e5f678efd7348584eed2b6281c7448bc45f5d8e`. No staging,
+commit, remote or push. No database credential supplied, read or prompted for;
+no PostgreSQL connection, backend/browser listener, manifest generation, fixture
+write, schema/migration/role/privilege change, reset or cleanup. G1 remains open.
+
+Added only POST /api/hackathons/{hackathon_id}/teams. Existing validated cookie
+principal is the sole actor; creation_session rechecks session-bound CSRF through
+SessionService.verify_csrf. Origin/Fetch Metadata, production HTTPS, actual-peer/
+forwarded-header protections, auth custom headers/throttling and no-store policies
+are unchanged. Strict JSON accepts only name; reject extra body/query/identity
+headers and invalid UUIDs. Exactly one Idempotency-Key uses the existing exact
+1-128 printable-ASCII contract without normalization. Authorization header alone
+cannot authenticate or replace the cookie actor.
+
+The route calls create_team_idempotent exactly once, reusing the auth-owned lazy
+Engine with no independent Settings fallback, connection/transaction owner,
+existence lookup or audit/outbox write. It returns the immutable stored success
+status/body/allowlisted headers; initial creation and matching replay are 201,
+with existing browser-cache policy overlay. The domain service/retry/lock/schema
+sources are unchanged. Same key with changed name/hackathon is 409 mismatch;
+new key with existing assignment is 409 already_assigned. outcome_uncertain is
+503/retryable with an explicit unchanged SAME-key retry instruction and claims
+neither success nor failure. Other errors have fixed sanitized mapping.
+
+Existing limit deliberately retained: immediate reservation FKs can reject a
+missing hackathon before its domain lookup, yielding sanitized 503 rather than
+404. No check-then-write preflight or raw constraint inference added. Exact
+request/response TypeScript contract, full errors, trust boundaries and future
+React integration are in TEAM_API.md. No frontend creation flow or unrestricted
+join/invite/request/leave/leadership endpoint is included. Discovery GET DTOs,
+pagination and My Team null remain unchanged. The existing GET-only negative
+route/OpenAPI assertions were updated only for this newly authorized collection
+POST; all other unsupported methods and GET contract assertions remain enforced.
+
+The M-011A test-only browser host removes this router by exact identity before
+its existing closed inventory audit. No manifest write scope was expanded.
+Offline regression proves creation is absent there and reintroducing its router
+latches the host closed before dependency resolution. Every original R4 drain/
+shutdown test remains passing; no drain/connection/manifest guard was changed.
+
+Fixed guarded --suite team-api requires explicit 0003_auth before credentials,
+uses only merge_test/merge_app/loopback, injects real credential/session/read/team
+services and checks every service checkout plus fresh observers. New test fixtures
+are scoped/retained. They verify complete committed chains, real expired/revoked
+and session-CSRF rejection, mismatch and assignment, two matching/distinct-key
+HTTP requests with server-observed blocking on different PIDs, old committed
+state before release, post-write and actual deferred-COMMIT rollback, and injected
+acknowledgement loss after actual commit or rollback, with available/unavailable
+reconciliation. No live test result is inferred from collection. Fresh domain/
+record/account/session invariants run on teardown even after failures; unexpected
+faults/timeouts fail. Incomplete worker shutdown is not evidence of rollback.
+
+Changed-file inventory (23 files; 18 tracked modifications, five new files):
+
+- `backend/app/main.py`
+- `backend/app/team_api.py`
+- `backend/team_api_tests/conftest.py`
+- `backend/team_api_tests/test_team_creation.py`
+- `backend/test_support/browser.py`
+- `backend/test_support/concurrency.py`
+- `backend/tests/test_auth_schema_support.py`
+- `backend/tests/test_browser_harness.py`
+- `backend/tests/test_concurrency_harness.py`
+- `backend/tests/test_read_api.py`
+- `backend/tests/test_team_api.py`
+- `docs/ARCHITECTURE.md`
+- `docs/BROWSER_ACCEPTANCE.md`
+- `docs/DECISIONS.md`
+- `docs/FRONTEND.md`
+- `docs/HTTP_AUTH.md`
+- `docs/IDEMPOTENCY.md`
+- `docs/PROGRESS.md`
+- `docs/READ_API.md`
+- `docs/TEAM_API.md`
+- `docs/TEAM_MUTATIONS.md`
+- `docs/TEAM_SERVICES.md`
+- `docs/TEST_DATABASE.md`
+
+Actual checks, Windows PowerShell, existing Python 3.11.9 / FastAPI 0.162.0 /
+SQLAlchemy 2.1.8 / psycopg 3.3.8 / Uvicorn 0.54.0 / pytest 9.2.0; existing Node/
+npm installation, no package install/update:
+
+- backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  final **1018 passed, 32 deselected in 30.41s**, exit 0. Includes all 128 harness
+  cases and 83 new HTTP cases. One existing Starlette/HTTPX deprecation warning.
+- Focused adapter/read/harness/runner/revision run: 328 passed in 19.03s. A later
+  full run exposed one new fixture-double setup omission (safe engine logging
+  flags), fixed without runtime changes; that run had 1 failed / 1016 passed.
+  Corrected focused adapter/harness/runner/revision run: 258 passed in 12.18s;
+  full run 1017 passed in 23.21s. Final bearer-header regression added afterward
+  and the final 1018-pass command above supersedes those interim counts.
+- backend `.\.venv\Scripts\python.exe -m pip check`: no broken requirements,
+  exit 0.
+- frontend `npm run typecheck`: passed; `npm test`: **52 passed / three files
+  in 12.09s**; `npm run build`: passed, 36 modules / 2.44s;
+  `npm ls --depth=0`: valid installed dependencies. All exit 0. Build remains
+  JS 210.43 kB / 65.98 kB gzip and CSS 9.94 kB / 3.02 kB gzip; no load claim.
+- backend `.\.venv\Scripts\python.exe -m compileall -q app/team_api.py app/main.py team_api_tests tests/test_team_api.py tests/test_auth_schema_support.py tests/test_browser_harness.py tests/test_concurrency_harness.py tests/test_read_api.py test_support/browser.py test_support/concurrency.py`:
+  passed, exit 0. Inline Python AST/compile/whitespace/secret-format checks and
+  protected baseline comparisons passed: no auth/service/security/database/model/
+  migration/config/frontend/dependency change, only one composed route call,
+  no route SQL/lifecycle/legacy mutation calls. No configured Python linter.
+- `git -c safe.directory=I:/Merge diff --check`: passed; only existing LF/CRLF
+  notices. Final inventory/HEAD/empty-index checks performed at handoff.
+- Separate backend `.\.venv\Scripts\python.exe -m pytest <suite> --collect-only -q`:
+  team_api_tests **105** in 0.19s; auth_api_tests **54** in 0.04s; read_api_tests
+  **87** in 0.05s; team_mutation_tests **81** in 0.03s; retry_tests **54** in 0.19s.
+  All exit 0; collection only. A combined multi-suite collection initially
+  rejected duplicate shared --confirm-merge-test option registration; no fixtures
+  executed. Corrected by separate processes, consistent with the fixed runner.
+  The first buffered wrapper's completion was not captured, so explicit per-suite
+  collection was repeated with captured output/status. No live tests ran.
+- New offline module collected **83 cases in 3.08s**, exit 0. No skips/xfails or
+  weakened mutation/auth assertions. Full offline tests do not prove PostgreSQL
+  races, rollback or real cookies.
+
+Owner-run guarded verification and regression commands are in TEAM_API.md. They
+require a private interactive DB-role password and verified revision, write only
+new scoped retained test fixtures and never migrate/reset/clean. They are pending,
+as are PostgreSQL HTTP concurrency/rollback/reconciliation, real-browser cookies,
+deployed HTTPS/proxy, 50-way authorized join, CI/load and G1. The existing browser
+manifest/approval prerequisites are unchanged; that host cannot exercise create.
+No automatic fixture creation/cleanup or existing account adoption occurred here.
+
+Owner exercise: trace why same-key replay returns the original 201 after a later
+fixture join, while a new key for the same actor/hackathon gets already_assigned.
+Then disable reconciliation in the existing offline double and explain why
+outcome_uncertain must keep the command/key unchanged. Stop for owner review
+before any commit or live action.
+
+## M-012A-R1 - first guarded team HTTP fixture error, 2026-11-10
+
+**Fixture corrected and offline verified; full live HTTP suite still pending.**
+Owner-reported live evidence: verified merge_test / merge_app, READ COMMITTED,
+0003_auth (head). First selected case
+`team_api_tests/test_team_creation.py::test_success_and_exact_replay_with_fresh_stored_chain[0]`
+errored with `app.services.credential_errors.CredentialError: invalid_input`;
+**1 error in 0.65s**. Fresh committed-state invariants were reported verified.
+This does not establish HTTP creation success or completion of the 105-case run.
+Codex did not access the database or reproduce this through a live connection.
+
+Exact root cause: backend/team_api_tests/conftest.py:37 used
+`'team_api_' + uuid4().hex[:24]`: 9 + 24 = 33 characters. The unchanged username
+regex in app/services/credentials.py:19 is `[a-z0-9_]{3,32}` with ASCII fullmatch;
+register() rejects at lines 99-100. The account fixture imported from
+session_tests/conftest.py:78-81 calls register(username=environment.username(),
+password=secrets.token_urlsafe(32)), omitting display_name. The generated password
+is 43 unpadded base64url ASCII characters, within the existing 15-128/UTF-8 policy.
+Display name would default to username and meet its 1-80 rule, but registration
+fails the username check before password validation, display-name construction,
+hashing, connection acquisition or INSERT. The actual owner-generated UUID suffix
+and password were not read, recovered or printed; the exact faulty value shape
+and length follow deterministically from the source.
+
+The test body is never reached. authorized would next call SessionService.login
+with exactly account[0].username and account[1], then set the cookie. Login calls
+CredentialService._verify_for_session -> _verify_record with those same inputs;
+public verify_credentials() is not called by this case. Neither verification
+path runs after the observed registration error. No HTTP adapter or production
+validation fault was found. Search of team_api_tests found one account generator;
+every test uses the imported account fixture directly or via authorized, so all
+35 parameter scenarios / 105 executions share the faulty construction. Other
+explicit session login calls also reuse the same account tuple without editing it.
+
+Smallest correction: change only prefix `team_api_` to `teamapi_` at line 37.
+8 + 24 = 32; preserve the existing 24-hex random suffix, password generation and
+display-name default. No runtime CredentialService, session, HTTP, CSRF, name/
+password policy, transaction/lock, idempotency, audit or outbox source changes.
+
+R1 changed only four already-pending files:
+- backend/team_api_tests/conftest.py: one-character prefix deletion.
+- backend/tests/test_team_api.py: two database-free regressions. The actual
+  imported account fixture uses real CredentialService registration/verification
+  input checks and HTTP RegisterBody/LoginBody validators with deterministic
+  synthetic inputs and in-memory SQL/transaction/KDF doubles; no validator is
+  patched. The old exact 33-character form still rejects before hashing or SQL.
+- docs/TEAM_API.md: owner failure/correction and historical offline-evidence label.
+- docs/PROGRESS.md: this evidence entry.
+
+Fresh Windows PowerShell / existing Python 3.11.9 venv checks:
+- Before correction, backend `.\.venv\Scripts\python.exe -m pytest tests/test_team_api.py -q -k 'real_guarded_account_fixture or previous_33_character' --tb=short`:
+  **1 failed, 1 passed, 83 deselected in 3.10s**, exit 1. The new account regression
+  reproduced CredentialError invalid_input at the exact imported fixture and
+  production register validation lines, using no PostgreSQL.
+- After correction, backend `.\.venv\Scripts\python.exe -m pytest tests/test_team_api.py tests/test_credentials.py tests/test_sessions.py tests/test_auth_http.py -q --tb=short`:
+  **295 passed in 17.70s**, exit 0.
+- backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1020 passed, 32 deselected in 25.08s**, exit 0. Includes all original team,
+  idempotency, auth and browser-harness shutdown/security regressions. One existing
+  Starlette/HTTPX deprecation warning in each pytest invocation.
+- backend `.\.venv\Scripts\python.exe -m pytest team_api_tests --collect-only -q`:
+  **105 collected in 0.54s**, exit 0; no fixtures executed/database opened.
+- backend `.\.venv\Scripts\python.exe -m pip check`: no broken requirements,
+  exit 0. `.\.venv\Scripts\python.exe -m compileall -q team_api_tests/conftest.py tests/test_team_api.py`:
+  passed, exit 0. No dependency change.
+- Final inline source/AST comparison against the captured pre-R1 pending scope
+  verifies only the four files above changed, the fixture diff is exactly one
+  character, original tests are intact with two functions appended, and all
+  production/runtime sources are unchanged. Whitespace/static checks and
+  `git -c safe.directory=I:/Merge diff --check` are performed before handoff.
+  Frontend typecheck/tests/build were not rerun for this fixture-only correction;
+  the prior 52-test result remains historical, not a new R1 claim.
+
+Owner-run verification remains the guarded verify then --suite team-api
+--revision 0003_auth --repetitions 3 workflow in TEAM_API.md, using only hidden
+interactive credentials and stopping on nonzero exit. No migration/reset/cleanup
+is needed. Fixtures remain scoped and retained; do not infer that the offline
+correction proves live creation/races/rollback/COMMIT reconciliation. No credential
+prompt, database access, browser/backend launch, fixture write, manifest creation,
+schema/permission change, staging, commit, remote or push occurred in R1.
+HEAD remains `2e5f678efd7348584eed2b6281c7448bc45f5d8e`; combined pending scope
+remains 23 files (18 tracked modifications, five new), empty index. G1 remains open.
+
+Owner exercise: count prefix plus suffix before running a credential fixture,
+then trace why a 33-character name is rejected before any hashing or SQL.
+Stop for owner review before another live run or commit.
+
+## M-012A final review and local commit checkpoint - 2026-11-10
+
+**Owner-verified guarded team HTTP suite; final offline checks passed.** The owner
+reports verified merge_test / merge_app, READ COMMITTED, **0003_auth (head)** and
+**105 team API cases passed in 140.81 seconds**, following the R1 fixture fix.
+This supersedes the earlier first-case setup failure and pending full-suite status;
+the earlier failure and red/green regression evidence remain historical above.
+The existing nonblocking Starlette deprecation warning remains. This is owner-run
+PostgreSQL evidence, not a new Codex database execution or an invented transcript.
+No PostgreSQL rerun was needed or performed during final review.
+
+Reviewed all 23 pending files against AGENTS.md and the create-only scope. The
+HTTP path derives actor exclusively from authenticated_session's PostgreSQL
+principal, rechecks session-bound CSRF, rejects client identity/query/body extras,
+and preserves exact Origin/Fetch Metadata/actual-peer/HTTPS/JSON policy. It uses
+the existing exact idempotency key validator and calls create_team_idempotent
+once. Stored 201 status/body/allowlisted headers survive replay with the existing
+private/no-store overlay. Mismatch and assignment conflicts are fixed sanitized
+409s; outcome_uncertain is explicit same-command/SAME-key retryable 503, never a
+claim of success or failure. No route SQL, UUID allocation, transaction lifecycle,
+independent existence query or separate audit/outbox write was introduced.
+TeamService._execute remains the sole transaction owner; composed mutation,
+retry, audit/outbox, locks and database constraints are unchanged.
+
+The R1 generator is exactly `teamapi_` (8) plus 24 lowercase hex characters: 32.
+Production CredentialService username/password/display-name validation is byte-
+for-byte unchanged from baseline. The old 33-character fixture still rejects
+before hashing or SQL in the regression. Existing auth/session/security, read
+service/DTOs, configuration, database helpers, models, schema, migrations,
+privileges and dependency manifests/lockfiles are unchanged. The only production
+changes are the new team HTTP module and its app router/error registration.
+No frontend code, unrestricted join, invite, request, leave or leadership API.
+
+The browser-only host removes only this router by identity; its exact dependency/
+route inventory still fails closed if it is reintroduced. No browser manifest or
+write scope changed. Original per-connection and R4 sticky shutdown/drain guards
+are intact; all 128 harness cases pass within the offline suite. Packaging stays
+app-only and no production app import reaches test_support. All original tests
+are preserved apart from the explicitly authorized POST replacing one old 405
+expectation and its GET-only OpenAPI inventory; all other negative/GET contracts
+remain enforced. No skips/xfails or weakened transaction/credential assertions.
+
+Final command evidence, Windows PowerShell / existing Python 3.11.9 venv and
+Node/npm installation, no install/update:
+
+- backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1020 passed, 32 deselected in 41.33s**, exit 0; one existing Starlette/HTTPX
+  deprecation warning. Includes 85 team HTTP/fixture offline cases and the full
+  existing auth/read/mutation/retry/browser-harness regressions. The R1 focused
+  **295 passed in 17.70s** remains prior evidence, not rerun as a separate final
+  command; its cases are included in the final full suite.
+- frontend `npm run typecheck`: passed, exit 0.
+- frontend `npm test`: **52 passed / three files in 13.54s**, exit 0.
+- frontend `npm run build`: passed, exit 0; Vite 6.4.5, 36 modules / 2.86s.
+  JS 210.43 kB (65.98 kB gzip), CSS 9.94 kB (3.02 kB gzip); no load claim.
+- frontend `npm ls --depth=0`: installed dependency tree valid, exit 0.
+- backend `.\.venv\Scripts\python.exe -m pip check`: no broken requirements,
+  exit 0.
+- backend `.\.venv\Scripts\python.exe -m compileall -q app/team_api.py app/main.py team_api_tests tests/test_team_api.py tests/test_auth_schema_support.py tests/test_browser_harness.py tests/test_concurrency_harness.py tests/test_read_api.py test_support/browser.py test_support/concurrency.py`:
+  passed, exit 0. Inline Python AST/compile/whitespace/candidate secret-format
+  checks passed over all 23 files. Protected baseline comparisons, exactly-one
+  composed call/no route transaction lifecycle, exact fixture length and app-only
+  packaging/import exclusion checks passed. No configured Python linter.
+- `git -c safe.directory=I:/Merge diff --check`: passed; existing LF/CRLF notices
+  only. Final staged file inventory, normalized blob identity, candidate secret-
+  format scan and `git diff --cached --check` are required before the commit.
+  No active Git hooks or signing side effects are configured. Candidate inspection
+  found no private credentials, bearer/session values, database rows or approval
+  manifests; synthetic offline fixtures are deliberately public test inputs.
+  Pattern scanning is not an exhaustive secret-detection guarantee.
+
+Reviewed commit inventory (23 files):
+
+- `backend/app/main.py`
+- `backend/app/team_api.py`
+- `backend/team_api_tests/conftest.py`
+- `backend/team_api_tests/test_team_creation.py`
+- `backend/test_support/browser.py`
+- `backend/test_support/concurrency.py`
+- `backend/tests/test_auth_schema_support.py`
+- `backend/tests/test_browser_harness.py`
+- `backend/tests/test_concurrency_harness.py`
+- `backend/tests/test_read_api.py`
+- `backend/tests/test_team_api.py`
+- `docs/ARCHITECTURE.md`
+- `docs/BROWSER_ACCEPTANCE.md`
+- `docs/DECISIONS.md`
+- `docs/FRONTEND.md`
+- `docs/HTTP_AUTH.md`
+- `docs/IDEMPOTENCY.md`
+- `docs/PROGRESS.md`
+- `docs/READ_API.md`
+- `docs/TEAM_API.md`
+- `docs/TEAM_MUTATIONS.md`
+- `docs/TEAM_SERVICES.md`
+- `docs/TEST_DATABASE.md`
+
+Known limit preserved in TEAM_API.md and here: a fresh unknown hackathon can
+fail the immediate reservation FK before the domain lookup and return sanitized
+**503 service_unavailable**, not 404. No second existence transaction or raw
+constraint inference was added. Owner-local test schedules and injected COMMIT
+acknowledgement faults do not prove all interleavings or a real network outage.
+Separate current live auth/read/mutation/retry regressions were not rerun in this
+checkpoint; existing source and final offline tests are unchanged/passing.
+Frontend creation, real-browser cookie/CSRF acceptance, deployed HTTPS/proxy,
+authorized 50-way join, CI/load and G1 remain outstanding. The browser harness
+cannot exercise team creation under its existing auth-only approval scope.
+
+The owner explicitly authorizes exactly one local commit after a nonblocking
+review: `feat: add authenticated idempotent team creation API (M-012A)`.
+Source baseline is `2e5f678efd7348584eed2b6281c7448bc45f5d8e`; resulting full
+hash and final clean status are read from Git after committing and reported at
+handoff, never invented in advance. No database connection, credential prompt,
+backend/browser startup, fixture creation/reset/cleanup, migration/permission
+change, remote creation or push occurs in this checkpoint.
+
+Owner explanation/exercise: trace matching-key replay after a later membership
+change and explain why its 201 body stays at the original count/version. Change
+only the requested name with that key and predict 409 mismatch; changing the key
+for the same assigned actor/hackathon instead yields already_assigned. Explain
+why unknown commit acknowledgement must preserve the command/key.
+
 ## Daily work log template
 ```
 ### YYYY-MM-DD — [component/task ID]

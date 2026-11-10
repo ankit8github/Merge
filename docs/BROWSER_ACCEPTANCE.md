@@ -1,5 +1,11 @@
 # M-011A-R4 - test-only guarded browser host
 
+M-012A adds team creation to the ordinary application, but this test-only host
+explicitly excludes that router and retains its original exact dependency/route
+audit. Its approval manifest never authorizes team writes. Team creation is not
+supported by these browser commands; separate HTTP test instructions are in
+[TEAM_API.md](TEAM_API.md).
+
 **M-011A-R4: shutdown defect corrected offline; stop for owner review.** The R3
 regression now passes. Timeout/incomplete drains remain unsuccessful independently
 of later snapshots; final success is printed only after Engine/listener cleanup.

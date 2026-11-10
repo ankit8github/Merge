@@ -1,5 +1,12 @@
 # HTTP authentication — M-007B.3A-R1
 
+M-012A adds one authenticated, session-CSRF-protected team-create POST on /api.
+Existing cookie, Origin/Fetch Metadata, custom-header, throttle and peer/proxy
+policies are unchanged. [TEAM_API.md](TEAM_API.md) defines the stored 201 reply,
+sanitized errors and same-key uncertainty handling. The owner verified 105 guarded
+HTTP cases in 140.81s at 0003_auth. Codex did not rerun PostgreSQL; browser and
+deployed HTTPS acceptance remain pending.
+
 M-010A adds authenticated GET-only /api/hackathons discovery routes. They reuse
 the existing validated-session dependency and extend the same AuthBoundary browser/
 actual-peer/proxy/HTTPS and no-store policy to /api. No cookie, CSRF, session or

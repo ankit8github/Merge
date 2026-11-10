@@ -628,6 +628,25 @@ def test_r3_no_domain_mutation_route(api, path):
     api.sessions.revoke.assert_not_called()
 
 
+def test_m012a_create_router_is_excluded_and_reintroduction_latches_closed(api):
+    from app import team_api
+    path = '/api/hackathons/' + str(uuid4()) + '/teams'
+    api.client.cookies.set('merge_session_dev', auth.encode_token(b't'*32))
+    result = api.client.post(path, headers={**HEADERS, 'X-CSRF-Token': auth.encode_token(b'c'*32),
+                             'Idempotency-Key': 'unapproved-create'}, json={'name': 'Forbidden'})
+    assert result.status_code == 405
+    api.sessions.verify_csrf.assert_not_called()
+    # Even trusted code accidentally reinstalling the new router must be rejected
+    # before its unoverridden database dependency can resolve ordinary Settings.
+    api.app.include_router(team_api.router)
+    try:
+        assert api.client.post(path, headers=HEADERS, json={'name': 'Forbidden'}).status_code == 503
+        assert api.client.get('/health').status_code == 503
+        api.sessions.verify_csrf.assert_not_called()
+    finally:
+        api.app.routes.pop()
+
+
 def test_r3_missing_manifest_refuses_without_prompt(monkeypatch, capsys):
     missing = MagicMock()
     missing.read_bytes.side_effect = FileNotFoundError(MARKER)

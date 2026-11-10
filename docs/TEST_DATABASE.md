@@ -1,5 +1,12 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+M-012A adds fixed guarded `--suite team-api`, requiring explicit 0003_auth before
+credentials. Real auth/read/team dependencies share the guarded test Engine; new
+UUID fixtures are retained and fresh committed chains/invariants checked. The
+owner verified 105 cases in 140.81s at guarded 0003_auth. Codex did not rerun
+PostgreSQL. Reproduction commands and exact writes are in
+[TEAM_API.md](TEAM_API.md); no schema, privilege, cleanup or browser-host expansion.
+
 **M-011A-R4: shutdown defect corrected offline; stop for owner review.** The R3
 regression now passes. Timeout/incomplete drains remain unsuccessful independently
 of later snapshots; final success is printed only after Engine/listener cleanup.

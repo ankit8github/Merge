@@ -1,5 +1,11 @@
 # Authenticated discovery reads — M-010A
 
+M-012A now adds POST on the existing scoped teams collection, without changing
+any GET response, pagination or My Team null contract. Earlier statements about
+GET-only routes and no public mutations describe M-010A history. Creation is
+defined separately in [TEAM_API.md](TEAM_API.md); no public join or other lifecycle
+route is added.
+
 Checkpoint against `0372c85caa59f0a114f6634957dd8f61f2e64b19`, revision
 **0003_auth**: owner verified **87 authenticated read API cases in 73.35s** and
 **54 authentication API regressions in 28.28s**, **141 passed**, suite-time sum

@@ -1,5 +1,10 @@
 # Merge authentication and discovery UI — M-011A
 
+M-012A implements the backend create-only route; the next React milestone must
+use the exact typed command/stored-reply and same-key retry contract in
+[TEAM_API.md](TEAM_API.md). No frontend create flow is implemented here, and the
+existing guarded browser host still excludes team mutations.
+
 **M-011A-R4: shutdown defect corrected offline; stop for owner review.** The R3
 regression now passes. Timeout/incomplete drains remain unsuccessful independently
 of later snapshots; final success is printed only after Engine/listener cleanup.

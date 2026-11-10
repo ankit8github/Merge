@@ -1,5 +1,12 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
+M-012A adds only POST /api/hackathons/{hackathon_id}/teams using the validated
+session actor, session-bound CSRF and existing composed idempotent create service.
+It returns the stored 201 result and explicitly handles outcome_uncertain without
+adding transactions, schema, dependencies or join authorization. The owner verified
+105 guarded HTTP cases in 140.81s at 0003_auth; Codex did not rerun PostgreSQL.
+Contract and final offline evidence: [TEAM_API.md](TEAM_API.md) and PROGRESS.md. Earlier no-team-HTTP statements retain historical scope; G1 is open.
+
 **Status:** PHASE 0 VERIFIED / M-006A DOMAIN SCHEMA IMPLEMENTED; M-007A internal create/join services and R1 AUTOCOMMIT rejection implemented. Owner verified 48 expanded PostgreSQL cases in 37.23s; Codex verified 94 database-free checks. No domain APIs; G1 remains open for later acceptance work. Concrete schema and database guards: `docs/SCHEMA.md`; bounded service contract: `docs/TEAM_SERVICES.md`. Source requirements: `docs/REQUIREMENTS.md`. Decisions: `docs/DECISIONS.md`. Verification: `docs/PROGRESS.md`.
 
 ## 1. Goals and constraints
