@@ -12,7 +12,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.engine import Connection
 
 from app.services.errors import DomainError, ErrorCode
-from app.services.teams import _CreateTeamCommand, _JoinTeamCommand, _query
+from app.services.teams import _CreateTeamCommand, _CreateTeamRequest, _JoinTeamCommand, _query
 
 _OPERATIONS = ('team.create.v1', 'team.join.v1')
 _MAX_REPLY_BYTES = 16_384
@@ -64,14 +64,14 @@ class _IdempotencyCommand:
             _invalid()
 
 
-def _command(command: _CreateTeamCommand | _JoinTeamCommand, key: str) -> _IdempotencyCommand:
+def _command(command: _CreateTeamCommand | _CreateTeamRequest | _JoinTeamCommand, key: str) -> _IdempotencyCommand:
     """Validate and fingerprint meaningful inputs, without normalizing user text."""
     _key(key)
-    if not isinstance(command, (_CreateTeamCommand, _JoinTeamCommand)):
+    if not isinstance(command, (_CreateTeamCommand, _CreateTeamRequest, _JoinTeamCommand)):
         _invalid()
     if not isinstance(command.actor_id, UUID) or not isinstance(command.hackathon_id, UUID):
         _invalid()
-    if isinstance(command, _CreateTeamCommand):
+    if isinstance(command, (_CreateTeamCommand, _CreateTeamRequest)):
         name = command.name
         if not isinstance(name, str) or not 1 <= len(name) <= 120 or not name.strip(' ') or '\x00' in name:
             _invalid()

@@ -118,6 +118,13 @@ All membership-changing operations must acquire locks in **one consistent order*
 - Verify state in DB, not only HTTP responses.
 
 ### Idempotency
+- M-008D adds internal create_team_idempotent/join_team_idempotent composition
+  under TeamService._execute, with one audit/outbox pair and version per success.
+  Owner verified 81 composed + 57 service + 60 idempotency cases on guarded
+  0003_auth: 198 passed, corrected suite-time sum 201.63s, three repetitions
+  requested per suite, fresh invariants verified. Public HTTP integration remains
+  pending; see TEAM_MUTATIONS.md. Codex did not rerun PostgreSQL.
+  Legacy methods remain internal compatibility facades, excluded from future HTTP.
 - M-008C implements private primitives only: exact printable-ASCII keys, versioned
   canonical SHA-256 command hashes, ON CONFLICT reservation, separate fresh
   READ COMMITTED replay lookup and transaction-local successful completion.

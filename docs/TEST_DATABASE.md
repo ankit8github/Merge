@@ -302,3 +302,16 @@ guarded merge_test / **0003_auth**, three repetitions requested, fresh committed
 invariants verified and fixtures retained. This successful full run supersedes
 the earlier first-test failure; see the R1 and final entries in PROGRESS.md.
 Codex did not rerun PostgreSQL. This verifies private primitives, not a public API.
+
+## M-008D guarded composed-mutation suite
+
+`--suite mutations` selects team_mutation_tests only and requires explicit
+`--revision 0003_auth`. It preserves fixed-target identity checks, bounded waits,
+retained fixtures and fresh independent committed-chain/team-invariant checks.
+Owner verified merge_test / merge_app, READ COMMITTED, 0003_auth (head): mutations
+81 passed in 101.23s, services 57 in 59.59s and idempotency 60 in 40.81s. Total 198
+passed, corrected suite-time sum 201.63s, three repetitions requested per suite,
+fresh composed chains/committed invariants verified and fixtures retained. Codex
+did not rerun PostgreSQL. Exact reproduction commands and the correction of the
+earlier arithmetic total are in TEAM_MUTATIONS.md. No migration, reset, privilege
+change or fixture cleanup is performed.

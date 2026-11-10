@@ -1,5 +1,23 @@
 # Internal team services — M-007A
 
+## M-008D composed entry points — owner-verified checkpoint
+
+Owner verified guarded merge_test / merge_app, READ COMMITTED, 0003_auth (head):
+81 mutation cases in 101.23s, 57 service regressions in 59.59s and 60 idempotency
+regressions in 40.81s, **198 passed**, corrected suite-time sum **201.63s**.
+Three repetitions requested for each suite, fresh committed chains/invariants
+verified and fixtures retained. Codex did not rerun PostgreSQL. Full evidence
+and the owner's arithmetic correction are in TEAM_MUTATIONS.md/PROGRESS.md.
+
+New create_team_idempotent()/join_team_idempotent() compose reservation, existing
+transaction-local mutation, version, audit, outbox and successful reply completion
+under the unchanged _execute owner. Legacy create_team()/join_team() stay internal
+compatibility facades and must not back future HTTP mutations. No HTTP routes,
+schema/migration, dependency, dispatcher or retry framework is added. See
+[TEAM_MUTATIONS.md](TEAM_MUTATIONS.md) for exact interfaces, graph, payloads,
+fault tests, owner commands and checkpoint evidence. Earlier entries below describe
+their original milestones, not M-008D live verification. G1 remains open.
+
 ## M-008C private idempotency primitives — owner-verified checkpoint
 
 Owner verified **60 passed in 40.82s** on guarded merge_test / **0003_auth**,

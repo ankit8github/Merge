@@ -76,6 +76,12 @@ filtered out to make comparisons pass.
 
 ## Supporting transactional records
 
+M-008D adds composed team/idempotency/audit/outbox writers on this unchanged
+schema. Owner verified 81 composed, 57 service and 60 idempotency cases: 198 passed
+on guarded 0003_auth, three repetitions requested per suite and fresh invariants
+verified. Exact timings, payloads and rollback guarantees are in TEAM_MUTATIONS.md.
+No dispatcher or schema/migration change is introduced.
+
 Idempotency has immediate uniqueness `(actor_id, operation, key)`, a 32-byte
 fingerprint, bounded printable-ASCII key and checked pending/completed response
 shape. A deferred trigger reads final state and rejects a committed pending

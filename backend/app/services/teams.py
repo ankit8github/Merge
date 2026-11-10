@@ -1,9 +1,11 @@
 """Atomic internal creation/join operations. Identity is trusted, not authenticated.
 
-No idempotency, authorization, audit or outbox generation. Do not expose directly
-as public mutations. Engine ownership prevents caller-controlled partial commits.
+Legacy create/join are internal compatibility facades. Future HTTP must use the
+composed idempotent entry points and authenticate/authorize the trusted actor.
+Engine ownership prevents caller-controlled partial commits.
 """
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import text
@@ -12,6 +14,9 @@ from sqlalchemy.exc import DBAPIError
 
 from app.services.errors import DomainError, ErrorCode, map_database_error
 
+if TYPE_CHECKING:
+    from app.services.idempotency import _StoredReply
+
 
 @dataclass(frozen=True)
 class TeamResult:
@@ -19,6 +24,14 @@ class TeamResult:
     hackathon_id: UUID
     user_id: UUID
     member_count: int  # Actual rows at mutation time, not a persistent/cached field.
+
+
+@dataclass(frozen=True, slots=True)
+class _CreateTeamRequest:
+    """Meaningful inputs only; no outcome UUID is allocated for a replay."""
+    hackathon_id: UUID
+    actor_id: UUID
+    name: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +79,20 @@ class TeamService:
             _uuid(value)
         command = _JoinTeamCommand(hackathon_id, team_id, actor_id)
         return self._execute(lambda c: self._join_team_in_tx(c, command))
+
+    def create_team_idempotent(self, *, hackathon_id: UUID, actor_id: UUID,
+                               name: str, key: str) -> '_StoredReply':
+        """Compose one trusted-actor mutation; return only after _execute commits."""
+        # Local import keeps the existing private command/fingerprint dependency
+        # acyclic at module load. There is still only one transaction owner.
+        from app.services.team_mutations import _create_team_idempotent
+        return _create_team_idempotent(self, hackathon_id, actor_id, name, key)
+
+    def join_team_idempotent(self, *, hackathon_id: UUID, team_id: UUID,
+                             actor_id: UUID, key: str) -> '_StoredReply':
+        """Trusted self-admission, not HTTP authorization or an invite workflow."""
+        from app.services.team_mutations import _join_team_idempotent
+        return _join_team_idempotent(self, hackathon_id, team_id, actor_id, key)
 
     def _create_team_in_tx(self, connection: Connection, command: _CreateTeamCommand) -> TeamResult:
         """Private operation on _execute's guarded connection; never owns a transaction."""

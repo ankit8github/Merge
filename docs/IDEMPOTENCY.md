@@ -1,5 +1,16 @@
 # Private idempotency primitives — M-008C
 
+M-008D now composes these primitives in explicit internal TeamService entry points;
+see TEAM_MUTATIONS.md. Owner verified 81 composed cases in 101.23s, 57 service
+regressions in 59.59s and 60 idempotency regressions in 40.81s: 198 passed, corrected
+suite-time sum 201.63s, guarded 0003_auth, three repetitions requested per suite,
+fresh invariants verified and fixtures retained. Codex did not rerun PostgreSQL.
+A new frozen create request without an outcome UUID uses the same canonical V1
+fingerprint as the
+existing private create command; all reservation/replay/completion rules remain.
+The M-008C checkpoint/history below records primitive-only evidence. No public
+HTTP mutation routes exist.
+
 Checkpoint against `35ddacecfd803c7fd1b1d1ed2a188873ba62f488`: owner verified
 **60 passed in 40.82s** on guarded merge_test / **0003_auth**, three repetitions
 requested, fresh committed-state invariants verified and fixtures retained.

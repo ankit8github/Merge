@@ -2611,6 +2611,251 @@ the committed immutable reply. Explain why a generated create UUID must not ente
 the command hash; trace an exception after completion through the owner's rollback
 to show that neither the reservation nor the simulated effect survives.
 
+### 2026-11-10 — M-008D atomic composed mutations (owner review; live pending)
+
+Historical implementation entry: its pending-live/no-commit status is superseded
+by the owner-verified final checkpoint below. Original commands/results are retained.
+
+Baseline: main `d8cf343a50cfaec4e83c47d318bfac79d10072ea`, initially clean.
+M-008B's 57 owner-verified service cases and M-008C's 60 primitive cases remain
+historical evidence, not a live pass for this composition. G1, R-08 and R-12
+remain open. Implemented/offline-tested only; no commit is authorized in this task.
+
+New TeamService.create_team_idempotent()/join_team_idempotent() validate trusted
+UUID/meaningful inputs/key and construct the unchanged canonical V1 fingerprint
+before connecting. A frozen _CreateTeamRequest contains no outcome UUID, allowing
+replay without allocating a new team ID. Local imports avoid the existing command/
+fingerprint module cycle. The compatibility create_team()/join_team(), private
+mutation commands/TeamResult and every original TeamService method are AST-identical
+to baseline. Only the new composed methods may back a future authenticated and
+authorized public mutation boundary; no HTTP team routes are implemented.
+
+Graph: new entry point -> private facade/validated input/hash -> unchanged _execute
+connection/guard/begin/timeouts -> reservation -> either stored reply or existing
+transaction-local mutation -> version -> audit -> outbox -> reply completion ->
+one COMMIT -> return. Reservation precedes hackathon SHARE -> user NO KEY UPDATE
+-> existing team NO KEY UPDATE and fresh post-lock counts. No helper owns a
+connection, transaction, savepoint, commit, retry or external publication.
+Create requires version 1; join increments once under its retained parent lock
+and stamps updated_at with database clock_timestamp(). Bigint version exhaustion
+fails closed and rolls back admission. Legacy methods deliberately retain their
+internal compatibility semantics without version/audit/outbox composition.
+
+One audit row links the reservation, trusted actor, hackathon, team, team_version
+and operation action. Its bounded before/after summary includes count/version,
+leader, frozen sizes/readiness and affected subject membership. Create before is
+SQL NULL; join before count/version are result minus one because this path adds
+exactly one member and retains the parent lock, with unchanged leader/sizes.
+One corresponding outbox row uses team.changed.v1/schema_version 1, only
+hackathon/team IDs and team_version, published_at SQL NULL, attempt_count zero.
+No key/hash, credential, cookie, CSRF/session, profile or audit snapshot goes into
+the event. Create response status 201, join 200; existing bounded versioned reply
+contains result IDs/count/version and exact safe content-type/cache-control.
+Replay preserves the original response after later state changes and adds no
+mutation, version, audit, outbox or outcome UUID. Payloads/limits are in
+TEAM_MUTATIONS.md. No schema changes are needed for the actual named constraints.
+
+Changed-file inventory (17):
+- `backend/app/services/teams.py`, `backend/app/services/idempotency.py`,
+  new `backend/app/services/team_mutations.py`.
+- new `backend/tests/test_team_mutations.py`, existing
+  `backend/tests/test_concurrency_harness.py`, `backend/tests/test_auth_schema_support.py`.
+- `backend/test_support/concurrency.py`, new
+  `backend/team_mutation_tests/conftest.py`, `backend/team_mutation_tests/test_composition.py`.
+- new `docs/TEAM_MUTATIONS.md`, existing `docs/TEAM_SERVICES.md`, `docs/IDEMPOTENCY.md`,
+  `docs/DECISIONS.md`, `docs/ARCHITECTURE.md`, `docs/SCHEMA.md`, `docs/TEST_DATABASE.md`,
+  this `docs/PROGRESS.md`.
+
+Actual Codex evidence, Windows PowerShell, existing backend Python 3.11.9 /
+SQLAlchemy 2.1.8 / psycopg 3.3.8 venv, from backend unless stated:
+- `.\.venv\Scripts\python.exe -m pytest tests/test_team_mutations.py tests/test_team_services.py tests/test_idempotency.py -q --tb=short`:
+  **154 passed in 1.83s**, exit 0. Covers 28 new orchestration cases plus the
+  unchanged 55 team/71 primitive offline cases.
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **657 passed, 32 deselected, one existing Starlette/HTTPX warning in 17.89s**,
+  exit 0. Includes all prior 627 cases and two extra runner parameter cases.
+- `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0; no install/update.
+- `.\.venv\Scripts\python.exe -m pytest team_mutation_tests --collect-only -q`:
+  initial **81 collected in 0.15s**; final collection after strengthening fresh
+  audit-state assertions **81 in 0.03s**, exit 0 (output summarized with
+  `| Select-Object -Last 2`). These are 27 scenarios at default three repetitions.
+- `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q`:
+  **57 collected in 0.07s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest idempotency_tests --collect-only -q`:
+  **60 collected in 0.08s**, exit 0. No collection executed database fixtures.
+
+Root inline Python via `.\backend\.venv\Scripts\python.exe -` passed source AST
+comparisons for all original TeamService methods/commands/TeamResult, every
+unchanged primitive helper, and normalized factory comparison proving only the
+new create input shape is accepted (canonical bytes/rules unchanged). It checked
+the exact component file allowlist, nine Python ASTs, no composition lifecycle/
+retry calls, four literal composition SQL statements and their expected team
+version/audit/outbox write targets. Protected baseline comparison passed for all
+migrations/models/db configuration, error mapping, auth/session/throttle runtime,
+existing 57/60 live suite sources, existing team/primitive offline tests,
+dependencies/locks, frontend and provisioning/privilege scripts. Backend inline
+Python compiled 28 literal service/live SQL call sites, checked required binds
+against supplied parameters and rejected quoted accidental binds. Source inspection
+confirmed no route or non-service facade imports the new methods.
+
+Changed-file secret/artifact path/content and whitespace scans passed with no
+actionable findings; these are supplementary pattern checks, not an exhaustive
+secret proof. `git -c safe.directory=I:/Merge diff --check` passed, with existing
+LF/CRLF conversion warnings. No configured Python linter or frontend/browser
+build/test result is claimed. No private environment file was opened. No credential
+was supplied in the test environment; Codex did not prompt, connect to PostgreSQL,
+access merge_dev, migrate/reset/drop/clean up data, or alter roles/permissions.
+
+New guarded runner `--suite mutations --revision 0003_auth` verifies revision before
+requesting credentials; all independent fixture/service/worker/observer connections
+check fixed merge_test identity/revision/READ COMMITTED before writes. Retained
+UUID fixtures receive fresh independent original team-invariant and record-chain
+checks: exactly one audit/outbox per completed success, scope/subject/snapshots,
+safe unpublished payloads, contiguous versions and current counts. Fault injection
+after actual reservation/founder/member/version/audit/outbox/completion SQL must
+raise the exact injected signal and leave all five affected tables unchanged.
+Deferred COMMIT failure requires exact 23503/fk_teams_leader_member and full chain
+rollback with no returned result. Concurrent duplicates require observed server
+blocking, original equal responses and one chain; held-before-commit snapshots
+prove outbox/other effects invisible and no reply returned. Different-key capacity/
+same-user races require exact team_full/already_assigned rejection, not a timeout
+or generic database error. Real DBAPI AUTOCOMMIT, ownership and lock order cases
+are included. Waits remain bounded (8s sync, 3s observation, 30s join, 5s connect/
+lock, 15s SQL). No production retry framework is introduced by explicit test reruns.
+
+Pending: **all 81 new live executions and the 57/60 post-M-008D regression executions
+have only been collected, not executed by Codex**. Exact owner PowerShell verify,
+mutations, services and idempotency commands with revision 0003_auth, three
+repetitions, hidden credentials and stop-on-failure checks are in TEAM_MUTATIONS.md.
+No live success/timing is inferred from previous milestones.
+
+Limitations: trusted actor syntax/existence is not authentication/authorization;
+eventual HTTP must derive the actor from a verified session and authorize replay
+and mutation. Immediate reservation FKs use the existing integrity_fault mapping
+for nonexistent actor/hackathon IDs before legacy existence lookup; public error
+policy is not defined here. Legacy/raw writers are not automatically audited or
+versioned and must remain excluded from public workflows. Audit is a bounded
+state summary, not a roster/profile snapshot. No dispatcher, invitation/request
+workflow, general retries, ambiguous-COMMIT reconciliation, expiry/lease/takeover/
+cleanup, public 50-way API/CI, load, deployment or browser/HTTPS proof. M-008E and
+G1 closure are not included. No staging, commit, remote creation or push.
+
+Owner exercise: trace failure after outbox insertion through the only owner's
+rollback; then explain why replay after a different user's join returns the old
+count/version and why the stored response cannot escape before COMMIT.
+
+### 2026-11-10 — M-008D final review and authorized local checkpoint
+
+Owner verified the explicit target: merge_test / merge_app, READ COMMITTED,
+Alembic **0003_auth (head)**. The owner-run PostgreSQL results are:
+
+| Suite | Passing executions | Reported suite duration |
+|---|---:|---:|
+| Composed mutations | 81 | 101.23s |
+| Service regressions | 57 | 59.59s |
+| Idempotency regressions | 60 | 40.81s |
+| Total / sum | **198** | **201.63s** |
+
+Three repetitions requested for each suite. Fresh composed mutation chains and
+committed-state invariants verified; fixtures retained. These are owner-run
+results, not Codex database executions. The owner explicitly corrected the earlier
+202.63s combined figure as an arithmetic error, not an independently measured
+duration; the individual timings remain exactly as reported. 201.63s is their
+sum. No code or test change was required for that correction. No separate per-case
+raw transcript was supplied. G1 and public R-08/R-12 acceptance remain open.
+
+Final review against main baseline
+`d8cf343a50cfaec4e83c47d318bfac79d10072ea` found no correctness/security blocker.
+All 17 changed files were inspected; their exact inventory is in the implementation
+entry above and the commit. This checkpoint changes only evidence/status docs;
+runtime and tests remain the implementation that the owner verified.
+
+Confirmed _execute is the sole connection/transaction owner and retains its
+original guard, isolation, timeouts, rollback/error mapping and commit-before-return
+behavior. Reservation precedes unchanged hackathon SHARE -> user NO KEY UPDATE
+-> team NO KEY UPDATE / fresh-count logic. The composed paths invoke the original
+_create_team_in_tx/_join_team_in_tx once, never their committing compatibility
+facades. Create allocates its team UUID after winning the reservation and requires
+initial version 1; join increments version once under its retained parent lock.
+Exactly one successful audit and linked unpublished outbox are inserted and checked
+with RETURNING before completing the successful idempotency outcome.
+
+Stored status/body/headers reflect the mutation-time count/version and existing
+bounded V1 reply contract. Matching replay returns before outcome UUID allocation,
+domain locks, mutation/version/audit/outbox stages; no subsequent state regeneration.
+Mismatch/pending/malformed outcomes fail closed. Audit records link actor, subject,
+scope, operation and bounded before/after state; outbox contains only hackathon ID,
+team ID and version, with published_at NULL and attempt_count zero. No event or
+external notification is emitted from the transaction. Failure at any write or
+deferred COMMIT unwinds the full chain; tests require the specific injected signal,
+named leader-FK violation or intended race rejection, never generic database failure
+or a timeout accepted as success. All original legacy method signatures/behavior
+remain internal compatibility only, excluded from future public HTTP mutations.
+No new HTTP actor-ID/authentication boundary or unauthenticated join was added.
+
+Actual checkpoint commands, Windows PowerShell, existing backend Python 3.11.9 /
+SQLAlchemy 2.1.8 / psycopg 3.3.8 venv, from backend:
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **657 passed, 32 deselected, one existing Starlette/HTTPX warning in 12.80s**,
+  exit 0. Team, auth/session/throttle and composed orchestration regressions pass.
+- `.\.venv\Scripts\python.exe -m pytest tests/test_team_mutations.py tests/test_team_services.py tests/test_idempotency.py -q --tb=short`:
+  **154 passed in 1.52s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0; no install/update.
+- `.\.venv\Scripts\python.exe -m pytest team_mutation_tests --collect-only -q`:
+  **81 collected in 0.05s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q`:
+  **57 collected in 0.03s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest idempotency_tests --collect-only -q`:
+  **60 collected in 0.05s**, exit 0. Collection outputs were summarized with
+  `| Select-Object -Last 2`; no fixtures executed.
+
+Root `.\backend\.venv\Scripts\python.exe -` inline static review passed: exact
+17-file scope, nine Python ASTs, all original TeamService methods/commands/
+TeamResult AST-identical, unchanged primitive helpers and normalized factory
+comparison proving only new create-input acceptance, not changed canonical bytes.
+It verified no composition lifecycle/retry calls and four literal composition SQL
+queries with only expected version/audit/outbox write targets. Backend inline
+Python compiled 28 literal service/live SQL call sites with required supplied
+binds, rejected accidental quoted binds, and verified no route or non-service
+facade imports the new methods. Protected-baseline comparison passed for all
+migrations/models/db settings, error mapper, auth/session/throttle runtime,
+existing service/idempotency live sources and team/primitive offline tests,
+dependencies/locks, frontend, provisioning/privilege scripts, AGENTS and gitignore.
+
+Changed-file secret/artifact path/content scans and
+`git -c safe.directory=I:/Merge diff --check` passed; existing LF/CRLF conversion
+warnings remain. No actionable credential, generated artifact or unrelated-file
+finding; pattern checks supplement manual review, not an exhaustive secret proof.
+No private environment file was opened, and no PostgreSQL connection, credential
+access, merge_dev access, merge_test reset/drop/cleanup, schema/migration or
+role/permission change/query was performed by Codex. External ACL state was not
+independently queried. No configured Python linter, frontend build, browser/HTTPS
+or deployment check was run or claimed.
+
+Owner authorized exactly one local commit after successful review:
+`feat: compose atomic team mutations with audit and outbox (M-008D)`.
+Checkpoint procedure stages exactly the 17 reviewed files, compares every staged
+blob to reviewed working contents, and checks staged syntax, secret patterns and
+whitespace before committing once. Full resulting hash and final Git status are
+read and reported after commit; this commit cannot embed its own hash. No remote
+creation or push is authorized or performed.
+
+Remaining limitations: trusted internal actor input, future HTTP session-derived
+identity/current authorization/error policy, legacy/raw writers excluded from
+public audited workflows, audit summaries rather than rosters, unpublished outbox
+without dispatcher, no invitation/request workflow, no M-008E bounded retries or
+ambiguous-COMMIT reconciliation, no lease/expiry/takeover/cleanup. Existing
+reservation-FK missing-identity errors retain the documented integrity_fault
+mapping. Tested local schedules do not prove all interleavings, authenticated
+50-way API/CI, load, browser/HTTPS or production readiness. G1 remains open.
+
+Owner explanation/exercise: trace an exception after outbox insertion through
+the only owner's rollback, including a locally completed reply; then explain why
+replay after another member joins returns the original count/version without
+publishing or adding a second audit/outbox pair.
+
 ## Daily work log template
 ```
 ### YYYY-MM-DD — [component/task ID]

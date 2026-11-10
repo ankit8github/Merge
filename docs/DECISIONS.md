@@ -294,3 +294,28 @@ Owner checkpoint: 60 guarded idempotency cases passed in 40.82s on merge_test /
 and fixtures retained. This supersedes the first-test bind failure repaired in
 test-only R1. Codex did not rerun PostgreSQL; no public mutation facade, audit/
 outbox composition, retry reconciliation or G1 closure is included.
+
+### M-008D — owner-approved atomic composition, 2026-11-10
+
+Add explicit create_team_idempotent/join_team_idempotent methods on TeamService.
+The existing _execute remains the only transaction owner. Reserve before domain
+locks, replay without invoking domain logic, otherwise compose one existing
+transaction-local mutation, version, audit, outbox and successful reply completion.
+Legacy create/join remain internal compatibility facades, excluded from future
+HTTP use. No schema, migration, dependency, dispatcher or retry framework change.
+
+Create allocates its outcome UUID only after reservation succeeds and starts at
+version 1. Join increments version once under its retained team lock. Audit stores
+bounded before/after team summaries and affected subject membership, using schema
+columns for actor/scope/action/version/operation linkage. The unchanged leader/
+sizes and pre-join version/count can be derived under the retained lock from the
+single join's resulting values. Outbox contains only hackathon/team IDs and team
+version with event_type team.changed.v1, unpublished and attempt_count zero.
+See TEAM_MUTATIONS.md for payloads, ownership, verification and limitations.
+
+Owner checkpoint: guarded merge_test / merge_app, READ COMMITTED, 0003_auth (head);
+81 composed cases passed in 101.23s, 57 service regressions in 59.59s and 60
+idempotency regressions in 40.81s. Total 198 passed, corrected suite-time sum
+201.63s, three repetitions requested per suite, fresh chains/invariants verified,
+fixtures retained. The owner corrected 202.63s as an arithmetic error. No Codex
+PostgreSQL run, M-008E implementation, public HTTP integration or G1 closure.
