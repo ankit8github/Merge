@@ -1,5 +1,15 @@
 # HTTP authentication — M-007B.3A-R1
 
+M-010A adds authenticated GET-only /api/hackathons discovery routes. They reuse
+the existing validated-session dependency and extend the same AuthBoundary browser/
+actual-peer/proxy/HTTPS and no-store policy to /api. No cookie, CSRF, session or
+Origin policy change; no header-based identity or CORS. TeamService is unchanged.
+Owner verified at 0003_auth: read API 87 passed in 73.35s and auth API regressions
+54 in 28.28s; total 141 passed, suite-time sum 101.63s, three repetitions
+requested, one existing Starlette/HTTPX warning. These are owner-run PostgreSQL
+results, not Codex executions; earlier auth results below remain historical.
+Contracts and guarded reproduction commands: [READ_API.md](READ_API.md).
+
 M-007B.3B now adds durable login account/IP and registration IP throttling,
 owner-verified on guarded merge_test / 0003_auth, 2026-11-10: 33 throttle cases
 in 31.42s, 54 updated API cases in 30.94s and 78 session cases in 48.33s;

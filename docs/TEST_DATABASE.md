@@ -1,5 +1,14 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+M-010A adds fixed guarded `--suite reads`, requiring explicit revision 0003_auth
+before credentials. Owner verified at 0003_auth: reads 87 passed in 73.35s and
+auth API regressions 54 in 28.28s; total 141 passed, suite-time sum 101.63s.
+Three repetitions requested; one existing Starlette/HTTPX warning. This is owner
+execution, not a Codex database run. Fixtures retain accounts, sessions and teams;
+every connection
+checks identity/isolation/revision and fresh committed invariants are inspected.
+No schema, privilege or cleanup change. Exact commands: [READ_API.md](READ_API.md).
+
 M-008E adds fixed guarded `--suite retries`, requiring explicit
 `--revision 0003_auth` before credentials. It reuses retained mutation fixtures,
 identity/isolation/revision guards and fresh complete-chain/invariant verification.

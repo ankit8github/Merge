@@ -14,7 +14,13 @@ execute PostgreSQL tests. Only composed operations
 participate, maximum three total attempts, monotonic budget and bounded jitter;
 `_execute` remains sole transaction owner and lock order/schema remain unchanged.
 See [TRANSACTION_RETRY.md](TRANSACTION_RETRY.md) and PROGRESS.md. Older milestone
-statements below describe their original scope. No HTTP team API or G1 closure.
+statements below describe their original scope. M-010A now implements authenticated
+GET-only discovery; owner verified 87 reads in 73.35s and 54 auth API regressions
+in 28.28s at 0003_auth: 141 passed, suite-time sum 101.63s, three repetitions
+requested and one existing warning. Codex did not execute PostgreSQL tests. See
+[READ_API.md](READ_API.md) for scope, typed DTOs, single-statement read-only
+snapshots and bounded keyset pages on existing indexes. No HTTP team mutation,
+frontend integration or G1 closure.
 - Solve PS1 with a **correct-by-design membership core**, not an application-server mutex.
 - Support 10k seeded users, 2k teams, board p95 < 200ms under 100 concurrent clients in the measured environment.
 - Deliver an end-to-end React UI, secure API, realtime team/board notifications, verified tests and deployment by challenge deadline.

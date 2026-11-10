@@ -44,7 +44,7 @@ def decode_token(value: str | None) -> bytes | None:
 
 
 class AuthBoundary:
-    """Before body parsing: browser policy. On all auth responses: no caching.
+    """Before body parsing: browser policy. On all /auth and /api responses: no caching.
 
     Pure ASGI middleware also sanitizes unexpected failures without logging their
     exception, request headers, body or local variables. Hosting/APM remains trusted.
@@ -53,7 +53,8 @@ class AuthBoundary:
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if scope['type'] != 'http' or not (scope['path'] == '/auth' or scope['path'].startswith('/auth/')):
+        if scope['type'] != 'http' or not any(
+                scope['path'] == prefix or scope['path'].startswith(prefix+'/') for prefix in ('/auth', '/api')):
             return await self.app(scope, receive, send)
         request = Request(scope)
         policy = request.app.state.auth_policy

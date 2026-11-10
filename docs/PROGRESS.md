@@ -17,6 +17,7 @@
 - [x] Automated tests passed — M-007B.3B final checkpoint: owner verified 33 throttles in 31.42s, 54 updated API cases in 30.94s and 78 session cases in 48.33s; 165 passed in 110.69s, three repetitions requested and fresh committed-state invariants verified. Codex reran 546 database-free checks in 8.52s, dependency/static and controlled-launcher HTTP/Vite checks; all passed. Existing Starlette/HTTPX warning and earlier proxy timing flakiness remain. No CI, deployed HTTPS/browser or 50-way team-race claim.
 - [x] M-008B final checkpoint: owner verified guarded merge_test / 0003_auth (head), 57 passed in 40.99s, three repetitions requested and fresh committed-state invariants verified; reduced diagnostic 19 passed in 13.19s. Codex reran 554 database-free cases in 23.07s; dependency/static checks passed. Earlier interrupted run remains inconclusive history. G1 remains open.
 - [x] M-008E final review: owner verified guarded merge_test / merge_app, READ COMMITTED, 0003_auth (head): retries 54 in 48.66s, mutations 81 in 72.40s, TeamService 57 in 36.15s and idempotency 60 in 42.84s; 252 passed, suite-time sum 200.05s, three repetitions requested for all suites, fresh committed invariants verified and fixtures retained. Codex reran 709 database-free checks and dependency/static review; no Codex PostgreSQL execution. G1 remains open.
+- [x] M-010A final review: owner verified authenticated read API 87 passed in 73.35s and auth API regressions 54 in 28.28s, 141 passed with suite-time sum 101.63s at revision 0003_auth, three repetitions requested and one existing Starlette/HTTPX warning. These are owner-run PostgreSQL results, not Codex executions. Read-only routes and response contracts are in READ_API.md; G1 remains open.
 - [ ] Any public deployment exists — **not verified**.
 - [ ] PS1 submission completed — **not verified**.
 
@@ -3061,6 +3062,220 @@ Owner explanation/exercise: change injected 40001 to 55P03 and explain why no
 second attempt starts; trace real commit followed by lost acknowledgement through
 same-key replay and explain why it returns the original response without another
 membership/version/audit/outbox chain.
+
+## M-010A — initial implementation / pre-live history, 2026-11-10
+
+Historical implementation evidence below; final checkpoint follows this section.
+Implemented for owner review against main
+`0372c85caa59f0a114f6634957dd8f61f2e64b19`; **uncommitted; current guarded
+PostgreSQL execution pending**. The prior 709 offline / 252 owner-verified live
+M-008E passes are baseline history, not new read-API live evidence. G1 stays open.
+
+Added GET /api/hackathons, scoped /teams and /teams/{team_id}, and /me/team.
+All require the existing validated PostgreSQL session cookie. No client actor
+field or identity-header authentication; authenticated X-User-ID/X-Actor-ID,
+extra/duplicate query parameters and invalid UUID/page bounds are rejected.
+Current schema has no enrollment/tenant/private visibility model, so authenticated
+accounts may discover this public metadata, including unjoined live teams;
+every team/cursor query is scoped to the requested hackathon. No admission or
+leadership rights follow from reading. Exact typed fields and policies:
+[READ_API.md](READ_API.md).
+
+Pages default 20, bounded 1–100, limit+1 lookahead. Hackathons use id ASC keysets;
+teams use created_at DESC/id DESC with same-hackathon UUID cursor anchors, which
+remain usable after soft deletion. Actual membership counts, readiness, leader
+display and own membership come from one domain SELECT snapshot. Details share
+the small summary contract; no full roster, credential/session/CSRF, creator,
+audit/outbox, idempotency or internal version data is serialized. Missing/deleted/
+cross-scope resources and invalid cursors receive fixed sanitized errors. All
+/api responses receive the existing no-store/private headers and browser/proxy/
+HTTPS protections; no CORS or cookie/Origin policy change. Missing cookie does
+not initialize runtime database settings. No public team mutation route.
+
+The new read service owns READ ONLY transactions on the existing lazily owned
+Engine, with actual DBAPI AUTOCOMMIT/READ COMMITTED/no-active-transaction guards
+and 5s lock / 15s statement timeouts. No row write locks, per-statement retries,
+mutation service dependency or new connection configuration. It reuses existing
+PK/board/membership indexes by query design; no EXPLAIN/load evidence is claimed.
+TeamService, mutation/idempotency/retry runtime and schema remain unchanged.
+
+Files (18):
+- New backend/app/read_api.py, read_models.py, services/team_reads.py.
+- Backend app/auth.py (extend existing boundary path matching to /api) and
+  app/main.py (read router/error registration and lazy service state only).
+- New backend/tests/test_read_api.py and test_team_reads.py.
+- New backend/read_api_tests/conftest.py and test_reads.py.
+- Backend test_support/concurrency.py, tests/test_concurrency_harness.py and
+  tests/test_auth_schema_support.py (fixed reads suite and explicit 0003 guard).
+- Docs READ_API.md (new), ARCHITECTURE.md, DECISIONS.md, HTTP_AUTH.md,
+  TEST_DATABASE.md and PROGRESS.md.
+
+Actual verification, existing backend Windows PowerShell venv:
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **806 passed, 32 deselected, one existing Starlette/HTTPX warning in 15.59s**,
+  exit 0. Includes original auth/session/throttle and mutation regressions.
+- `.\.venv\Scripts\python.exe -m pytest tests/test_read_api.py tests/test_team_reads.py tests/test_auth_http.py tests/test_auth_throttle_http.py -q --tb=short`:
+  **235 passed**, one existing warning, **7.12s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0; no install/update.
+- `.\.venv\Scripts\python.exe -m pytest read_api_tests --collect-only -q`:
+  **87 collected in 0.07s**, exit 0, 29 scenarios x3; output summarized with
+  `| Select-Object -Last 2`, LASTEXITCODE checked. No fixtures executed.
+
+Initial focused implementation run passed 90 cases in 4.88s. Fixture review
+caught a missing required ThrottlePolicy argument, fixed before live execution.
+The added database-free guarded-client construction regression then exposed an
+offline Engine double missing existing hide_parameters/echo safety flags:
+1 failed / 805 passed in 16.62s; focused 1 failed / 234 passed in 6.94s. Only
+the double was corrected to hide_parameters=True/echo=False; no existing guard
+was weakened. Its focused rerun passed 1 in 1.31s and the full green runs above
+supersede these intermediate failures. No live failure or success is claimed.
+
+Pending guarded live cases exercise actual session validation (missing, forged,
+expired, revoked), current membership, counts, deterministic pages/ties, invalid
+UUID/bounds, scope/tombstones/cursors, no sensitive fields, READ ONLY SQL, actual
+AUTOCOMMIT rejection and concurrent join visibility. Test-only guarded fixture
+registration, issuance, domain seeds, legal tombstone INSERT and internal legacy
+join supply data; no write HTTP route or destructive cleanup. Fresh independent
+connections check session/team invariants and zero scoped support-record effects;
+fixtures retained. Event waits 8s; worker joins share 30s. Unexpected exceptions,
+timeouts or shapes fail rather than being accepted as race outcomes.
+
+Use the exact verify + reads + existing auth-api regression PowerShell commands
+in READ_API.md, all explicit merge_test / 0003_auth. Codex did not request/read
+credentials, access private attachments or open PostgreSQL. No merge_dev access,
+schema/migration/role/permission change, reset/drop/cleanup, remote or push.
+No commit or staging. Current live verification remains pending owner execution.
+
+Root inline `.\backend\.venv\Scripts\python.exe -` static review passed:
+exact 18-file scope, 12 Python AST/compile checks, seven runtime plus 13 fixture
+SQL binding checks, including rejection of accidental binds inside quoted SQL
+literals. Verified four GET-only routes, READ ONLY guard, allowlisted SELECT
+tables, no write/row-lock SQL or mutation/config dependencies. Existing auth
+AST differs only in boundary prefix matching/docstring; cookie/session/error/
+Origin/proxy policy logic is unchanged. All TeamService/mutation/idempotency/
+retry/auth-service/security runtime, migrations/models/db configuration,
+dependencies, provisioning/permission scripts, frontend and prior live suites
+remain unchanged. Secret/artifact patterns and
+`git -c safe.directory=I:/Merge diff --check` passed. No staged content, baseline
+HEAD/main unchanged. Pattern scans supplement manual review, not exhaustive
+secret proof. No configured Python linter, frontend build, EXPLAIN/load, browser
+or deployed HTTPS check was run or claimed. No external database ACL query.
+
+Frontend remains unchanged: its health screen and Vite proxy currently expose
+/health and /auth, so next integration needs a same-origin /api proxy/path rule,
+session bootstrap, relative cookie-authenticated fetches, hackathon/cursor state,
+stale-response cancellation, safe text rendering and 401/404/422/503/empty states.
+No join button may call an unimplemented endpoint. No browser/deployed HTTPS,
+50-way mutation HTTP race, CI/load or production-readiness evidence. G1 stays open.
+
+Owner exercise: hold an admission before COMMIT and trace why list/detail/count/
+own-membership remain old, then become the coherent new state after commit;
+change an offline page size and predict its exact exclusive next cursor.
+
+## M-010A — final review and local checkpoint, 2026-11-10
+
+Reviewed all 18 files against main baseline
+`0372c85caa59f0a114f6634957dd8f61f2e64b19`. No correctness/security blocker
+found within the approved authenticated discovery scope; no runtime or test
+edits were needed during final review. This checkpoint supersedes the initial
+implementation entry's pending-live/no-commit status above.
+
+Owner-run PostgreSQL evidence at revision **0003_auth**, not Codex executions:
+
+| Suite | Passed | Time |
+| --- | ---: | ---: |
+| Authenticated read API | 87 | 73.35s |
+| Authentication API regressions | 54 | 28.28s |
+| Combined / suite-time sum | **141** | **101.63s** |
+
+Three repetitions requested; one existing Starlette/HTTPX deprecation warning.
+The total is the precise sum of supplied suite timings, not an inferred separate
+wall-clock measurement. The guarded runner fixes merge_test / merge_app and
+READ COMMITTED; the read fixtures verify exact 0003_auth, retain scoped data and
+run fresh committed session/team invariant checks. No new credential or raw
+private transcript was supplied/read by Codex and no database rerun was performed.
+
+Confirmed all four GET routes depend on the existing session-cookie validator,
+with no alternative actor/header identity. Revoked/expired/malformed/forged or
+missing sessions receive 401 before domain reads. The current schema has no
+private/enrollment/tenant rules: authenticated discovery includes unjoined live
+teams, with team/detail/cursor queries restricted to the requested hackathon.
+X-User-ID/X-Actor-ID, client actor query fields, unknown/duplicate fields and
+invalid UUID/page bounds are rejected. Existing Origin/Fetch Metadata/HTTPS/
+actual-peer/trusted-proxy policy is preserved; no permissive CORS. Public DTOs
+exclude session/credential/CSRF, creator, roster, internal version, idempotency,
+audit and outbox material. All /api responses are no-store/private.
+
+Response contracts are exact and typed in READ_API.md: hackathon/team lists
+return `{items,next_cursor}`, detail returns the allowlisted Team summary, and
+`GET /api/hackathons/{hackathon_id}/me/team` returns **HTTP 200** with exactly
+`{"team":null}` for a user without membership in an existing hackathon. It has
+application/json and no-store/private headers. A missing hackathon remains
+404 hackathon_not_found. Missing/deleted/cross-hackathon team details are 404.
+
+Verified actual configuration, not just an intended isolation label:
+`app/db/session.py` builds the runtime Engine with READ COMMITTED and hidden
+parameters; lazy auth/read wiring shares that owned Engine. The read-service
+guard separately requires synchronous PostgreSQL/psycopg, actual DBAPI
+autocommit is False, no existing transaction and get_isolation_level() equal
+READ COMMITTED. Each owner transaction sets server READ ONLY and 5s/15s lock/
+statement timeouts before its one domain SELECT. Counts query actual membership
+rows in that same statement snapshot as team/leader/own membership/cursor state.
+No separate count/roster snapshot, stored counter, row write lock or mutation
+call occurs. Runtime SQL is SELECT plus transaction-local controls; permanent
+domain DML is prohibited by READ ONLY. Live tests assert transaction_read_only
+and committed before/after join shapes; unsupported transaction state fails closed.
+
+Pagination defaults to 20 with a 1–100 bound and <=101 lookahead. Catalog orders
+id ASC; team keysets order immutable created_at DESC/id DESC. Team cursor anchors
+are scoped to the hackathon and can be tombstones without returning deleted
+teams. Missing/cross-scope cursors are invalid. Separate HTTP pages/requests can
+observe later committed snapshots; no cross-request repeatable snapshot promised.
+
+Actual final-review verification, Windows PowerShell/backend venv:
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **806 passed, 32 deselected, one existing warning in 18.27s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest tests/test_read_api.py tests/test_team_reads.py tests/test_auth_http.py tests/test_auth_throttle_http.py -q --tb=short`:
+  **235 passed**, one existing warning, **7.28s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0; no install/update.
+- Root inline `.\backend\.venv\Scripts\python.exe -` static review passed:
+  exact **18-file** scope, **12 Python AST/compile** checks, **seven runtime plus
+  13 fixture SQL-binding** checks, quoted-bind detection, four GET-only routes,
+  allowlisted read tables and no write/row-lock SQL or mutation/config dependency.
+  Existing auth AST differs only in boundary prefix/docstring; cookie/session/
+  error/Origin/proxy logic remains unchanged. Changed-file secret/artifact patterns
+  and `git -c safe.directory=I:/Merge diff --check` passed.
+
+Manual diff review and protected-baseline checks confirm TeamService, mutation
+composition, idempotency/retry, auth services/security, migrations 0001/0002/0003,
+schema/models/db settings, dependencies, frontend, provisioning/role/permission
+scripts and original live suites remain unchanged. No PostgreSQL/merge_dev,
+private attachment or credential access, reset/drop/cleanup, schema/role/permission
+action or external ACL query was performed by Codex. External ACL state was not
+independently queried in this offline review. Pattern scans supplement manual
+review, not exhaustive secret proof. No configured linter, frontend build,
+EXPLAIN/load, deployed HTTPS or browser check run or claimed.
+
+The complete 18-file inventory is in the implementation entry above. Owner
+authorized exactly one local commit after successful review:
+`feat: add authenticated hackathon and team read API (M-010A)`.
+Checkpoint procedure stages only these reviewed files, compares every staged
+blob with reviewed working contents and checks staged syntax, scope, secret/
+artifact patterns and whitespace before committing once. Full resulting hash
+and clean status are read and reported after commit; this commit cannot contain
+its own hash. No remote creation or push.
+
+Remaining limits: frontend health UI and Vite proxy are unchanged (/api proxy and
+dashboard integration still needed); no full roster, mutation API, invitation/
+request flow, new visibility model or dispatcher. Covered schedules do not prove
+all interleavings or performance. No authenticated 50-way mutation HTTP acceptance,
+CI/load, browser/HTTPS or production readiness is established. G1 stays open.
+
+Owner exercise: change an offline page size and predict the exclusive next cursor;
+explain why count and own-membership remain old during a held uncommitted join
+without taking a row write lock, then change together after commit.
 
 ## Daily work log template
 ```

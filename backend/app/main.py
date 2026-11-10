@@ -12,6 +12,8 @@ from app.security.auth_policy import AuthSettings
 from app.services.credential_errors import CredentialError
 from app.services.session_errors import SessionError
 from app.services.throttling import ThrottleExceeded
+from app.read_api import router as read_router, read_error_handler
+from app.services.team_reads import ReadError
 
 
 def create_app(policy: AuthSettings | None = None) -> FastAPI:
@@ -27,6 +29,7 @@ def create_app(policy: AuthSettings | None = None) -> FastAPI:
         app.state.auth_services = None
         app.state.auth_engine = None
         app.state.auth_lock = Lock()
+        app.state.read_service = None
         try:
             yield
         finally:
@@ -41,7 +44,9 @@ def create_app(policy: AuthSettings | None = None) -> FastAPI:
     app.add_exception_handler(ThrottleExceeded, throttle_handler)
     app.add_exception_handler(RequestValidationError, validation_handler)
     app.add_exception_handler(HTTPException, http_handler)
+    app.add_exception_handler(ReadError, read_error_handler)
     app.include_router(router)
+    app.include_router(read_router)
 
     @app.get('/health')
     def health() -> dict[str, str]:

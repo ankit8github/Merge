@@ -348,3 +348,32 @@ idempotency 60 in 42.84s. Total 252 passed, suite-time sum 200.05s, three
 repetitions requested per suite, fresh committed-state invariants verified and
 fixtures retained. These are owner-run PostgreSQL results, not Codex database
 executions. No schema/permission/dependency change, HTTP team API or G1 closure.
+
+### M-010A — authenticated read-only discovery, 2026-11-10
+
+The owner authorizes GET-only hackathon/team discovery and own membership. The
+schema has no enrollment, tenant or private-visibility rules; all authenticated
+accounts may view this bounded public metadata, including unjoined teams. Scope
+every team/cursor lookup to its hackathon; derive own identity only from validated
+PostgreSQL session cookies. No new mutation authorization model is inferred.
+
+Use /api/hackathons, scoped /teams and /teams/{id}, and /me/team. Share existing
+browser/proxy/HTTPS policy and no-store protection with /auth. New read service
+owns READ ONLY snapshots on the existing lazy owned Engine; TeamService and
+mutation helpers are unchanged. One domain SELECT returns counts, leader and
+membership state consistently, without row write locks. Allowlisted typed DTOs
+omit account/session/audit fields and full rosters. Pagination is keyset-based,
+1–100 rows, over existing PK/board/roster indexes; no schema change. Team cursors
+resolve immutable timestamp/ID in the same hackathon, including tombstones;
+missing/cross-scope cursors are invalid. No stable snapshot across pages promised.
+
+Alternatives rejected: client identities, enrollment invented without schema,
+unbounded lists/rosters, offset scans, separate count/state snapshots and ORM/auth
+object serialization. READ_API.md records exact contracts and live evidence.
+No HTTP team mutations, invitation/request workflow, dependency,
+frontend, privilege or migration changes. G1 remains open.
+
+Owner checkpoint at 0003_auth: read API 87 passed in 73.35s, auth API regressions
+54 in 28.28s; combined 141 passed, suite-time sum 101.63s. Three repetitions
+requested; one existing Starlette/HTTPX warning. These are owner-run PostgreSQL
+results, not Codex database executions. No public mutation or production/G1 claim.
