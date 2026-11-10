@@ -10,7 +10,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
 from app.services.errors import DomainError, ErrorCode, map_database_error
-from app.services.teams import TeamService
+from app.services.teams import TeamService, _CreateTeamCommand, _JoinTeamCommand
 
 
 def driver_error(state, constraint=None):
@@ -50,23 +50,32 @@ class FakeConnection:
         self.rolled_back = False
         self.fail_insert = fail_insert
         self.fail_commit = fail_commit
+        self.active = False
+        self.begin_count = 0
+        self.commit_count = 0
 
     def get_isolation_level(self):
         return 'READ COMMITTED'
 
     def in_transaction(self):
-        return False
+        return self.active
 
     @contextmanager
     def begin(self):
+        assert not self.active, 'Nested transaction attempted'
+        self.active = True
+        self.begin_count += 1
         try:
             yield
             if self.fail_commit:
                 raise driver_error('23503', 'fk_teams_leader_member')
             self.committed = True
+            self.commit_count += 1
         except Exception:
             self.rolled_back = True
             raise
+        finally:
+            self.active = False
 
     def execute(self, statement, values):
         statement = str(statement)
@@ -229,3 +238,79 @@ def test_normal_transactional_state_is_accepted_and_unchanged():
     result = service_for(c).create_team(hackathon_id=uuid4(), actor_id=uuid4(), name='Team')
     assert result.member_count == 1 and c.committed
     assert c.connection.dbapi_connection.autocommit is False
+
+
+@pytest.mark.parametrize('operation', ['create', 'join'])
+def test_public_mutation_passes_owner_connection_and_commits_once(operation, monkeypatch):
+    c = FakeConnection()
+    service = service_for(c)
+    hackathon, actor, team = uuid4(), uuid4(), uuid4()
+    monkeypatch.setattr('app.services.teams.uuid4', lambda: team)
+    method = '_create_team_in_tx' if operation == 'create' else '_join_team_in_tx'
+    original = getattr(service, method)
+    seen = []
+
+    def observe(connection, command):
+        assert connection is c and c.active and c.commit_count == 0
+        assert (command.hackathon_id, command.actor_id, command.team_id) == (hackathon, actor, team)
+        seen.append(command)
+        return original(connection, command)
+
+    monkeypatch.setattr(service, method, observe)
+    if operation == 'create':
+        result = service.create_team(hackathon_id=hackathon, actor_id=actor, name='Team')
+        assert seen[0].name == 'Team'
+    else:
+        result = service.join_team(hackathon_id=hackathon, team_id=team, actor_id=actor)
+    assert result.team_id == team and len(seen) == 1
+    assert c.begin_count == c.commit_count == 1 and not c.active
+    assert not c.rolled_back
+    service._engine.connect.assert_called_once_with()
+    service._engine.connect.return_value.__exit__.assert_called_once()
+
+
+@pytest.mark.parametrize('operation', ['create', 'join'])
+def test_transaction_local_mutation_uses_supplied_transaction_without_owning_it(operation, monkeypatch):
+    c = FakeConnection()
+    service = service_for(FakeConnection())  # A different connection must never be acquired.
+
+    def forbidden(*args, **kwargs):
+        pytest.fail('Transaction-local method attempted transaction ownership')
+
+    monkeypatch.setattr(service._engine, 'connect', forbidden)
+    monkeypatch.setattr(service, '_execute', forbidden)
+    for method in ('commit', 'rollback', 'close', 'begin_nested'):
+        monkeypatch.setattr(c, method, forbidden, raising=False)
+    with c.begin():
+        monkeypatch.setattr(c, 'begin', forbidden)
+        if operation == 'create':
+            command = _CreateTeamCommand(uuid4(), uuid4(), 'Team', uuid4())
+            result = service._create_team_in_tx(c, command)
+        else:
+            command = _JoinTeamCommand(uuid4(), uuid4(), uuid4())
+            result = service._join_team_in_tx(c, command)
+        assert result.team_id == command.team_id and c.active
+        assert c.begin_count == 1 and c.commit_count == 0
+        assert not c.committed and not c.rolled_back
+        assert not any(statement.startswith('SET LOCAL') for statement in c.statements)
+    assert c.commit_count == 1  # Only the supplying owner completed the transaction.
+
+
+@pytest.mark.parametrize('operation', ['create', 'join'])
+@pytest.mark.parametrize('phase,code', [
+    ('insert', ErrorCode.ALREADY_ASSIGNED), ('commit', ErrorCode.INTEGRITY_FAULT),
+])
+def test_extracted_mutation_failure_unwinds_single_owner_before_mapping(operation, phase, code):
+    c = FakeConnection(fail_insert=phase == 'insert', fail_commit=phase == 'commit')
+    service = service_for(c)
+    with pytest.raises(DomainError) as error:
+        if operation == 'create':
+            service.create_team(hackathon_id=uuid4(), actor_id=uuid4(), name='Team')
+        else:
+            service.join_team(hackathon_id=uuid4(), team_id=uuid4(), actor_id=uuid4())
+    assert error.value.code == code
+    assert c.begin_count == 1 and c.commit_count == 0
+    assert c.rolled_back and not c.active and not c.committed
+    assert any('INSERT INTO public.memberships' in statement for statement in c.statements)
+    service._engine.connect.assert_called_once_with()
+    service._engine.connect.return_value.__exit__.assert_called_once()

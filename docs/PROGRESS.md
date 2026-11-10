@@ -15,6 +15,7 @@
 - [ ] Remote connected — none configured; no push performed.
 - [x] Application code executed — FastAPI and Vite verified over local HTTP (M-002).
 - [x] Automated tests passed — M-007B.3B final checkpoint: owner verified 33 throttles in 31.42s, 54 updated API cases in 30.94s and 78 session cases in 48.33s; 165 passed in 110.69s, three repetitions requested and fresh committed-state invariants verified. Codex reran 546 database-free checks in 8.52s, dependency/static and controlled-launcher HTTP/Vite checks; all passed. Existing Starlette/HTTPX warning and earlier proxy timing flakiness remain. No CI, deployed HTTPS/browser or 50-way team-race claim.
+- [x] M-008B final checkpoint: owner verified guarded merge_test / 0003_auth (head), 57 passed in 40.99s, three repetitions requested and fresh committed-state invariants verified; reduced diagnostic 19 passed in 13.19s. Codex reran 554 database-free cases in 23.07s; dependency/static checks passed. Earlier interrupted run remains inconclusive history. G1 remains open.
 - [ ] Any public deployment exists — **not verified**.
 - [ ] PS1 submission completed — **not verified**.
 
@@ -23,7 +24,7 @@
 | Gate | Scope | Required objective evidence | Status |
 |---|---|---|---|
 | G0 | Repository and local integration | Commit hash, README, backend health, React build, PostgreSQL connectivity, migration, smoke test | DONE — local checks recorded in M-003; initial commit `66d28b51728f466b3d0124de03f457dd190c22f1`; closed 2026-11-07 |
-| G1 | Transactional team core | Real PostgreSQL 50-way last-seat race, cross-team race, idempotency; repeatable tests | PARTIAL — schema/guards verified in M-006A; services and multi-connection/API races pending |
+| G1 | Transactional team core | Real PostgreSQL 50-way last-seat race, cross-team race, idempotency; repeatable tests | PARTIAL — schema, M-007A internal services and M-008B extraction verified within their scope; idempotency and 50-way authenticated API acceptance pending |
 | G2 | Business flows and security | Team lifecycle, invites, requests, leader succession, audit, authorization negative tests | PARTIAL — durable auth throttle and updated API/session suites owner-verified (165 passes); browser/deployed HTTPS and domain flows remain open |
 | G3 | Frontend and realtime | Complete React flows, SSE between two clients, mobile/keyboard browser tests, scoring | NOT STARTED |
 | G4 | Acceptance performance and CI | >=20 API tests in passing GitHub Actions, 10k/2k seed, k6 100 VUs, measured board p95 <200ms | NOT STARTED |
@@ -1979,6 +1980,334 @@ row; returning a decision lets the transaction commit before HTTP denial.
 Explain why raising inside that transaction would undo the charge. Change the
 login account limit consistently from 5 to 3 across instances and predict why
 the fourth valid request gets 429 even after changing IP.
+
+## M-008B transaction-local team mutation extraction — 2026-11-10
+
+Historical implementation preparation; pending-live statements below are
+superseded by the M-008B final review/checkpoint entry later in this log.
+
+Baseline: clean main at 35b14080be905f8a7d3e0921724cf4d07fd779c4.
+Read AGENTS and source-of-truth requirements/architecture/decisions/progress,
+SCHEMA, TEAM_SERVICES and TEST_DATABASE; inspected actual TeamService, schema
+constraints and existing real service tests before editing. Owner approved the
+M-008A extraction boundary for this task; other composition policies are future
+work. No invariant or transaction/locking protocol needed to be weakened.
+
+Changed five files: backend/app/services/teams.py,
+backend/tests/test_team_services.py, backend/service_tests/test_teams.py,
+docs/TEAM_SERVICES.md and this log. No new dependencies, migrations or files.
+
+Extracted _create_team_in_tx(connection, command) and
+_join_team_in_tx(connection, command), using private frozen/slotted
+_CreateTeamCommand/_JoinTeamCommand data. Public input validation, signatures,
+creation UUID timing and immutable TeamResult remain unchanged. The private
+operations use only the supplied connection and contain the same SQL operations
+as the former closures. No unused _join_locked_in_tx split: a second authorized
+admission path does not exist yet. No version update, idempotency, audit/outbox,
+retry framework, public team HTTP route or frontend work.
+
+Before: public validation -> _execute -> connect/guard/begin/timeouts -> nested
+closure -> locks/checks/writes/count -> COMMIT -> result.
+After: public validation/private command -> _execute -> connect/guard/begin/
+timeouts -> extracted private operation -> identical locks/checks/writes/count ->
+COMMIT -> result. The actual order is connect, actual DBAPI guard/isolation check,
+begin, SET LOCAL, operation, commit, close, return; no guard SQL precedes the
+actual AUTOCOMMIT rejection. Engine initialization/test identity listeners remain
+the existing trusted metadata-only boundary.
+
+_execute is still the only connection/transaction owner. Extracted methods never
+open/begin/commit/roll back/close a connection and expose no new public API. Their
+internal preconditions are validated commands and an active owner-guarded
+transaction; Python-private methods are not an adversarial in-process sandbox.
+Public APIs retain Engine-only construction and reject caller transactions.
+Hackathon SHARE -> user NO KEY UPDATE -> existing team NO KEY UPDATE is unchanged;
+create inserts its own team/founder. Counts remain fresh post-lock SQL queries.
+Founder leadership, deleted-team rules, frozen sizes, deferred final-state guards,
+timeouts (5s/15s), READ COMMITTED, actual DBAPI AUTOCOMMIT rejection and named
+constraint/error mapping are preserved. A local result is not a committed public
+result: _execute must still finish COMMIT before the public method returns it.
+
+Actual offline evidence, Windows PowerShell, Python 3.11.9 / SQLAlchemy 2.1.8 /
+psycopg 3.3.8, existing venv, commands from backend:
+- `.\.venv\Scripts\python.exe -m pytest -q tests/test_team_services.py --tb=short`:
+  **55 passed in 0.57s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **554 passed, 32 deselected, one existing Starlette/HTTPX warning in 10.58s**,
+  exit 0; includes unchanged authentication/throttling database-free regressions.
+- `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0; no installs/updates.
+- `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q`:
+  **57 cases collected in 0.07s**, exit 0; no fixtures executed.
+
+Added eight database-free executions proving exact supplied connection/command
+use, one owner begin/commit, absence of local lifecycle calls and create/join
+insert/deferred-COMMIT unwind before error mapping. The test fake now records
+active state and begin/commit counts, rejecting nested begin; it does not prove
+PostgreSQL behavior. Every original test function and decorator is unchanged.
+
+Prepared nine additional guarded executions (three scenarios, three repetitions):
+real create/join connection/root-transaction/single-commit observation with fresh
+roster/leader/unchanged-version/empty-support checks; failed join INSERT rollback
+and later successful admission. All 48 original service executions, including
+founder/deferred rollback, final-seat/same-user/create races and actual AUTOCOMMIT
+rejection, remain intact. Guarded results for this refactor are **PENDING**.
+The earlier owner-verified 48 in 37.23s and auth/throttle 165 in 110.69s are
+historical results, not post-refactor live executions.
+
+Static checks actually executed from root:
+- Inline Python via `.\backend\.venv\Scripts\python.exe -` compared baseline and
+  working ASTs: _execute, actual DBAPI guard and all existing SQL helpers are
+  identical; public signatures/validation/UUID timing and moved operation bodies
+  are identical; no local lifecycle calls/new public methods; every original
+  unit/live test function and decorator preserved. PASS, exit 0.
+- `git -c safe.directory=I:/Merge diff --check`: PASS, exit 0; existing LF/CRLF
+  conversion warnings only. No configured Python linter; no lint pass claimed.
+- Final inline source audit: exact five-file scope, three Python ASTs,
+  path/secret-pattern/whitespace review and six ignore checks passed, exit 0.
+  No actionable secret/generated/unrelated-file findings; no staged/untracked
+  files and HEAD unchanged. This supplements manual review, not proof against
+  every possible unknown secret. No private environment file opened.
+- Protected-baseline diff exited 0 for migrations, models/constraints, error
+  mapper, authentication/session/throttle/security, DB/core settings, guarded
+  test infrastructure, dependency pins, frontend, scripts and .gitignore:
+  `git -c safe.directory=I:/Merge diff --exit-code 35b14080be905f8a7d3e0921724cf4d07fd779c4 -- backend/alembic backend/app/models backend/app/services/errors.py backend/app/services/credentials.py backend/app/services/credential_errors.py backend/app/services/sessions.py backend/app/services/session_errors.py backend/app/services/throttling.py backend/app/auth.py backend/app/main.py backend/app/security backend/app/db backend/app/core backend/test_support backend/concurrency_tests backend/pyproject.toml backend/requirements.lock frontend scripts .gitignore`.
+
+Private credential presence was checked without printing a value: no
+MERGE_TEST_DB_PASSWORD supplied. stdin reported interactive; no hidden prompt was
+invoked and no credential was requested/read. Codex opened no database connection,
+accessed no merge_dev or private environment file and ran no live test/migration,
+reset/drop/cleanup, role/permission or credential change. Only offline tests and
+fixture-free collection were executed. No frontend/build/browser/HTTP deployment
+checks rerun for this bounded backend extraction.
+
+Current owner-run command, NOT executed by Codex. Run in an interactive
+PowerShell terminal without transcripts; use the existing hidden password prompt:
+
+```powershell
+Set-Location I:\Merge\backend
+Remove-Item Env:MERGE_TEST_DB_PASSWORD -ErrorAction SilentlyContinue
+.\.venv\Scripts\python.exe -m test_support.database verify --confirm-merge-test --revision 0003_auth
+if ($LASTEXITCODE -ne 0) { throw 'Read-only target verification failed. Stop.' }
+.\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite services --revision 0003_auth --repetitions 3
+if ($LASTEXITCODE -ne 0) { throw 'M-008B service verification failed. Stop; do not change constraints.' }
+```
+
+The runner selects services and the current verified 0003_auth explicitly;
+existing per-connection target guards and fresh invariant observers remain in
+force. No migration/reset is needed. Record the new pass/fail count, duration,
+fresh-state checks and warnings as a separate follow-up entry after owner execution.
+No post-refactor concurrency/invariant pass is claimed from collection or mocks.
+
+Risks/missing work: live refactor verification pending; raw-writer deadlocks,
+mutation-time snapshot counts and ambiguous COMMIT remain documented. No automatic
+retry/idempotency safety was added. Later composition must keep one transaction
+owner and must not call the committing facade from an outer transaction.
+G1 remains open for idempotency and authenticated 50-way API/CI acceptance.
+No public mutation/authZ, invitation/request, audit/outbox, load/deployment or
+production-readiness claim. HEAD is unchanged; changes remain unstaged for owner
+review. No commit, remote creation or push.
+
+Owner exercise: identify where the supplied connection reaches _insert_membership,
+then explain why an exception at COMMIT after _join_team_in_tx has returned still
+rolls back membership and prevents a public TeamResult. Predict the behavior if a
+second begin() were added to the extracted method; the ownership tests must fail.
+
+## M-008B-R1 interrupted service verification investigation — 2026-11-10
+
+Historical investigation. The interruption remains inconclusive; the subsequent
+full 57-case pass is recorded separately in the final checkpoint below.
+
+Owner-reported partial live evidence: merge_test authentication succeeded;
+revision 0003_auth (head); **8 passed in 13.17s**, with fresh committed-state
+invariant reports for completed cases. Execution ended with KeyboardInterrupt
+inside psycopg.connection.py. The 57-case suite did NOT complete; M-008B and G1
+are not marked passed. This result is separate from all historical M-007A and
+authentication/throttling evidence. No full traceback, active node/phase or
+server wait observation was supplied; no exact interrupted SQL is claimed.
+
+Read AGENTS, TEAM_SERVICES, TEST_DATABASE and the relevant progress/source-of-truth
+contracts. Inspected actual service tests/fixtures, shared concurrency fixtures,
+runner, RaceDatabase, guarded connection setup, deferred constraints, TeamService
+and installed psycopg interruption handling. R1 changes documentation only;
+the uncommitted M-008B source/test changes are preserved, with no harness or
+transaction/constraint correction made.
+
+Credential-free collection confirmed source-order execution with three repetitions:
+1-3: test_create_team_with_exact_founder_membership[0..2].
+4-6: test_creation_failure_after_team_insert_rolls_back[0..2].
+7-9: test_failed_creation_at_deferred_commit_rolls_back[0..2].
+Therefore the next nominal node after eight successful calls is
+test_failed_creation_at_deferred_commit_rolls_back[2]. Quiet output alone cannot
+exclude interruption during case 8 teardown or case 9 fixture setup. The first
+service race is case 28; no Barrier/Event/worker synchronization occurs in case 9.
+
+That test seeds a fresh UUID hackathon and 16 users, then injects SELECT 1 in place
+of founder membership INSERT on the service Engine. The service locks hackathon
+SHARE then actor NO KEY UPDATE and inserts its own new team. Deferred leader-FK
+or live-nonempty validation must reject COMMIT, mapping to integrity_fault.
+The listener is removed in finally, and fresh observers require zero committed
+team/membership rows. The preceding founder test deliberately injects an invalid
+integer cast and requires database_failure, rollback counts and a subsequent
+successful creation. Those printed categories are intended and asserted; they
+are not an independent exact-SQLSTATE transcript. Ordinary lock/statement timeout
+categories cannot substitute for the intended rejection without failing assertions.
+
+Each db/repetition fixture uses a new RaceDatabase and fresh UUID-scoped rows.
+Service Engine identity queries are rolled back before the mutation; its held
+anchor connection has no deliberate domain locks. Service listeners are removed,
+connections close/roll back and the test Engine is disposed on exit. Retained
+committed rows do not retain transaction locks and have no shared hardcoded keys
+that would normally collide with this case. Storage growth can affect latency;
+another live connection or external DDL/maintenance could still block shared
+relations. No database inspection was performed to rule those out.
+
+Shared synchronization audit: service/schema barriers have an 8s default,
+Event waits use 8s, PID queue reads use timeout=8, server-blocking observation has
+a 3s polling deadline, and daemon workers share a 30s join deadline. Broken
+barriers, infrastructure errors, missing results and overdue workers fail; they
+are not accepted as business outcomes. Guarded SQL connections configure 5s
+connect, 5s server lock and 15s server statement timeouts; TeamService retains
+its transaction-local 5s/15s values. These are not one whole-case wall-clock limit.
+Installed psycopg commit/rollback call wait() without its optional client timeout;
+transport/server stalls, driver mutex waits and cleanup are not all bounded by
+server SQL timeouts. Worker deadlines also do not hard-stop fixture setup/teardown
+or an independent driver wait. No absolute whole-run bound is claimed.
+
+Installed psycopg wait() catches KeyboardInterrupt/SystemExit, attempts cancellation
+for an active query and re-raises. The output establishes an interrupt/cancellation,
+not the reason it was issued or a server-confirmed lock/deadlock. The total 13.17s
+is shorter than the configured 15s statement timeout, so no timeout violation or
+indefinite hang follows from the supplied timing. Probable location is ordinary
+database work around the third deferred-rollback case; exact setup/call/teardown,
+commit/rollback/connection phase remains unknown.
+
+Offline commands actually executed from backend:
+- `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q`:
+  **57 collected in 0.02s**, exit 0; confirms the order above, no fixtures run.
+- `.\.venv\Scripts\python.exe -m pytest -q tests/test_team_services.py tests/test_concurrency_harness.py tests/test_test_database_safety.py tests/test_test_database_diagnostics.py --tb=short`:
+  **89 passed in 0.74s**, exit 0; no live database execution.
+- Inline Python via `.\.venv\Scripts\python.exe -`: offline doubles verified
+  unsignalled Event and overdue-worker failure branches, including the configured
+  timeout and remaining shared deadline; PASS, exit 0. No actual wait/thread/DB.
+- `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q --race-repetitions=1`:
+  **19 collected in 0.02s**, exit 0, no fixtures run.
+- Root protected diff against HEAD for shared test_support, concurrency_tests,
+  service fixture, migrations/models, error mapper, DB/core and dependencies:
+  exit 0. No source/harness edits made by R1.
+
+No TeamService/guard/constraint correction is justified by this evidence. A small
+future harness improvement could expose an allowlisted service-case selector and
+fixed node/phase/duration messages, retaining private settings, all target guards,
+fail-fast behavior and suppression of raw SQL/parameters/exceptions/locals. The
+current runner has no case selector and strips PYTEST_ADDOPTS, so do not use an
+unsupported -k/-v argument or direct live pytest to bypass it. No diagnostic
+selector/progress plugin or deadline extension was implemented in R1.
+
+Smallest existing guarded owner diagnostic is one repetition (19 executions),
+not the full 57-case verification. Proposed next command, NOT executed by Codex;
+run privately in an owner PowerShell terminal without transcripts:
+
+```powershell
+Set-Location I:\Merge\backend
+.\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite services --revision 0003_auth --repetitions 1
+if ($LASTEXITCODE -ne 0) { throw 'Reduced diagnostic failed or was interrupted. Stop; do not rerun blindly.' }
+```
+
+The guarded runner uses the owner's private credential mechanism. No credentials
+or credential presence were accessed by Codex for R1. No database access, live
+rerun, migration/schema/role/permission change, reset/drop/cleanup, commit or push.
+HEAD remains 35b14080be905f8a7d3e0921724cf4d07fd779c4; the original five M-008B
+files remain modified and unstaged. Full M-008B verification remains pending even
+if a reduced diagnostic later succeeds.
+
+Owner debugging exercise: distinguish a test call PASS from fixture teardown
+completion, then locate the deliberately omitted founder INSERT and explain why
+its COMMIT should fail. If another interruption occurs, retain the sanitized last
+node/phase and elapsed duration; do not share credentials, raw SQL or locals.
+
+## M-008B final review and local checkpoint — 2026-11-10
+
+Owner-verified live evidence supplied for this checkpoint:
+- Guarded merge_test verification passed; Alembic **0003_auth (head)**.
+- Full service suite: **57 passed in 40.99s**, three repetitions requested.
+- Fresh committed-state invariants verified.
+- Reduced diagnostic previously passed **19 in 13.19s**.
+
+These are owner-run results, not a Codex PostgreSQL rerun. No separate per-case
+transcript was supplied. The earlier KeyboardInterrupt after 8 passes in 13.17s
+remains inconclusive, but the full suite subsequently completed successfully.
+This completed run supersedes the historical pending-live status for M-008B;
+it does not establish the earlier interrupt's cause or close G1.
+
+Reviewed the exact five changed files against baseline
+35b14080be905f8a7d3e0921724cf4d07fd779c4: backend/app/services/teams.py,
+backend/tests/test_team_services.py, backend/service_tests/test_teams.py,
+docs/TEAM_SERVICES.md and this log. Read AGENTS, the required service/test-database/
+progress contracts and relevant requirements, architecture, decisions and schema
+sections. No correctness/security blocker found within this bounded component.
+Final review required documentation updates only; no implementation fix or test
+change was made after the owner-verified full run.
+
+Confirmed _execute remains the sole connection/begin/commit/unwind owner, unchanged
+against baseline. Its actual DBAPI AUTOCOMMIT guard, READ COMMITTED check, no-caller-
+transaction rule and 5s/15s local timeouts are unchanged. Public create_team and
+join_team signatures, input validation/UUID timing and frozen TeamResult match
+baseline. The moved operation bodies and all existing SQL helpers are AST-identical.
+The private methods use the supplied connection without lifecycle calls. Hackathon
+SHARE -> user NO KEY UPDATE -> existing team NO KEY UPDATE, fresh post-lock counts,
+founder leadership, deleted-team rejection and complete deferred-COMMIT rollback
+remain intact. Runtime DML targets only teams/memberships; no idempotency, audit,
+outbox, team-version update or retry framework was introduced. All original unit/
+live test functions and decorators remain unchanged; added cases strengthen owner
+connection/transaction/commit observation and rollback coverage.
+
+Final commands actually run by Codex, Windows PowerShell, existing Python 3.11.9 /
+SQLAlchemy 2.1.8 / psycopg 3.3.8 venv, from backend:
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **554 passed, 32 deselected, one existing Starlette/HTTPX warning in 23.07s**,
+  exit 0. Includes the 55 focused TeamService cases and auth/throttle regressions.
+  The separate earlier 55-pass focused command was not rerun at this checkpoint.
+- `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0. No install/update.
+- `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q`:
+  **57 collected in 0.06s**, exit 0; fixtures not executed.
+
+Root inline Python via `.\backend\.venv\Scripts\python.exe -` passed baseline
+AST comparisons for owner/guard/helpers, public signatures/validation/UUID timing,
+TeamResult, moved SQL bodies and original test functions. It checked the exact
+five-file allowlist, three Python ASTs, private lifecycle-call exclusion, runtime
+write targets, secret-pattern/source-path/whitespace safety and six ignore paths;
+no actionable secret/generated/unrelated-file findings. This supplements manual
+review, not a proof against every possible secret. No private environment file
+was opened. `git -c safe.directory=I:/Merge diff --check` passed, with existing
+LF/CRLF conversion warnings. Staged content is compared to these reviewed working
+contents, scanned and checked before the authorized commit. No configured Python
+linter; no lint pass claimed. Frontend/build/browser checks not rerun.
+
+Protected-baseline diff exited 0 using the exact command in the implementation
+preparation entry above. Migrations 0001/0002/0003, domain/auth models and schema,
+error mapping, authentication/session/throttle code, database settings, guarded
+test infrastructure, dependencies/locks, frontend, provisioning/privilege scripts
+and .gitignore remain unchanged. No database connection, external privilege query,
+merge_dev access, test reset/drop/cleanup, migration, role/permission or credential
+change was performed by Codex. Actual external ACL state was not queried.
+
+Owner authorized exactly one local commit after successful review:
+`refactor: extract transaction-local team mutations (M-008B)`.
+The resulting full hash and clean Git status are read and reported after commit;
+the commit cannot embed its own hash. No remote creation or push.
+
+Remaining limitations: internal trusted-actor services only; no public team HTTP
+mutations or leader authorization, idempotency/replay, audit/outbox or retries.
+No M-008C work, authenticated 50-way API/CI race, load/deployment acceptance or G1
+closure. Existing ambiguous COMMIT, raw-writer deadlocks, mutation-time counts,
+server/transport timeout boundaries and production HTTPS/browser limitations
+remain. Successful local schedules do not establish all possible interleavings.
+
+Owner explanation/exercise: each private method returns inside the owner's
+transaction, while the public result escapes only after COMMIT. Trace a deferred
+COMMIT failure and explain why it still removes the already-inserted membership;
+adding a second begin() to the extracted method must fail the ownership tests.
 
 ## Daily work log template
 ```

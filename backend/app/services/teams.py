@@ -21,6 +21,21 @@ class TeamResult:
     member_count: int  # Actual rows at mutation time, not a persistent/cached field.
 
 
+@dataclass(frozen=True, slots=True)
+class _CreateTeamCommand:
+    hackathon_id: UUID
+    actor_id: UUID
+    name: str
+    team_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class _JoinTeamCommand:
+    hackathon_id: UUID
+    team_id: UUID
+    actor_id: UUID
+
+
 def _uuid(value: UUID) -> None:
     if not isinstance(value, UUID):
         raise DomainError(ErrorCode.INVALID_INPUT)
@@ -43,42 +58,49 @@ class TeamService:
         if not isinstance(name, str) or not 1 <= len(name) <= 120 or not name.strip(' '):
             raise DomainError(ErrorCode.INVALID_INPUT)
         team_id = uuid4()
-
-        def operation(c):
-            hackathon = self._lock_subject(c, hackathon_id, actor_id)
-            self._require_unassigned(c, hackathon_id, actor_id)
-            _query(c, '''INSERT INTO public.teams
-                (id,hackathon_id,name,min_team_size,max_team_size,leader_user_id,created_by)
-                VALUES (:team,:hackathon,:name,:minimum,:maximum,:actor,:actor)''',
-                team=team_id, hackathon=hackathon_id, name=name,
-                minimum=hackathon.min_team_size, maximum=hackathon.max_team_size, actor=actor_id)
-            # The new team is owned by this transaction. No preexisting team lock needed.
-            self._insert_membership(c, hackathon_id, team_id, actor_id)
-            return TeamResult(team_id, hackathon_id, actor_id, self._count(c, team_id))
-
-        return self._execute(operation)
+        command = _CreateTeamCommand(hackathon_id, actor_id, name, team_id)
+        return self._execute(lambda c: self._create_team_in_tx(c, command))
 
     def join_team(self, *, hackathon_id: UUID, team_id: UUID, actor_id: UUID) -> TeamResult:
         for value in (hackathon_id, team_id, actor_id):
             _uuid(value)
+        command = _JoinTeamCommand(hackathon_id, team_id, actor_id)
+        return self._execute(lambda c: self._join_team_in_tx(c, command))
 
-        def operation(c):
-            self._lock_subject(c, hackathon_id, actor_id)
-            team = _query(c, '''SELECT id,deleted_at,max_team_size FROM public.teams
+    def _create_team_in_tx(self, connection: Connection, command: _CreateTeamCommand) -> TeamResult:
+        """Private operation on _execute's guarded connection; never owns a transaction."""
+        c = connection
+        hackathon_id, actor_id = command.hackathon_id, command.actor_id
+        name, team_id = command.name, command.team_id
+        hackathon = self._lock_subject(c, hackathon_id, actor_id)
+        self._require_unassigned(c, hackathon_id, actor_id)
+        _query(c, '''INSERT INTO public.teams
+                (id,hackathon_id,name,min_team_size,max_team_size,leader_user_id,created_by)
+                VALUES (:team,:hackathon,:name,:minimum,:maximum,:actor,:actor)''',
+            team=team_id, hackathon=hackathon_id, name=name,
+            minimum=hackathon.min_team_size, maximum=hackathon.max_team_size, actor=actor_id)
+        # The new team is owned by this transaction. No preexisting team lock needed.
+        self._insert_membership(c, hackathon_id, team_id, actor_id)
+        return TeamResult(team_id, hackathon_id, actor_id, self._count(c, team_id))
+
+    def _join_team_in_tx(self, connection: Connection, command: _JoinTeamCommand) -> TeamResult:
+        """Private operation on _execute's guarded connection; never owns a transaction."""
+        c = connection
+        hackathon_id, team_id, actor_id = command.hackathon_id, command.team_id, command.actor_id
+        self._lock_subject(c, hackathon_id, actor_id)
+        team = _query(c, '''SELECT id,deleted_at,max_team_size FROM public.teams
                 WHERE id=:team AND hackathon_id=:hackathon FOR NO KEY UPDATE''',
-                team=team_id, hackathon=hackathon_id).one_or_none()
-            if team is None:
-                raise DomainError(ErrorCode.TEAM_NOT_FOUND)
-            if team.deleted_at is not None:
-                raise DomainError(ErrorCode.TEAM_DELETED)
-            self._require_unassigned(c, hackathon_id, actor_id)
-            # Fresh statement after parent lock: no ORM identity-map count reuse.
-            if self._count(c, team_id) >= team.max_team_size:
-                raise DomainError(ErrorCode.TEAM_FULL)
-            self._insert_membership(c, hackathon_id, team_id, actor_id)
-            return TeamResult(team_id, hackathon_id, actor_id, self._count(c, team_id))
-
-        return self._execute(operation)
+            team=team_id, hackathon=hackathon_id).one_or_none()
+        if team is None:
+            raise DomainError(ErrorCode.TEAM_NOT_FOUND)
+        if team.deleted_at is not None:
+            raise DomainError(ErrorCode.TEAM_DELETED)
+        self._require_unassigned(c, hackathon_id, actor_id)
+        # Fresh statement after parent lock: no ORM identity-map count reuse.
+        if self._count(c, team_id) >= team.max_team_size:
+            raise DomainError(ErrorCode.TEAM_FULL)
+        self._insert_membership(c, hackathon_id, team_id, actor_id)
+        return TeamResult(team_id, hackathon_id, actor_id, self._count(c, team_id))
 
     def _execute(self, operation):
         try:

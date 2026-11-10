@@ -1,5 +1,120 @@
 # Internal team services — M-007A
 
+## M-008B transaction-local extraction — 2026-11-10
+
+Owner-verified final checkpoint: guarded merge_test verification passed at
+**0003_auth (head)**; full service suite **57 passed in 40.99s**, three
+repetitions requested, fresh committed-state invariants verified. The reduced
+diagnostic previously passed **19 in 13.19s**. This records owner execution,
+not a Codex PostgreSQL rerun; no separate per-case transcript was supplied.
+
+The earlier M-008B-R1 run stopped with KeyboardInterrupt after 8 passes in 13.17s.
+That interruption remains inconclusive; the full suite subsequently completed
+successfully. Its historical investigation is retained in PROGRESS.md and does
+not supersede the completed 57-case result. G1 remains open.
+
+Implemented for owner review against baseline
+35b14080be905f8a7d3e0921724cf4d07fd779c4. Public create_team()/join_team()
+signatures, validation, UUID generation timing, TeamResult and SQL behavior are
+unchanged. The owner's M-008A approval for this task covers extraction only;
+idempotency, audit/outbox, version/reply policies and retry implementation remain
+separate work. No migration, dependency, schema, HTTP or frontend change.
+
+Before:
+
+```text
+public validation -> _execute -> guarded connection -> begin + SET LOCAL
+    -> nested operation closure -> locks/checks/writes/count -> COMMIT -> TeamResult
+```
+
+After:
+
+```text
+public validation + private frozen command -> _execute
+    -> guarded connection -> begin + SET LOCAL
+    -> _create_team_in_tx(connection, command) / _join_team_in_tx(connection, command)
+    -> unchanged locks/checks/writes/count -> COMMIT -> TeamResult
+```
+
+_execute remains the only connection/transaction owner. The private command types
+are _CreateTeamCommand and _JoinTeamCommand; the creation UUID is still generated
+before acquiring a connection. The extracted methods accept only the supplied
+owner-guarded connection and never open, begin, commit, roll back or close one.
+Their internal preconditions are an already validated command and the owner's
+active guarded transaction. They are not public standalone APIs or a security
+sandbox against trusted Python callers. Public APIs still reject caller-owned
+Connection/Session objects. No new public mutation method was added.
+
+No _join_locked_in_tx was introduced: there is only one admission path today,
+so further splitting would add an unused boundary. Future authorization/composition
+must be designed under the same owner, rather than call a committing facade from
+an outer transaction.
+
+Creation retains hackathon SHARE -> user NO KEY UPDATE -> new team/founder insert.
+Joining retains hackathon SHARE -> user NO KEY UPDATE -> team NO KEY UPDATE, then
+fresh membership/count checks. Founder leadership, deleted-team rejection,
+frozen size copies and database constraints are unchanged. _execute, the actual
+DBAPI AUTOCOMMIT/isolation guard, 5s/15s timeouts, SQL helpers and error mapper
+retain their baseline behavior. No support-table writes or team-version updates.
+Local results do not escape through public methods until COMMIT succeeds;
+statement and deferred-COMMIT failures still unwind the entire transaction.
+
+Executed M-008B checks (Windows PowerShell, existing backend venv):
+- Backend `.\.venv\Scripts\python.exe -m pytest -q tests/test_team_services.py --tb=short`:
+  **55 passed in 0.57s**, exit 0.
+- Backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **554 passed, 32 deselected, one existing Starlette/HTTPX warning in 10.58s**,
+  exit 0; includes authentication/throttling regressions.
+- Backend `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0; no dependency changes.
+- Backend `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q`:
+  **57 cases collected in 0.07s**, exit 0; no fixtures executed.
+- AST comparison against baseline confirms unchanged owner/guard/helpers,
+  signatures/validation, moved operation bodies and all original test functions.
+
+Eight added database-free cases check exact supplied-connection use, one owner
+begin/commit, no local lifecycle calls and rollback/error mapping for create/join
+statement and deferred-COMMIT failures. The fake now records active transaction
+state and counts; it does not simulate PostgreSQL concurrency/invariants.
+
+The guarded suite retains the original 48 executions and adds nine: create/join
+connection/root-transaction/commit observation with fresh roster/leader/version/
+empty-support checks, and injected join INSERT failure followed by successful
+admission. Existing real race, founder/deferred rollback and actual AUTOCOMMIT
+assertions remain unchanged. **Owner verified all 57 post-refactor cases in
+40.99s**; the old 48-pass M-007A result below remains historical evidence.
+
+No private test credential was supplied to Codex; Codex did not prompt for one or
+open a database. The owner completed the full run above; these current-target
+commands are retained for reproduction in an owner PowerShell terminal,
+without transcripts; the password prompt is hidden. They supersede the historical
+default-revision examples below. No migration/reset/cleanup is needed:
+
+```powershell
+Set-Location I:\Merge\backend
+Remove-Item Env:MERGE_TEST_DB_PASSWORD -ErrorAction SilentlyContinue
+.\.venv\Scripts\python.exe -m test_support.database verify --confirm-merge-test --revision 0003_auth
+if ($LASTEXITCODE -ne 0) { throw 'Read-only target verification failed. Stop.' }
+.\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite services --revision 0003_auth --repetitions 3
+if ($LASTEXITCODE -ne 0) { throw 'M-008B service verification failed. Stop; do not change constraints.' }
+```
+
+The final live count/timing/invariant result is recorded separately in PROGRESS.md.
+Final review reran 554 database-free cases in 23.07s, with 32 deselected and the
+existing Starlette/HTTPX warning; dependency checks passed and 57 cases collected
+in 0.06s. The baseline AST, five-file scope, secret-pattern and whitespace audits
+passed. No implementation fix was required during final review.
+G1 remains open; no idempotency/audit/outbox, authorized team API, 50-way HTTP race,
+CI/load or production-readiness claim. Owner authorized exactly one local commit:
+`refactor: extract transaction-local team mutations (M-008B)`. The resulting full
+hash/status are read from Git and reported after commit. No remote/push action.
+
+Owner exercise: follow a join from its public validation into the extracted method,
+then explain why an exception after its return but during COMMIT still prevents
+the public TeamResult from escaping and rolls back the membership.
+
+## Historical M-007A contract and verification
+
 M-007B.3A-R1 exposes authentication only; TeamService and its transaction protocol
 are unchanged. No public create/join/leader/invite/request route exists. Future
 team actors must come from the real validated-session dependency described in

@@ -220,3 +220,78 @@ def test_actual_autocommit_engine_rejected_without_domain_sql(db, service, opera
     # Verify pool return resets the original Engine's transactional configuration.
     with service._engine.connect() as c:
         assert c.connection.dbapi_connection.autocommit is False
+
+
+@pytest.mark.parametrize('operation', ['create', 'join'])
+def test_extracted_mutation_reuses_one_owner_connection_and_commit(db, service, operation, monkeypatch):
+    h, users, teams = db.seed(teams=0 if operation == 'create' else 1)
+    connections, committed, statements, observed = [], [], [], []
+    method = '_create_team_in_tx' if operation == 'create' else '_join_team_in_tx'
+    original = getattr(service, method)
+
+    def connected(c):
+        connections.append(c)
+
+    def statement(c, cursor, query, parameters, context, many):
+        if 'public.' in query or query.startswith('SET LOCAL') or query.startswith('SAVEPOINT'):
+            statements.append((c, query.startswith('SAVEPOINT')))
+            if observed:
+                assert c.get_transaction() is observed[0][1]
+
+    def commit(c):
+        assert len(observed) == 1 and c.get_transaction() is observed[0][1]
+        committed.append(c)
+
+    def local(c, command):
+        assert c.connection.dbapi_connection.autocommit is False
+        transaction = c.get_transaction()
+        assert transaction is not None and transaction.is_active
+        observed.append((c, transaction))
+        result = original(c, command)
+        assert c.get_transaction() is transaction and transaction.is_active
+        assert committed == [], 'Transaction-local method committed early'
+        return result
+
+    monkeypatch.setattr(service, method, local)
+    listeners = [('engine_connect', connected), ('before_cursor_execute', statement), ('commit', commit)]
+    for label, listener in listeners:
+        event.listen(service._engine, label, listener)
+    try:
+        if operation == 'create':
+            result = service.create_team(hackathon_id=h, actor_id=users[0], name='Extracted creation')
+        else:
+            result = service.join_team(hackathon_id=h, team_id=teams[0], actor_id=users[1])
+    finally:
+        for label, listener in reversed(listeners):
+            event.remove(service._engine, label, listener)
+    assert len(observed) == 1 and connections == committed == [observed[0][0]]
+    assert statements and all(c is connections[0] and not savepoint for c, savepoint in statements)
+    assert not observed[0][1].is_active
+    expected = {users[0]} if operation == 'create' else {users[0], users[1]}
+    assert db.roster(result.team_id) == expected and result.member_count == len(expected)
+    assert db.team(result.team_id) == (users[0], None)
+    with db.connection() as c:
+        assert sql(c, 'SELECT version FROM public.teams WHERE id=:team', team=result.team_id).scalar_one() == 1
+        for table in ('idempotency_records', 'audit_events'):
+            assert sql(c, f'SELECT count(*) FROM public.{table} WHERE hackathon_id=:h', h=h).scalar_one() == 0
+        assert sql(c, '''SELECT count(*) FROM public.outbox_events o
+            JOIN public.audit_events a ON a.id=o.audit_event_id WHERE a.hackathon_id=:h''', h=h).scalar_one() == 0
+
+
+def test_join_membership_insert_failure_rolls_back_and_releases_admission(db, service):
+    h, users, teams = db.seed()
+
+    def fail_membership(c, cursor, statement, parameters, context, many):
+        if statement.lstrip().startswith('INSERT INTO public.memberships'):
+            return "SELECT CAST('not-an-integer' AS integer)", ()
+        return statement, parameters
+
+    event.listen(service._engine, 'before_cursor_execute', fail_membership, retval=True)
+    try:
+        reject(ErrorCode.DATABASE_FAILURE,
+               lambda: service.join_team(hackathon_id=h, team_id=teams[0], actor_id=users[1]))
+    finally:
+        event.remove(service._engine, 'before_cursor_execute', fail_membership)
+    assert db.roster(teams[0]) == {users[0]} and db.team(teams[0]) == (users[0], None)
+    assert service.join_team(hackathon_id=h, team_id=teams[0], actor_id=users[1]).member_count == 2
+    assert db.roster(teams[0]) == {users[0], users[1]}
