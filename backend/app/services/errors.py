@@ -14,6 +14,8 @@ class ErrorCode(StrEnum):
     ALREADY_ASSIGNED = 'already_assigned'
     TEAM_FULL = 'team_full'
     TRANSACTION_CONFLICT = 'transaction_conflict'
+    TRANSACTION_DEADLINE = 'transaction_deadline'
+    OUTCOME_UNCERTAIN = 'outcome_uncertain'
     LOCK_TIMEOUT = 'lock_timeout'
     STATEMENT_TIMEOUT = 'statement_timeout'
     INTEGRITY_FAULT = 'integrity_fault'

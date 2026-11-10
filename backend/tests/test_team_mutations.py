@@ -37,6 +37,7 @@ class Connection:
         self.dialect = SimpleNamespace(name='postgresql', driver='psycopg', is_async=False)
         self.connection = SimpleNamespace(dbapi_connection=SimpleNamespace(autocommit=False))
         self.transaction = None
+        self.info = {}
         self.data = dict(teams={}, members=[], reservations={}, audits=[], outbox=[])
         self.events = []
         self.fail_after = None
@@ -82,7 +83,11 @@ class Connection:
         statement.compile(dialect=postgresql.dialect()).construct_params(p)
         q, value = str(statement), None
         d = self.data
-        if 'INSERT INTO public.idempotency_records' in q:
+        if q.startswith('SELECT set_config'):
+            assert set(p) == {'statement', 'lock'}
+            assert 1 <= int(p['statement'][:-2]) <= 15000
+            assert 1 <= int(p['lock'][:-2]) <= 5000
+        elif 'INSERT INTO public.idempotency_records' in q:
             scope = (p['actor'], p['operation'], p['key'])
             if scope not in d['reservations']:
                 d['reservations'][scope] = dict(id=p['id'], actor_id=p['actor'],

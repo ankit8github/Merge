@@ -1,5 +1,25 @@
 # Internal team services — M-007A
 
+## M-008E bounded orchestration — owner-verified checkpoint
+
+Only composed create/join enter a maximum-three-attempt policy with one monotonic
+budget (default 30s, configurable 1–60s) and bounded jitter (default ceiling 50ms,
+configurable 0–250ms). `_execute` remains the only connection/transaction owner;
+its private attempt metadata records deadline/phase and commit/replay proof.
+Confirmed 40P01/40001 alone permit full-transaction retry after unwind. Unknown
+COMMIT uses a fresh guarded same-key reservation; unresolved outcome returns
+retryable outcome_uncertain. Legacy methods, transaction-local mutations, actual
+DBAPI AUTOCOMMIT/READ COMMITTED guards and error mapper remain unchanged. Composed
+SQL timeouts are clamped to remaining budget and never exceed 5s/15s. Synchronous
+transport waits are not hard-cancelled. Owner verified guarded merge_test /
+merge_app, READ COMMITTED, 0003_auth (head): retries 54 in 48.66s, mutations 81
+in 72.40s, services 57 in 36.15s and idempotency 60 in 42.84s; **252 passed**,
+suite-time sum **200.05s**, three repetitions requested per suite. Fresh committed
+invariants verified; fixtures retained. These are owner-run PostgreSQL results,
+not Codex executions. Contract and reproduction commands:
+[TRANSACTION_RETRY.md](TRANSACTION_RETRY.md). Checkpoint sections below remain
+history. G1 remains open.
+
 ## M-008D composed entry points — owner-verified checkpoint
 
 Owner verified guarded merge_test / merge_app, READ COMMITTED, 0003_auth (head):
@@ -263,7 +283,7 @@ space-trimmed / at-most-120-character contract without normalizing the name.
 
 Database errors are mapped outside the transaction context, after rollback/unwind;
 deferred commit errors are included. Unknown constraints are not disguised as
-business conflicts. No retry loop is implemented here. A caller may retry a fully
+business conflicts. These legacy methods have no retry loop. A caller may retry a fully
 rolled-back transaction conflict only as a complete operation, never from a partial
 step. Connection loss during COMMIT can have an ambiguous durable outcome; without
 idempotency, do not blindly retry database_failure. Normal SQL/business failures

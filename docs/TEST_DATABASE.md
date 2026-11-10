@@ -1,5 +1,16 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+M-008E adds fixed guarded `--suite retries`, requiring explicit
+`--revision 0003_auth` before credentials. It reuses retained mutation fixtures,
+identity/isolation/revision guards and fresh complete-chain/invariant verification.
+No migration or cleanup. Owner verified merge_test / merge_app, READ COMMITTED,
+0003_auth (head): retries 54 passed in 48.66s, mutations 81 in 72.40s, services
+57 in 36.15s and idempotency 60 in 42.84s; **252 passed**, suite-time sum
+**200.05s**. Three repetitions requested for all suites; fresh committed-state
+invariants verified and fixtures retained. Codex did not execute PostgreSQL tests.
+Historical results below remain history. Exact reproduction and fault descriptions:
+[TRANSACTION_RETRY.md](TRANSACTION_RETRY.md). Collecting this suite opens no DB.
+
 M-007B.3B adds fixed `--suite throttles`, explicit --revision 0003_auth. Codex
 collected 33 dedicated cases; updated real-service HTTP/session suites collect
 54/78. Owner verified 33 throttles in 31.42s, 54 updated API cases in 30.94s

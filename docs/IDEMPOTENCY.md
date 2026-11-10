@@ -1,5 +1,14 @@
 # Private idempotency primitives — M-008C
 
+M-008E adds bounded retries and same-key ambiguous-COMMIT reconciliation around
+the M-008D composed operations. Owner verified 54 retry / 81 mutation / 57 service /
+60 idempotency cases, **252 passed in a 200.05s suite-time sum**, on guarded
+merge_test / merge_app, READ COMMITTED, 0003_auth (head). Three repetitions
+requested per suite, fresh committed invariants verified and fixtures retained.
+Codex did not execute PostgreSQL tests. The primitive module/schema are unchanged.
+Precise individual timings and the current orchestration policy:
+[TRANSACTION_RETRY.md](TRANSACTION_RETRY.md).
+
 M-008D now composes these primitives in explicit internal TeamService entry points;
 see TEAM_MUTATIONS.md. Owner verified 81 composed cases in 101.23s, 57 service
 regressions in 59.59s and 60 idempotency regressions in 40.81s: 198 passed, corrected
@@ -18,7 +27,9 @@ This is owner execution evidence, not a Codex PostgreSQL rerun. The earlier
 first-test bind failure is superseded by this full successful run; R1 changed
 only test SQL, retaining the original one-effect assertion and adding an offline
 regression. Historical details and checkpoint offline checks are in PROGRESS.md.
-R-08 and G1 remain open. No public idempotent team method or HTTP route exists.
+R-08 and G1 remain open. No composed idempotent team method existed at that
+primitive checkpoint; M-008D later added internal composed methods. No public
+HTTP mutation route exists.
 
 ## Contract
 
@@ -96,15 +107,17 @@ and all effects. There is no success-before-commit shortcut.
 No helper opens, begins, commits, rolls back or closes a connection. Each requires
 an active, non-nested PostgreSQL/psycopg READ COMMITTED transaction and checks the
 actual DBAPI autocommit flag before reservation SQL. SQLAlchemy's logical begin()
-cannot make DBAPI AUTOCOMMIT safe. `TeamService._execute` remains unchanged and
-the only application transaction owner; its initial guard, 5s lock timeout,
-15s statement timeout and sanitized database-error mapping remain in place.
+cannot make DBAPI AUTOCOMMIT safe. `TeamService._execute` remains the only team
+transaction owner; its initial guard and sanitized database-error mapper remain
+unchanged. Legacy timeouts remain 5s/15s; M-008E clamps composed-operation lock/
+statement timeouts to the remaining monotonic budget without raising those caps.
 
-Current public create/join call graphs and behavior are byte-for-byte unchanged.
-Only tests compose `_execute -> reserve -> simulated effect -> complete -> COMMIT`.
-Future approved composition must reserve before hackathon SHARE -> user NO KEY
-UPDATE -> team NO KEY UPDATE, then take fresh post-lock counts. No mutation or
-domain lock is added here. Reservation's unique-index wait and FK KEY SHARE locks
+Legacy create/join call graphs and behavior remain unchanged. M-008D composes
+`_execute -> reserve -> mutation/version/audit/outbox -> complete -> COMMIT`;
+M-008E orchestrates bounded attempts around that complete owner call. Composition
+reserves before hackathon SHARE -> user NO KEY UPDATE -> team NO KEY UPDATE,
+then takes fresh post-lock counts. No mutation or domain lock is added in the
+primitive helper. Reservation's unique-index wait and FK KEY SHARE locks
 must not be introduced after domain locks by a future caller. Taking multiple
 reservations per transaction, or mixing raw writers with the inverse order, risks
 deadlocks and is outside this policy. Never hold the owner transaction across
@@ -112,10 +125,11 @@ external network work.
 
 Existing mappings apply to deadlock/serialization conflict, lock timeout,
 statement timeout and integrity errors; unexpected database failures fail closed.
-There is no automatic retry, retry loop, lease, expiry, deletion or takeover.
+Primitive helpers have no automatic retry, lease, expiry, deletion or takeover.
 If COMMIT acknowledgement is lost, the caller cannot infer success from a local
 reply; later same-command reservation/replay can discover a committed success.
-Automatic ambiguous-COMMIT reconciliation and public retry semantics remain
+M-008E now orchestrates automatic same-key reconciliation for composed operations;
+unresolved outcomes return uncertainty. Public HTTP retry semantics remain
 unimplemented. Failed commands have no retained result and can be attempted anew.
 Future public composition must authenticate/authorize the actor; these primitives
 do not grant team or invitation/request authorization.

@@ -14,20 +14,21 @@ from app.services.idempotency import (
 from app.services.teams import (
     TeamService, TeamResult, _CreateTeamCommand, _CreateTeamRequest, _JoinTeamCommand, _query,
 )
+from app.services.transaction_retry import _run_composed, _note_reservation
 
 
 def _create_team_idempotent(service: TeamService, hackathon_id: UUID, actor_id: UUID,
                             name: str, key: str) -> _StoredReply:
     request = _CreateTeamRequest(hackathon_id, actor_id, name)
     scope = _command(request, key)  # Full validation before acquiring a connection.
-    return service._execute(lambda c: _mutate_in_tx(service, c, request, scope))
+    return _run_composed(service, lambda c: _mutate_in_tx(service, c, request, scope))
 
 
 def _join_team_idempotent(service: TeamService, hackathon_id: UUID, team_id: UUID,
                           actor_id: UUID, key: str) -> _StoredReply:
     request = _JoinTeamCommand(hackathon_id, team_id, actor_id)
     scope = _command(request, key)
-    return service._execute(lambda c: _mutate_in_tx(service, c, request, scope))
+    return _run_composed(service, lambda c: _mutate_in_tx(service, c, request, scope))
 
 
 def _fault():
@@ -100,6 +101,7 @@ def _outbox_in_tx(c, audit_id, result, version):
 
 def _mutate_in_tx(service, c, request, scope) -> _StoredReply:
     reservation = _reserve_in_tx(c, scope)
+    _note_reservation(c, reservation)
     if isinstance(reservation, _StoredReply):
         return reservation  # No IDs, domain locks, versions, audit or outbox writes.
     creating = isinstance(request, _CreateTeamRequest)

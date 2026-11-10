@@ -23,10 +23,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--confirm-merge-test', action='store_true', required=True)
     parser.add_argument('--repetitions', type=int, choices=range(1, 11), default=3)
-    parser.add_argument('--suite', choices=('schema', 'services', 'auth', 'credentials', 'sessions', 'auth-api', 'throttles', 'idempotency', 'mutations'), default='schema')
+    parser.add_argument('--suite', choices=('schema', 'services', 'auth', 'credentials', 'sessions', 'auth-api', 'throttles', 'idempotency', 'mutations', 'retries'), default='schema')
     parser.add_argument('--revision', choices=TARGET_REVISIONS, default=DOMAIN_REVISION)
     args = parser.parse_args()
-    if args.suite in ('auth', 'credentials', 'sessions', 'auth-api', 'throttles', 'idempotency', 'mutations') and args.revision != AUTH_REVISION:
+    if args.suite in ('auth', 'credentials', 'sessions', 'auth-api', 'throttles', 'idempotency', 'mutations', 'retries') and args.revision != AUTH_REVISION:
         parser.error('Selected suite requires explicit --revision 0003_auth')
     if not __debug__:
         parser.error('Python optimization must be disabled so invariant assertions execute')
@@ -56,7 +56,8 @@ def main():
                    'auth-api': [root / 'auth_api_tests'],
                    'throttles': [root / 'throttle_tests'],
                    'idempotency': [root / 'idempotency_tests'],
-                   'mutations': [root / 'team_mutation_tests']}[args.suite]
+                   'mutations': [root / 'team_mutation_tests'],
+                   'retries': [root / 'retry_tests']}[args.suite]
     # Fixed suite, fail fast, no exception/local-variable dumps or third-party autoload.
     os.environ['PYTEST_DISABLE_PLUGIN_AUTOLOAD'] = '1'
     os.environ.pop('PYTEST_ADDOPTS', None)

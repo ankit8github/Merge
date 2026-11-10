@@ -16,6 +16,7 @@
 - [x] Application code executed — FastAPI and Vite verified over local HTTP (M-002).
 - [x] Automated tests passed — M-007B.3B final checkpoint: owner verified 33 throttles in 31.42s, 54 updated API cases in 30.94s and 78 session cases in 48.33s; 165 passed in 110.69s, three repetitions requested and fresh committed-state invariants verified. Codex reran 546 database-free checks in 8.52s, dependency/static and controlled-launcher HTTP/Vite checks; all passed. Existing Starlette/HTTPX warning and earlier proxy timing flakiness remain. No CI, deployed HTTPS/browser or 50-way team-race claim.
 - [x] M-008B final checkpoint: owner verified guarded merge_test / 0003_auth (head), 57 passed in 40.99s, three repetitions requested and fresh committed-state invariants verified; reduced diagnostic 19 passed in 13.19s. Codex reran 554 database-free cases in 23.07s; dependency/static checks passed. Earlier interrupted run remains inconclusive history. G1 remains open.
+- [x] M-008E final review: owner verified guarded merge_test / merge_app, READ COMMITTED, 0003_auth (head): retries 54 in 48.66s, mutations 81 in 72.40s, TeamService 57 in 36.15s and idempotency 60 in 42.84s; 252 passed, suite-time sum 200.05s, three repetitions requested for all suites, fresh committed invariants verified and fixtures retained. Codex reran 709 database-free checks and dependency/static review; no Codex PostgreSQL execution. G1 remains open.
 - [ ] Any public deployment exists — **not verified**.
 - [ ] PS1 submission completed — **not verified**.
 
@@ -2855,6 +2856,211 @@ Owner explanation/exercise: trace an exception after outbox insertion through
 the only owner's rollback, including a locally completed reply; then explain why
 replay after another member joins returns the original count/version without
 publishing or adding a second audit/outbox pair.
+
+## M-008E — initial implementation / pre-live history, 2026-11-10
+
+Historical pre-live evidence below; the final checkpoint follows this section.
+Implemented for owner review against main
+`bdbbf3ddd46dd7e67aa04577f1d0d6969ac2eb8b`; **not committed; current live
+PostgreSQL verification pending**. M-008D's owner-run 198 passes / corrected
+201.63s suite-time sum and 657 offline passes remain historical baseline evidence.
+G1 remains open. No M-008E PostgreSQL pass or production/browser claim.
+
+Only composed idempotent create/join enter `_run_composed`. Immutable validated
+command/key/scope/fingerprint are captured once. `_execute` remains sole owner;
+every eligible retry starts a fresh guarded connection and full reservation ->
+hackathon SHARE -> user NO KEY UPDATE -> team NO KEY UPDATE -> fresh count ->
+mutation/version/audit/outbox/completion -> COMMIT. Legacy methods, local domain
+SQL, primitive module, actual AUTOCOMMIT/isolation guard and error mapper are
+unchanged. Only observed 40P01/40001 qualify as confirmed-abort retries, after
+full unwind; at most three total attempts including reconciliation. No statement
+retry, new key, nested transaction or background worker.
+
+Policy defaults: 30s monotonic operation budget (finite 1–60s), jitter ceiling
+50ms (integer 0–250ms). SQL lock/statement timeouts clamp to remaining budget
+without exceeding 5s/15s. No further SQL/attempt after observed expiry. Synchronous
+driver/network/cleanup waits are not hard-cancelled; transport stalls can exceed
+the budget before control returns. Extra timeout-control SQL adds unbenchmarked
+overhead. This is not a measured hard response-time or performance guarantee.
+
+Unknown COMMIT acknowledgement uses only the fresh same-key reservation protocol.
+Matching immutable committed reply is proof; winning INSERT resolves the earlier
+unique-key transaction as uncommitted. No immediate-absence inference. Unresolved
+outcome returns sanitized retryable outcome_uncertain; ordinary budget exhaustion
+returns retryable transaction_deadline. A local completed reply is never proof.
+Classification is captured before connection cleanup; later cleanup errors cannot
+replace original COMMIT evidence. Confirmed commit or validated committed-row
+reconciliation permits returning the stored reply only after owner unwind.
+
+Changed files (19): runtime `app/services/{teams,team_mutations,errors}.py` and new
+`app/services/transaction_retry.py`; guarded runner `test_support/concurrency.py`;
+new `retry_tests/{conftest,test_retry}.py`; offline
+`tests/{test_team_mutations,test_concurrency_harness,test_auth_schema_support}.py`
+and new `tests/test_transaction_retry.py`; docs ARCHITECTURE, DECISIONS,
+IDEMPOTENCY, TEAM_MUTATIONS, TEAM_SERVICES, TEST_DATABASE, PROGRESS and new
+TRANSACTION_RETRY. Paths above are under backend except docs. No dependency,
+model, schema, migration, privilege, auth runtime, frontend or HTTP route changes.
+
+Actual commands, existing Windows PowerShell/backend venv, from backend:
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **709 passed, 32 deselected, one existing Starlette/HTTPX warning in 11.46s**,
+  exit 0. Earlier intermediate run: 705 passed in 19.84s before final edge tests.
+- `.\.venv\Scripts\python.exe -m pytest tests/test_transaction_retry.py tests/test_team_mutations.py tests/test_team_services.py tests/test_idempotency.py -q --tb=short`:
+  **204 passed in 2.02s**, exit 0, including 50 new deterministic retry tests.
+- `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0; no installs/updates.
+- `.\.venv\Scripts\python.exe -m pytest retry_tests --collect-only -q`:
+  **54 collected in 0.66s**, exit 0 (18 scenarios, three repetitions).
+- `.\.venv\Scripts\python.exe -m pytest team_mutation_tests --collect-only -q`:
+  **81 collected in 0.06s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q`:
+  **57 collected in 0.03s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest idempotency_tests --collect-only -q`:
+  **60 collected in 0.04s**, exit 0. Original suite collection used a PowerShell
+  foreach with `| Select-Object -Last 2` and checked each LASTEXITCODE. No fixtures
+  executed. One parallel launch of final checks was not started because automatic
+  approval review timed out; each command was retried successfully as permitted.
+
+New offline tests require fresh independent handles, full rollback and exact
+chain counts, pinned scope, exactly three attempts, monotonic deadline/jitter,
+no retry of excluded states/business errors, actual guard preservation, confirmed
+COMMIT abort/restart, simulated lost acknowledgement after committed/rolled-back
+outcomes, unresolved uncertainty, read-replay and confirmed-commit cleanup proof,
+and preservation of unknown COMMIT evidence despite a later cleanup abort.
+Offline ledger tests are not PostgreSQL concurrency proof.
+
+Pending guarded live suite uses real PostgreSQL DO/RAISE errors after domain/audit
+writes and exact-state/attempt assertions, plus dialect COMMIT hooks invoking real
+commit before simulated acknowledgement loss or raising before commit. No schema
+objects or permission changes. It reuses retained scoped mutation fixtures and
+fresh committed chain/invariant verification. Original 81/57/60 suites must also
+be rerun; collection is not execution. Hidden-password PowerShell commands for
+verify + retries + mutations + services + idempotency, all explicit 0003_auth:
+[TRANSACTION_RETRY.md](TRANSACTION_RETRY.md). No credential was requested/read and
+no PostgreSQL connection, merge_dev access, reset/drop/cleanup or external ACL
+query was made by Codex. No commit/push/remote creation.
+
+Root inline static command `@' ... '@ | .\backend\.venv\Scripts\python.exe -`
+passed: exact 19-file inventory, 11 Python AST/compile checks, 17 literal SQL
+binding checks (including timeout settings), three-attempt cap and no helper
+connection/transaction lifecycle calls. Legacy methods, local mutations, actual
+guard, TeamResult/commands and database error mapper are AST-identical to baseline.
+Existing primitive runtime, migrations/models/db settings, dependencies, original
+81/57/60 live sources and original team/primitive unit sources are unchanged.
+No runtime print/log call added. Changed-file secret/artifact patterns and
+`git -c safe.directory=I:/Merge diff --check` passed. A trailing documentation
+blank line was removed; an initial SQL-literal scan was corrected to stop
+matching across separate quoted literals. Pattern checks supplement manual
+review, not exhaustive secret proof. No configured linter or frontend build run.
+Verified environment: Python 3.11.9 / SQLAlchemy 2.1.8 / psycopg 3.3.8. No staged
+files; 19 intended files are modified/new and HEAD remains the baseline above.
+
+Owner exercise: change injected 40001 to 55P03 and trace why a second attempt no
+longer starts; explain why replay after actual commit/acknowledgement loss has
+one membership/version/audit/outbox chain and why an unresolved outcome is not a
+failed mutation. Remaining work: owner live verification/review, future trusted
+HTTP authorization/error contract, invitation/request workflows, dispatcher,
+authenticated 50-way API/CI/load and browser/HTTPS/deployment proof. G1 stays open.
+
+## M-008E — final review and local checkpoint, 2026-11-10
+
+Reviewed the full 19-file change against main baseline
+`bdbbf3ddd46dd7e67aa04577f1d0d6969ac2eb8b`. No correctness/security blocker
+identified within the supported synchronous PostgreSQL/psycopg contract; no
+runtime or test changes were needed during final review. This checkpoint
+supersedes the pre-live/pending status in the initial implementation entry above.
+
+Owner-verified PostgreSQL evidence, **not Codex database executions**:
+
+| Suite | Passed | Time |
+| --- | ---: | ---: |
+| Retries | 54 | 48.66s |
+| Mutations | 81 | 72.40s |
+| TeamService | 57 | 36.15s |
+| Idempotency | 60 | 42.84s |
+| Combined / suite-time sum | **252** | **200.05s** |
+
+Verified merge_test / merge_app, READ COMMITTED, **0003_auth (head)**. Three
+repetitions requested for all suites; fresh committed-state invariants verified
+and fixtures retained. The combined duration equals the exact individual suite
+sum; no separate wall-clock duration is inferred. No Codex live rerun or private
+attachment/credential access was needed for this review.
+
+Confirmed contract: only composed idempotent create/join enter orchestration;
+observed DBAPI 40P01/40001 alone qualify as confirmed-abort retries. At most
+three total attempts, including reconciliation, with one captured monotonic
+budget and bounded jitter. The validated actor/command/operation/key/hackathon/
+fingerprint are fixed before database work. Every eligible retry follows full
+owner unwind, uses a fresh guarded connection and restarts the complete
+reservation -> domain locks -> mutation/version -> audit -> outbox -> completion
+transaction. No per-statement retry or fourth attempt. Legacy non-idempotent
+methods remain single-attempt and preserve their interface/behavior.
+
+Business rejections, 55P03/57014, integrity faults and work-phase connection or
+unknown failures do not trigger confirmed-abort retries. Unknown COMMIT is a
+separate same-key reconciliation case: unique INSERT must wait/resolve; fresh
+conflict SELECT must validate an immutable matching successful reply. Absence
+from an immediate lookup is never rollback proof. A newly won reservation proves
+the preceding same-key reservation did not commit. No local completed reply is
+commit proof. Only confirmed commit or valid committed-row reconciliation returns
+success after owner unwind; unresolved ambiguity is sanitized, retryable
+outcome_uncertain. Original evidence is captured before connection cleanup.
+
+`_execute` remains the only connection/transaction owner. Actual DBAPI
+AUTOCOMMIT=False and READ COMMITTED guards, reservation-before-hackathon SHARE
+-> user NO KEY UPDATE -> team NO KEY UPDATE ordering, fresh post-lock counts,
+rollback/deferred-COMMIT handling and original error mapper are preserved.
+Schema uniqueness and immutable stored responses prevent duplicate record chains;
+no version/member/audit/outbox effects run during matching replay. No event is
+published in a transaction. Trusted internal actors still require future HTTP
+session-derived identity and current authorization, including replay. No public
+team route or authorization bypass was introduced.
+
+Actual final-review commands, Windows PowerShell, existing backend venv:
+- From backend, `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **709 passed, 32 deselected, one existing Starlette/HTTPX warning in 19.01s**,
+  exit 0; includes existing auth/session/throttling regressions.
+- From backend, `.\.venv\Scripts\python.exe -m pytest tests/test_transaction_retry.py tests/test_team_mutations.py tests/test_team_services.py tests/test_idempotency.py -q --tb=short`:
+  **204 passed in 3.24s**, exit 0.
+- From backend, `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0; no install/update.
+- From root, inline `.\backend\.venv\Scripts\python.exe -` static review:
+  exact **19-file** scope, **11 Python AST/compile** and **17 SQL-binding** checks
+  passed. Legacy methods, transaction-local mutations, guard, TeamResult/commands
+  and error mapper remain AST-identical to baseline. One owner begin, no helper
+  connection/transaction lifecycle, three-attempt cap, scope and secret/artifact
+  patterns passed. `git -c safe.directory=I:/Merge diff --check` passed.
+
+No configured Python linter, frontend build, browser/HTTPS, deployment or load
+check run or claimed. Pattern scans supplement manual review, not exhaustive
+secret proof. Environment: Python 3.11.9 / SQLAlchemy 2.1.8 / psycopg 3.3.8.
+All migrations 0001/0002/0003, schema/models, dependencies, provisioning/permission
+scripts, auth runtime, frontend and original 81/57/60 live sources are unchanged.
+No database/credential access, migration/reset/drop/cleanup, schema/role/permission
+change or external ACL query was performed by Codex. External ACL state was not
+independently queried during this offline review.
+
+The exact 19-file inventory is in the initial implementation entry above. Owner
+authorized exactly one local commit after successful review:
+`feat: add bounded mutation retries and commit reconciliation (M-008E)`.
+Checkpoint procedure stages only those reviewed files, compares staged blobs to
+reviewed working contents, and checks staged syntax, secret/artifact patterns,
+scope and whitespace before the single commit. The resulting full commit hash
+and final status are read from Git and reported afterward; this commit cannot
+contain its own hash. No remote creation or push.
+
+Remaining limitations: cooperative deadline (default 30s, safe range 1–60s), not
+hard cancellation of driver/network/cleanup waits; bounded jitter ceiling default
+50ms, safe range 0–250ms; additional timeout-control SQL overhead unbenchmarked.
+Controlled faults/covered schedules do not prove every interleaving or actual
+network outage. Future HTTP authorization/error mapping, invitation/request
+workflows and outbox dispatcher remain unimplemented. No authenticated 50-way
+HTTP acceptance, CI/load or production/browser readiness is claimed. G1 stays open.
+
+Owner explanation/exercise: change injected 40001 to 55P03 and explain why no
+second attempt starts; trace real commit followed by lost acknowledgement through
+same-key replay and explain why it returns the original response without another
+membership/version/audit/outbox chain.
 
 ## Daily work log template
 ```

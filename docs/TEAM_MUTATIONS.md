@@ -9,8 +9,17 @@ chains/committed-state invariants verified; fixtures retained. These are owner-r
 PostgreSQL results, not Codex database runs. The earlier 202.63s combined figure
 was an arithmetic error corrected by the owner, not an independent measurement.
 Offline checkpoint evidence is in PROGRESS.md. No schema, migration, dependencies,
-HTTP routes, dispatcher or retries. G1, R-08 and R-12 remain open pending public
+HTTP routes, dispatcher or retries at that checkpoint. G1, R-08 and R-12 remain open pending public
 acceptance evidence; no production readiness is claimed.
+
+M-008E adds bounded retry and ambiguous-COMMIT reconciliation. Owner verified
+guarded merge_test / merge_app, READ COMMITTED, 0003_auth (head): retries 54 passed
+in 48.66s, mutations 81 in 72.40s, services 57 in 36.15s and idempotency 60 in
+42.84s; **252 passed**, suite-time sum **200.05s**. Three repetitions requested
+for all suites; fresh committed invariants verified and fixtures retained. See
+[TRANSACTION_RETRY.md](TRANSACTION_RETRY.md) for policy, classification and owner
+commands. These are owner-run results; Codex did not execute PostgreSQL tests.
+The M-008D checkpoint above remains historical evidence.
 
 ## Entry points and ownership
 
@@ -19,7 +28,8 @@ service.create_team_idempotent(hackathon_id=h, actor_id=trusted_user, name=name,
 service.join_team_idempotent(hackathon_id=h, team_id=t, actor_id=trusted_user, key=key)
 ```
 
-Both return the existing frozen `_StoredReply` only after the owner's commit.
+Both return the existing frozen `_StoredReply` only after confirmed commit or
+valid reconciliation from an immutable matching committed outcome.
 The constructor still takes an Engine, never a caller Connection/Session. Actor
 UUID validation is syntax validation, not authentication. A future HTTP boundary
 must derive the actor from the authenticated session and authorize the action on
@@ -37,9 +47,10 @@ The complete call graph is:
 ```text
 TeamService.create_team_idempotent / join_team_idempotent
   -> private team_mutations facade: immutable input + _command validation/hash
-  -> unchanged TeamService._execute (sole connection and transaction owner)
+  -> bounded _run_composed (same validated closure, at most three attempts)
+  -> TeamService._execute (sole connection and transaction owner, each attempt)
      -> unchanged actual DBAPI AUTOCOMMIT / READ COMMITTED / driver guard
-     -> one begin; SET LOCAL lock_timeout=5s, statement_timeout=15s
+     -> one begin; lock/statement timeouts <=5s/15s and remaining deadline
      -> _reserve_in_tx (named unique conflict INSERT)
         -> matching immutable completed row: separate fresh SELECT -> stored reply
         -> new reservation:
@@ -49,7 +60,8 @@ TeamService.create_team_idempotent / join_team_idempotent
            -> _audit_in_tx -> _outbox_in_tx
            -> bounded successful _StoredReply -> _complete_in_tx
      -> one COMMIT (including deferred constraints)
-  -> reply escapes only after successful COMMIT
+  -> owner fully unwinds before retry/reconciliation or returning a reply
+  -> reply only after confirmed COMMIT or valid committed-row reconciliation
 ```
 
 Private composition imports are local to the two TeamService wrappers to avoid
@@ -85,12 +97,15 @@ the existing integrity_fault mapping before the legacy domain existence lookup.
 This internal boundary does not invent a public missing-entity HTTP error policy.
 Team-full/already-assigned and mismatch failures roll back the reservation.
 
-Any later exception or statement/deferred-COMMIT failure removes every write in
-the chain, including a locally completed outcome. There is no autonomous audit,
-outbox, completion or nested savepoint. No automatic retries; 40P01/40001/55P03 and
-other errors retain existing service meanings. Loss of COMMIT acknowledgement
-remains ambiguous; M-008E reconciliation/retry is not implemented. Raw writers,
-inverse lock order and future multiple-subject operations still require review.
+Exceptions before COMMIT and confirmed server rejections at deferred COMMIT
+roll back every write in the chain, including a locally completed outcome.
+There is no autonomous audit, outbox, completion or nested savepoint. M-008E
+retries only observed 40P01/40001 after full unwind and within attempts/budget;
+55P03/57014, business and work-phase connection failures are not retried.
+Unknown COMMIT acknowledgement uses the same-key reservation protocol on a
+fresh guarded connection, never absence inference. Unproven outcome returns
+retryable outcome_uncertain. Raw writers, inverse lock order and future
+multiple-subject operations still require review.
 
 ## Stored response, audit and outbox
 

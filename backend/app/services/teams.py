@@ -5,6 +5,7 @@ composed idempotent entry points and authenticate/authorize the trusted actor.
 Engine ownership prevents caller-controlled partial commits.
 """
 from dataclasses import dataclass
+from contextlib import nullcontext
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -16,6 +17,7 @@ from app.services.errors import DomainError, ErrorCode, map_database_error
 
 if TYPE_CHECKING:
     from app.services.idempotency import _StoredReply
+    from app.services.transaction_retry import TransactionRetryPolicy
 
 
 @dataclass(frozen=True)
@@ -55,14 +57,20 @@ def _uuid(value: UUID) -> None:
 
 
 def _query(c: Connection, statement: str, **parameters):
+    from app.services.transaction_retry import _before_statement
+    _before_statement(c)
     return c.execute(text(statement), parameters)
 
 
 class TeamService:
-    def __init__(self, engine: Engine):
+    def __init__(self, engine: Engine, *, retry_policy: 'TransactionRetryPolicy | None' = None):
         if not isinstance(engine, Engine):
             raise TypeError('TeamService requires an Engine, never a caller transaction/session')
         self._engine = engine
+        from app.services.transaction_retry import TransactionRetryPolicy
+        if retry_policy is not None and not isinstance(retry_policy, TransactionRetryPolicy):
+            raise TypeError('TeamService requires a TransactionRetryPolicy')
+        self._retry_policy = retry_policy or TransactionRetryPolicy()
 
     def create_team(self, *, hackathon_id: UUID, actor_id: UUID, name: str) -> TeamResult:
         _uuid(hackathon_id)
@@ -129,17 +137,38 @@ class TeamService:
         self._insert_membership(c, hackathon_id, team_id, actor_id)
         return TeamResult(team_id, hackathon_id, actor_id, self._count(c, team_id))
 
-    def _execute(self, operation):
+    def _execute(self, operation, *, _attempt=None):
         try:
+            if _attempt is not None:
+                _attempt.check()
             with self._engine.connect() as c:
                 self._require_transactional_connection(c)
-                with c.begin():
-                    _query(c, "SET LOCAL lock_timeout='5s'")
-                    _query(c, "SET LOCAL statement_timeout='15s'")
-                    result = operation(c)
+                with (_attempt.bind(c) if _attempt is not None else nullcontext()):
+                    try:
+                        with c.begin():
+                            _query(c, "SET LOCAL lock_timeout='5s'")
+                            _query(c, "SET LOCAL statement_timeout='15s'")
+                            result = operation(c)
+                            if _attempt is not None:
+                                _attempt.before_statement(c)
+                                _attempt.phase = 'commit'
+                        if _attempt is not None:
+                            _attempt.phase = 'committed'
+                            _attempt.confirmed_reply = result
+                    except DBAPIError as error:
+                        if _attempt is not None:
+                            _attempt.database_failure(error)
+                        raise
+                    except Exception:
+                        if _attempt is not None:
+                            _attempt.failure_classified = True
+                            _attempt.ambiguous = _attempt.phase == 'commit'
+                        raise
                 # Deferred FK/constraint-trigger failures at COMMIT are caught too.
             return result
         except DBAPIError as error:
+            if _attempt is not None:
+                _attempt.database_failure(error)
             raise map_database_error(error) from None
 
     @staticmethod

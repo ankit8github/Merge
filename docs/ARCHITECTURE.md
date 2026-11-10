@@ -3,6 +3,18 @@
 **Status:** PHASE 0 VERIFIED / M-006A DOMAIN SCHEMA IMPLEMENTED; M-007A internal create/join services and R1 AUTOCOMMIT rejection implemented. Owner verified 48 expanded PostgreSQL cases in 37.23s; Codex verified 94 database-free checks. No domain APIs; G1 remains open for later acceptance work. Concrete schema and database guards: `docs/SCHEMA.md`; bounded service contract: `docs/TEAM_SERVICES.md`. Source requirements: `docs/REQUIREMENTS.md`. Decisions: `docs/DECISIONS.md`. Verification: `docs/PROGRESS.md`.
 
 ## 1. Goals and constraints
+
+Current team-core overlay: M-008D composed idempotent mutation/version/audit/outbox
+is committed; owner verified 198 live cases (suite-time sum 201.63s) at 0003_auth.
+M-008E bounded retries and same-key ambiguous-COMMIT reconciliation are implemented;
+owner verified 54 retry / 81 mutation / 57 service / 60 idempotency cases, 252
+passes with suite-time sum 200.05s at guarded 0003_auth, three repetitions
+requested per suite and fresh committed invariants verified. Codex did not
+execute PostgreSQL tests. Only composed operations
+participate, maximum three total attempts, monotonic budget and bounded jitter;
+`_execute` remains sole transaction owner and lock order/schema remain unchanged.
+See [TRANSACTION_RETRY.md](TRANSACTION_RETRY.md) and PROGRESS.md. Older milestone
+statements below describe their original scope. No HTTP team API or G1 closure.
 - Solve PS1 with a **correct-by-design membership core**, not an application-server mutex.
 - Support 10k seeded users, 2k teams, board p95 < 200ms under 100 concurrent clients in the measured environment.
 - Deliver an end-to-end React UI, secure API, realtime team/board notifications, verified tests and deployment by challenge deadline.

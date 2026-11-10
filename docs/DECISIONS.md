@@ -319,3 +319,32 @@ idempotency regressions in 40.81s. Total 198 passed, corrected suite-time sum
 201.63s, three repetitions requested per suite, fresh chains/invariants verified,
 fixtures retained. The owner corrected 202.63s as an arithmetic error. No Codex
 PostgreSQL run, M-008E implementation, public HTTP integration or G1 closure.
+
+### M-008E — owner-authorized bounded retry/reconciliation, 2026-11-10
+
+Only composed idempotent create/join enter retry orchestration. Pin the validated
+command/scope/key/hash once; at most three total fresh owned transactions,
+including reconciliation. Retry confirmed PostgreSQL 40P01/40001 only after
+the owner unwinds; retryable DomainError alone is not proof. Legacy operations
+retain single-attempt behavior. No statement retry, new key or background worker.
+
+Use an immutable service retry policy: total budget 1–60 seconds (default 30),
+jitter ceiling 0–250ms (default 50). A monotonic deadline checks attempts, waits,
+statements and COMMIT preparation; server lock/statement timeouts are clamped to
+remaining budget without exceeding existing 5s/15s limits. Synchronous connection,
+transport and cleanup waits retain their driver bounds, not hard thread cancellation.
+
+Track actual owner phase and sanitized DBAPI SQLSTATE without retaining driver
+text. Lost/unknown COMMIT acknowledgement is reconciled only by the same-key
+reservation protocol on a fresh guarded connection. A loaded immutable matching
+reply is valid reconciliation; winning a new reservation proves the earlier
+reservation did not commit. No immediate-absence inference. If proof cannot be
+obtained within attempts/budget, return retryable outcome_uncertain; do not report
+failure/success. No public HTTP status contract is added. See TRANSACTION_RETRY.md.
+
+Owner checkpoint: merge_test / merge_app, READ COMMITTED, 0003_auth (head);
+retries 54 passed in 48.66s, mutations 81 in 72.40s, TeamService 57 in 36.15s,
+idempotency 60 in 42.84s. Total 252 passed, suite-time sum 200.05s, three
+repetitions requested per suite, fresh committed-state invariants verified and
+fixtures retained. These are owner-run PostgreSQL results, not Codex database
+executions. No schema/permission/dependency change, HTTP team API or G1 closure.
