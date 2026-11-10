@@ -2309,6 +2309,308 @@ transaction, while the public result escapes only after COMMIT. Trace a deferred
 COMMIT failure and explain why it still removes the already-inserted membership;
 adding a second begin() to the extracted method must fail the ownership tests.
 
+### 2026-11-10 — M-008C private idempotency primitives (owner review; live pending)
+
+Historical implementation entry: its pending-live status is superseded by the
+M-008C final checkpoint below; the commands/results remain as originally observed.
+
+Baseline: main `35ddacecfd803c7fd1b1d1ed2a188873ba62f488`, initially clean.
+The owner's M-008B 57 live passes / 554 offline passes are prior evidence only.
+M-008C is implemented and offline tested, not yet PostgreSQL verified or committed.
+G1 and requirement R-08 remain open.
+
+New private command/fingerprint/reservation/stored-reply types and transaction-local
+helpers implement the approved success-only policy. Keys exactly match the existing
+1–128 printable-ASCII contract, including significant spaces/case. Versioned
+canonical meaningful-command JSON is SHA-256 hashed; create outcome UUIDs are
+excluded. Reservation uses the exact named ON CONFLICT constraint and a separate
+fresh READ COMMITTED SELECT for replay. Scope, hash, hackathon, completed state and
+bounded versioned successful response/header values are checked. Mismatch returns
+only `idempotency_mismatch`; missing/pending/corrupt outcomes are integrity faults.
+Completion is bound to the original connection and root transaction and updates
+only its matching pending row. Every helper rejects actual DBAPI AUTOCOMMIT.
+No helper owns a connection, transaction or commit.
+
+Exact changed files (15):
+- `backend/app/services/idempotency.py`, `backend/app/services/errors.py`.
+- `backend/tests/test_idempotency.py`, `backend/tests/test_concurrency_harness.py`,
+  `backend/tests/test_auth_schema_support.py`.
+- `backend/test_support/concurrency.py`, `backend/idempotency_tests/conftest.py`,
+  `backend/idempotency_tests/test_idempotency.py`.
+- `docs/IDEMPOTENCY.md`, `docs/DECISIONS.md`, `docs/ARCHITECTURE.md`, `docs/SCHEMA.md`,
+  `docs/TEAM_SERVICES.md`, `docs/TEST_DATABASE.md`, this `docs/PROGRESS.md`.
+
+Why: retain the existing unique/immutable/deferred constraints and transaction
+owner instead of adding a lease or second commit owner. A same-statement CTE
+cannot guarantee a fresh snapshot after waiting for an invisible winning INSERT.
+Private replies are bounded JSON with schema_version 1, data object and exact
+optional `content-type: application/json` and `cache-control: no-store` headers. No
+cookies or arbitrary headers are replayed. Floats are excluded to avoid JSONB
+exponent expansion producing an out-of-bounds integer on replay. These private
+response limits do not introduce a public HTTP contract; see IDEMPOTENCY.md.
+
+Actual Codex commands, existing Windows PowerShell backend venv, Python 3.11.9 /
+SQLAlchemy 2.1.8 / psycopg 3.3.8, from `backend` unless stated:
+- `.\.venv\Scripts\python.exe -m pytest tests/test_idempotency.py tests/test_concurrency_harness.py tests/test_auth_schema_support.py -q --tb=short`:
+  **109 passed in 1.72s**, exit 0, before the additional float-rejection case.
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **626 passed, 32 deselected, one existing Starlette/HTTPX warning in 8.30s**,
+  exit 0. Includes all 554 previous offline cases, 70 new primitive cases and two
+  added guarded-runner parameter cases; team/auth/throttle regressions pass.
+- `.\.venv\Scripts\python.exe -m pytest tests/test_idempotency.py -q --tb=short`:
+  final focused **70 passed in 0.46s**, exit 0, after adding a constant-time
+  two-field envelope-length check before constructing its key set. This is the
+  only runtime refinement after the full 626-pass run; no valid reply changes.
+- `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0. No install/update.
+- `.\.venv\Scripts\python.exe -m pytest idempotency_tests --collect-only -q`:
+  **60 collected in 0.17s**, exit 0 (20 scenarios, default three repetitions).
+- `.\.venv\Scripts\python.exe -m pytest service_tests --collect-only -q`:
+  **57 collected in 0.05s**, exit 0. Neither collection executes fixtures.
+
+An initial focused invocation from the repository root failed collection with
+two `test_support` import errors; rerunning from the documented backend directory
+passed. No database was opened. The inline static review initially assumed AST
+walk order was source order; sorting query nodes by source line corrected that
+review-script assertion, with no application change needed for it.
+
+Root `.\backend\.venv\Scripts\python.exe -` inline static review passed:
+exact file allowlist, eight Python ASTs, byte-equivalent unchanged TeamService,
+AST-equivalent database error mapper, unchanged protected paths, no private-helper
+lifecycle ownership, exactly three parameterized SQL statements with only
+idempotency INSERT/UPDATE targets and a separate conflict SELECT. Changed-file
+secret/artifact pattern and path scans, new-file whitespace and
+`git -c safe.directory=I:/Merge diff --check` passed (existing LF/CRLF conversion
+warnings). No actionable secret/generated/unrelated-file findings; pattern scans
+are not an exhaustive secret proof. No Python linter is configured or claimed.
+
+The dedicated guarded runner requires explicit `--suite idempotency --revision
+0003_auth`, fixed merge_test identity and revision checks before all live writes.
+New UUID fixtures are retained. Fresh independent connections check completed
+state, reply shape, existing team invariants and zero teams/memberships/audit/outbox
+rows in each fixture hackathon. A test-only user display-name update proves one
+effect and rollback without implementing team composition. Concurrency requires
+different backend PIDs and observed server blocking; unexpected errors/timeouts
+cannot pass. Event/queue/observation/join and server SQL waits remain bounded.
+The pending case uses own-transaction visibility plus exact deferred constraint
+`23514 / ct_idempotency_completed`; committed pending cannot be manufactured
+without weakening the unchanged database guard. Offline injection also tests
+the loaded pending branch. No constraints are bypassed.
+
+Pending live evidence: **none of the 60 new cases was executed against PostgreSQL
+by Codex**. No private test credential was supplied in the environment; no prompt,
+private environment file, database connection or migration was used. Exact
+two-step owner verification/suite commands with 0003_auth and three repetitions
+are in IDEMPOTENCY.md. Report actual counts/timing and fresh invariant outcomes
+after that run; do not reuse M-008B's live result for this milestone.
+
+Protected baseline remains unchanged: TeamService public create/join/TeamResult,
+_execute ownership, READ COMMITTED/DBAPI guard, lock order, fresh counts, timeouts
+and rollback handling; all migrations, models/schema, database settings/guards,
+dependencies/locks, authentication/session/throttle code, existing live team tests,
+frontend and provisioning/privilege scripts. Only the stable mismatch enum extends
+errors; existing database mappings are unchanged. No role/permission or external
+ACL change/query, merge_dev access, reset/drop/cleanup, audit/outbox/membership
+implementation, public idempotent mutation/HTTP route, retry framework, commit,
+remote creation or push. Historical architecture sketches are not deployed proof.
+
+Remaining work: owner PostgreSQL verification and review before any checkpoint;
+future approved authenticated mutation composition with audit/outbox, invitation/
+request authorization, public API/error policy and ambiguous-COMMIT reconciliation.
+One reservation per future mutation must precede hackathon -> user -> team locks;
+inverse/multiple-key ordering can deadlock. No expiry/lease/takeover/cleanup,
+50-way authenticated API/CI race, load or production HTTPS/browser proof is added.
+
+Owner explanation/exercise: the unique INSERT waits for its competing transaction,
+then the SELECT sees the committed immutable result. Change only a generated
+create UUID in the canonical-hash test and explain why the hash stays identical;
+trace failure after completion to show both effect and reservation roll back.
+
+### 2026-11-10 — M-008C-R1 first live failure: test-only SQL bind repair
+
+Historical R1 entry: the successful full 60-case owner run in the final checkpoint
+below supersedes its pending-live status and earlier failed run.
+
+Owner-reported live evidence: guarded merge_test verification passed at
+**0003_auth (head)**. The `idempotency` suite with three repetitions requested
+stopped at `test_first_completion_and_matching_replay_has_one_effect[0]`:
+**1 failed in 0.67s**. SQLAlchemy raised StatementError wrapping InvalidRequestError,
+`A value is required for bind parameter 'effect'`. Fresh committed-state invariants
+were reported verified. No successful full M-008C live verification exists.
+This is owner execution evidence, not a Codex PostgreSQL run.
+
+Exact root cause: `backend/idempotency_tests/test_idempotency.py:33`, test-only
+`effect()`. The SQL literal `display_name || ':effect'` passes through
+`test_support.races.sql()` to `connection.execute(text(statement), values)`.
+SQLAlchemy's text parser recognizes `:effect` even inside SQL quotes, but values
+contained only `u`. The UPDATE therefore failed bind construction before reaching
+PostgreSQL. This defect is in test-only SQL, not fixture instrumentation or runtime
+reservation/replay/completion. Earlier offline mocks did not compile this helper.
+
+Minimal repair: use `display_name || :effect` and explicitly pass
+`effect=':effect', u=cmd.actor_id`. This appends exactly the intended literal suffix
+and leaves the original `(1, 'race-test:effect')` assertion, replay/rollback checks,
+uniqueness/fingerprint checks and every live test scenario intact. The existing
+offline `tests/test_idempotency.py` now imports and exercises the actual live
+helper through a compile-only connection using the PostgreSQL dialect and real
+SQLAlchemy `construct_params()`. It asserts the supplied suffix and actor bind,
+without mocking text parsing, opening an Engine or executing database SQL.
+
+R1 changed only four already-pending files: the live helper, its offline test,
+this progress log and TEST_DATABASE.md's current verification-status sentence.
+No runtime file changed in R1. A pre-repair hash snapshot verified every Python
+file under app/, the fixture, runner, database helper and races helper unchanged;
+reversing the exact helper-call replacement reproduced the original live-file
+hash, proving all other live assertions/schedules remained byte-unchanged.
+The temporary review snapshot was removed. No dependency, schema, migration,
+permission, TeamService or transaction-guard change.
+
+Commands actually run by Codex from backend, existing Python 3.11.9 venv:
+- `.\.venv\Scripts\python.exe -m pytest tests/test_idempotency.py::test_live_effect_helper_supplies_binds_and_preserves_literal_suffix -q --tb=short`:
+  before repair, **1 failed in 1.03s**, reproducing the exact missing `effect`
+  InvalidRequestError without a database connection.
+- `.\.venv\Scripts\python.exe -m pytest tests/test_idempotency.py -q --tb=short`:
+  after repair, **71 passed in 1.41s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **627 passed, 32 deselected, one existing Starlette/HTTPX warning in 13.98s**,
+  exit 0. All 626 previous cases remain, plus the new regression.
+- `.\.venv\Scripts\python.exe -m pytest idempotency_tests --collect-only -q`:
+  **60 collected in 0.07s**, exit 0; no fixture execution.
+- `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0; no dependency install/update.
+
+Database-free inline Python via `.\.venv\Scripts\python.exe -` compiled 35 related
+literal sql/_query call sites in the live suite, fixtures, runtime primitives and
+races helper, checking required bind names against supplied parameters (including
+the explicit _scope expansion). A wider application/test/support scan examined
+277 SQL-like source literals for the same quoted-colon bind trap: no remaining
+findings. This is source/compilation evidence, not SQL execution or a claim to
+cover every dynamic statement. Git whitespace checks passed; existing LF/CRLF
+conversion warnings remain. No database or credentials were accessed by Codex.
+
+Owner next step, PowerShell without a transcript; credentials stay in hidden
+prompts, and a verification failure stops before the suite:
+
+```powershell
+Set-Location I:\Merge\backend
+Remove-Item Env:MERGE_TEST_DB_PASSWORD -ErrorAction SilentlyContinue
+.\.venv\Scripts\python.exe -m test_support.database verify --confirm-merge-test --revision 0003_auth
+if ($LASTEXITCODE -ne 0) { throw 'Database verification failed. Stop.' }
+.\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite idempotency --revision 0003_auth --repetitions 3
+if ($LASTEXITCODE -ne 0) { throw 'M-008C-R1 verification failed. Stop.' }
+```
+
+Live rerun remains pending; Codex only collected the 60 cases. Retained fixtures,
+fresh committed-state checks and all guards remain in place. No merge_dev access,
+database reset/cleanup, schema/role/permission changes, commit or push. HEAD stays
+`35ddacecfd803c7fd1b1d1ed2a188873ba62f488`; all M-008C changes remain uncommitted
+for owner review. G1 and R-08 remain open.
+
+Owner explanation/exercise: SQLAlchemy parses binds before PostgreSQL sees SQL;
+quotes in text() do not protect a colon-prefixed word. Run the new focused test,
+then explain why binding the suffix as data preserves the exact effect while
+removing the accidental missing parameter. It does not demonstrate live replay
+or concurrency correctness; the guarded PostgreSQL rerun still must do that.
+
+### 2026-11-10 — M-008C final review and authorized local checkpoint
+
+Owner-verified live result: guarded **merge_test / 0003_auth**, idempotency suite
+**60 passed in 40.82 seconds**, three repetitions requested. Fresh committed-state
+invariants verified; UUID-scoped fixtures retained. This full successful run
+supersedes the earlier first-test failure (**1 failed in 0.67s**), whose test-only
+SQL bind defect and R1 repair remain documented above. No separate per-case raw
+transcript was supplied. This records owner execution, not a Codex PostgreSQL
+rerun. M-008B's 57 live service cases are distinct prior evidence. G1 and R-08
+remain open because authenticated public mutation composition is not implemented.
+
+Reviewed all 15 pending files against main baseline
+`35ddacecfd803c7fd1b1d1ed2a188873ba62f488`; the exact inventory is in the original
+M-008C entry above and the commit. No correctness/security/transaction blocker
+was found. This checkpoint changes only evidence/status documentation; runtime
+and tests remain the owner-verified R1 contents.
+
+Confirmed policy: one operation, success-only retention, scope actor/operation/key,
+exact 1–128 printable-ASCII keys with significant spaces/case, and canonical
+versioned SHA-256 meaningful-input fingerprints excluding generated create IDs.
+The INSERT uses ON CONFLICT ON CONSTRAINT uq_idempotency_scope DO NOTHING
+RETURNING id. Conflict lookup is a separate READ COMMITTED SELECT; a same-statement
+snapshot is not substituted. Stored scope/hash/hackathon/state are checked before
+replay; mismatch is a fixed non-retryable idempotency_mismatch, pending/missing/
+corrupt outcomes fail closed. Immutable retained completed rows need no replay
+UPDATE. Completion checks the original connection and root transaction and updates
+only the matching pending reservation. No helper connection or commit ownership.
+
+Reply validation requires successful 2xx, exact schema_version 1/data envelope,
+16,384-byte UTF-8 JSON, bounded depth/nodes/containers/strings, signed 64-bit
+integers and no floats/NUL/invalid UTF-8. The only optional headers are exact
+`content-type: application/json` and `cache-control: no-store` pairs; cookies,
+authorization and arbitrary values are excluded. Values are frozen and sensitive
+repr fields are suppressed. The R1 helper explicitly binds the literal ':effect';
+its original one-effect assertion and real SQLAlchemy compilation regression are
+intact. No unexpected database_failure/timeout outcome is accepted as a pass in
+the new live schedules; they require the exact replay/winner/rollback outcomes,
+server blocking and the named deferred pending constraint.
+
+Actual checkpoint commands, Windows PowerShell, existing backend Python 3.11.9 /
+SQLAlchemy 2.1.8 / psycopg 3.3.8 venv, from backend:
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **627 passed, 32 deselected, one existing Starlette/HTTPX warning in 14.19s**,
+  exit 0. Includes team, authentication/session/throttle and all primitive cases.
+- `.\.venv\Scripts\python.exe -m pytest tests/test_idempotency.py -q --tb=short`:
+  **71 passed in 1.08s**, exit 0, including the R1 bind regression.
+- `.\.venv\Scripts\python.exe -m pip check`:
+  **No broken requirements found**, exit 0; no install/update.
+- `.\.venv\Scripts\python.exe -m pytest idempotency_tests --collect-only -q`:
+  **60 collected in 0.05s**, exit 0; no fixtures executed.
+
+Root `.\backend\.venv\Scripts\python.exe -` inline review passed exact 15-file
+scope, eight Python ASTs, byte-equivalent TeamService and AST-equivalent existing
+database error mapper, protected-baseline comparison, no private-helper lifecycle
+calls, exactly three literal parameterized runtime SQL statements and only
+idempotency INSERT/UPDATE targets with a separate conflict SELECT. Backend inline
+Python compiled 35 related SQL call sites and checked required bind dictionaries,
+including R1 and the explicit _scope expansion; no quoted accidental binds were
+found. Runtime source inspection found no route or facade importing the primitives.
+The helpers do not implement team/audit/outbox composition or bypass a future owner.
+
+Changed-file secret/artifact path and content scans, new-file whitespace and
+`git -c safe.directory=I:/Merge diff --check` passed, with existing LF/CRLF
+conversion warnings. No actionable private credential, generated artifact or
+unrelated-file findings; pattern scanning is not an exhaustive secret proof.
+No private environment file was opened. No configured Python linter, frontend
+build or browser/production HTTPS test was run or claimed.
+
+Protected baseline is unchanged: TeamService/create/join/TeamResult/_execute and
+their READ COMMITTED/actual DBAPI AUTOCOMMIT guard, lock order, fresh counts,
+timeouts and rollback handling; migrations 0001/0002/0003, models/schema, database
+settings/guard helpers, existing live team tests, authentication/session/throttle
+runtime, dependencies/locks, frontend and provisioning/privilege scripts. Only
+the fixed mismatch enum extends service errors; existing mappings are unchanged.
+No database connection or external ACL query/change, merge_dev access, reset,
+cleanup, migration, role/permission or credential change was performed by Codex.
+
+Owner authorized exactly one local commit after successful review:
+`feat: add transactional idempotency primitives (M-008C)`.
+Checkpoint procedure stages exactly the reviewed 15-file allowlist and compares
+the staged blobs to reviewed working contents before committing. The resulting
+full hash and final Git status are read and reported afterward; this commit cannot
+embed its own hash. No remote creation or push is authorized or performed.
+
+Limitations: private primitives and test-only effect composition, no new public
+idempotent facade or team HTTP mutation endpoints, no audit/outbox/invitation or
+request authorization composition, retry framework, ambiguous-COMMIT reconciliation,
+expiry/lease/takeover/cleanup, M-008D/E implementation or G1 closure. Future approved
+composition must reserve before hackathon -> user -> team locks and expose replies
+only after the existing owner's COMMIT succeeds. Raw writers/inverse/multiple-key
+lock order can still deadlock; tested local schedules do not prove every possible
+interleaving. Authenticated 50-way API/CI, load and deployed HTTPS/browser proof
+remain outstanding.
+
+Owner explanation/exercise: the losing INSERT waits, then a separate SELECT sees
+the committed immutable reply. Explain why a generated create UUID must not enter
+the command hash; trace an exception after completion through the owner's rollback
+to show that neither the reservation nor the simulated effect survives.
+
 ## Daily work log template
 ```
 ### YYYY-MM-DD — [component/task ID]

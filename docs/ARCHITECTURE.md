@@ -82,7 +82,7 @@ Browser verification: Playwright → accessible mobile/keyboard flows
 - Active-only `memberships(hackathon_id, user_id, team_id, joined_at)` with **PRIMARY KEY `(hackathon_id,user_id)`**, composite team/hackathon FK and unique `(team_id,user_id)` for the deferred leader FK. History belongs in audit.
 - `invitations(id, team_id, token_hash UNIQUE, expires_at, revoked_at, created_by, ...)`.
 - `join_requests(id, team_id, user_id, state, created_at, decided_at, decided_by, ...)` with sensible pending uniqueness.
-- `idempotency_records(id, actor_id, operation, key, request_hash, status, response, created_at, ...)` with unique `(actor_id,operation,key)`; exact pending-request behavior is to be specified.
+- `idempotency_records(id, actor_id, hackathon_id, operation, key, request_hash, state, http_status, response_body, response_headers, created_at, completed_at)` with unique `(actor_id,operation,key)`. M-008C adds private success-only reservation/replay helpers on this unchanged schema. Owner verified 60 guarded merge_test cases in 40.82s at 0003_auth, three repetitions requested, fresh invariants verified; public mutation composition remains pending. See IDEMPOTENCY.md.
 - `audit_events(id, actor_id, hackathon_id, team_id, action, old_state?, new_state?, occurred_at, ...)`.
 - `outbox_events(id, aggregate_type, aggregate_id, event_type, payload, occurred_at, published_at?)`.
 
@@ -118,6 +118,12 @@ All membership-changing operations must acquire locks in **one consistent order*
 - Verify state in DB, not only HTTP responses.
 
 ### Idempotency
+- M-008C implements private primitives only: exact printable-ASCII keys, versioned
+  canonical SHA-256 command hashes, ON CONFLICT reservation, separate fresh
+  READ COMMITTED replay lookup and transaction-local successful completion.
+  Pending cannot commit; failed mutations retain no record. The existing
+  TeamService transaction owner and public methods are unchanged. The bullets
+  below describe the future public integration, not a verified endpoint.
 - Client sends `Idempotency-Key` on creation/join mutations.
 - Atomic record uniqueness scoped to actor+operation+key; immutable fingerprint of meaningful request payload.
 - Same key+same payload returns one recorded result; same key+different payload returns conflict.

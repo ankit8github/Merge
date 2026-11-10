@@ -1,5 +1,22 @@
 # Internal team services — M-007A
 
+## M-008C private idempotency primitives — owner-verified checkpoint
+
+Owner verified **60 passed in 40.82s** on guarded merge_test / **0003_auth**,
+three repetitions requested, fresh committed-state invariants verified and
+fixtures retained. This supersedes the earlier test-only bind failure; the R1
+bound-value correction preserves the original one-effect assertion. Codex did
+not rerun PostgreSQL. Public composition and G1 remain open.
+
+The new private `services/idempotency.py` module accepts the existing private
+commands and an already guarded active connection. It does not change this
+service or its public interfaces. Test-only composition uses `_execute` as the
+sole owner; no public idempotent create/join path exists. See IDEMPOTENCY.md for
+reservation/replay/completion, response limits and owner-run verification.
+No team, membership, audit or outbox writes were added by M-008C. The approved
+future order is reservation before the unchanged hackathon -> user -> team
+locking protocol. The M-008B evidence below is historical, not M-008C live proof.
+
 ## M-008B transaction-local extraction — 2026-11-10
 
 Owner-verified final checkpoint: guarded merge_test verification passed at

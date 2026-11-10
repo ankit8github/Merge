@@ -80,7 +80,10 @@ Idempotency has immediate uniqueness `(actor_id, operation, key)`, a 32-byte
 fingerprint, bounded printable-ASCII key and checked pending/completed response
 shape. A deferred trigger reads final state and rejects a committed pending
 record. Scope/fingerprint and completed outcomes are immutable; deletion is
-rejected. No replay/reservation service or retention worker exists yet.
+rejected. M-008C adds private reservation/replay/completion helpers using these
+unchanged constraints. Owner verified 60 guarded cases in 40.82s at 0003_auth,
+three repetitions requested, fresh invariants verified; public composition is pending.
+See IDEMPOTENCY.md. No retention worker, lease, expiry or schema change is added.
 
 Audit has unique operation and `(team_id, team_version)` references; records are
 append-only. Outbox has one row per audit event and immutable identity/payload;

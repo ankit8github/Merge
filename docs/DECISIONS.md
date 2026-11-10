@@ -265,3 +265,32 @@ executions total, fresh committed-state invariants verified, one existing
 Starlette/HTTPX warning. Codex did not rerun PostgreSQL. Shared throttling and
 browser/deployed HTTPS correctness remain unverified; the proxy timing flake
 remains open. Exact contracts, failure semantics and reproduction: HTTP_AUTH.md.
+
+### M-008C — owner-approved idempotency primitives, 2026-11-10
+
+Use the unchanged idempotency table and constraints at 0003_auth. Reserve one
+operation in scope `(actor_id, operation, key)` before future domain locks;
+operation names are `team.create.v1` and `team.join.v1`. Keys are exactly 1–128
+printable ASCII characters, case-sensitive, without trimming. Hash versioned,
+canonical JSON of validated meaningful inputs with SHA-256; a generated team ID
+is an outcome, not a create-command input. A different fingerprint or hackathon
+in the same scope is `idempotency_mismatch`.
+
+Retention is success-only. The owner's transaction reserves, performs one future
+mutation, records its successful reply and commits once. Failure rolls everything
+back. Conflicting INSERT waits for its winner, then a separate READ COMMITTED
+SELECT loads an immutable completed response. Pending visibility is an integrity
+fault; the existing deferred constraint forbids committing pending rows. No lease,
+expiry, takeover, cleanup, autonomous transaction or retry framework is added.
+
+This milestone supplies private transaction-local helpers and test-only
+composition, without changing TeamService or exposing idempotent public methods.
+Reply format and bounded header policy are internal and versioned; no HTTP API
+contract is introduced. Audit/outbox and ambiguous-COMMIT reconciliation remain
+separate milestones. See IDEMPOTENCY.md for the precise contract and evidence.
+
+Owner checkpoint: 60 guarded idempotency cases passed in 40.82s on merge_test /
+0003_auth, three repetitions requested, fresh committed-state invariants verified
+and fixtures retained. This supersedes the first-test bind failure repaired in
+test-only R1. Codex did not rerun PostgreSQL; no public mutation facade, audit/
+outbox composition, retry reconciliation or G1 closure is included.

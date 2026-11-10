@@ -287,3 +287,18 @@ that deliberately uses ordinary development credentials; these are safety guards
 Owner exercise: omit `--confirm-merge-test` and explain why argparse stops before
 credentials or connection creation. Explain why each new connection needs its own
 server-side identity check.
+
+## M-008C guarded idempotency suite
+
+`test_support.concurrency --suite idempotency` requires explicit
+`--revision 0003_auth` and `--confirm-merge-test`. It keeps the existing fixed
+merge_test target, hidden credential prompt, fail-fast sanitized output, retained
+fixtures and fresh committed-state checks. All new independent connections also
+check revision before writes. No migration or cleanup runs. The exact two-step
+owner PowerShell command, scenario/timeout contracts and checkpoint evidence
+are in [IDEMPOTENCY.md](IDEMPOTENCY.md#schema-and-live-verification).
+Collection alone opens no connection. Owner verified **60 passed in 40.82s** on
+guarded merge_test / **0003_auth**, three repetitions requested, fresh committed-state
+invariants verified and fixtures retained. This successful full run supersedes
+the earlier first-test failure; see the R1 and final entries in PROGRESS.md.
+Codex did not rerun PostgreSQL. This verifies private primitives, not a public API.

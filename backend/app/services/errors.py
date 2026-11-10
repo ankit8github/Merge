@@ -6,6 +6,7 @@ from sqlalchemy.exc import DBAPIError
 
 class ErrorCode(StrEnum):
     INVALID_INPUT = 'invalid_input'
+    IDEMPOTENCY_MISMATCH = 'idempotency_mismatch'
     HACKATHON_NOT_FOUND = 'hackathon_not_found'
     USER_NOT_FOUND = 'user_not_found'
     TEAM_NOT_FOUND = 'team_not_found'
