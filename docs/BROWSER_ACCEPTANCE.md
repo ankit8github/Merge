@@ -1,5 +1,11 @@
 # M-011A-R4 - test-only guarded browser host
 
+M-012B now exposes a Create Team form in React. This host still excludes that
+router and its manifest authorizes no team mutations. Do not exercise creation
+through it or switch to ordinary app.serve to bypass the guard. Separately reviewed
+host/write scope is required for live creation UI acceptance. M-012B is offline
+verified only; no browser acceptance is claimed.
+
 M-012A adds team creation to the ordinary application, but this test-only host
 explicitly excludes that router and retains its original exact dependency/route
 audit. Its approval manifest never authorizes team writes. Team creation is not

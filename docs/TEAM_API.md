@@ -8,6 +8,19 @@ Final offline checks and review are recorded in PROGRESS.md. One existing
 nonblocking Starlette deprecation warning remains. No browser/deployed HTTPS/G1
 acceptance, frontend create flow, join authorization, migration or dependency change.
 
+## M-012B frontend integration
+
+The React client now implements this contract with current useSession CSRF,
+native cryptographic keys and an App-lifetime account/hackathon command journal.
+Unresolved retries freeze exact name/key across navigation and same-account
+reauthentication; session invalidation aborts/ignores old callbacks. Only validated
+201 confirms creation, then canonical reads refresh. No automatic mutation retry,
+backend change or new join authorization. Memory-only records cannot survive
+reload/crash/tab closure. FRONTEND.md and PROGRESS.md record offline evidence,
+recovery behavior and pending browser/write-approval prerequisites. Existing
+browser host still blocks creation. Earlier React-milestone statements below
+retain M-012A checkpoint scope.
+
 ## M-012A-R1 - first owner-run fixture failure
 
 The owner verified merge_test / merge_app, READ COMMITTED and 0003_auth (head),

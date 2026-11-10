@@ -107,6 +107,15 @@ dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
 .empty h2, .empty h3 { color: #34513e; }
 .empty-symbol { display: block; font-size: 2.5rem; color: #8b9d6c; margin-bottom: 1rem; }
 .back { margin-bottom: .7rem; }
+.create-team { padding: 1.5rem; margin-bottom: 2rem; border-top: 4px solid #75965a; }
+.create-team h2 { font-size: 1.4rem; }
+.create-team .eyebrow { margin-bottom: .6rem; }
+.create-team input { max-width: 36rem; }
+.create-team input[readonly] { background: #f2f5ef; }
+.create-team .primary { margin-right: 1rem; }
+.create-team form > .muted { display: inline-block; font-size: .8rem; }
+.unresolved { background: #fff7e6; border: 1px solid #e3c987; color: #695022; }
+.field-error { color: #802c22; font-size: .85rem; margin-top: .5rem; }
 .site-footer { max-width: 1280px; margin: auto; padding: 1.5rem 2.5rem; border-top: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; color: var(--muted); font-size: .75rem; }
 summary { cursor: pointer; padding: .3rem; }
 .health { padding-top: .8rem; } .health p { margin-bottom: 0; }

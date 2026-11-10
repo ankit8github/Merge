@@ -1,5 +1,13 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
+M-012B adds React team creation through the existing M-012A POST only. An App-
+lifetime account/hackathon in-memory journal preserves exact command/key after
+uncertain delivery or session/view changes. The existing session generation now
+exposes its invalidation signal; confirmed 201 refreshes canonical discovery.
+No persistence/dependency/backend/transaction/authentication model or browser-host
+scope change. FRONTEND.md and PROGRESS.md record offline evidence and reload/
+browser/HTTPS limits. G1 stays open.
+
 M-012A adds only POST /api/hackathons/{hackathon_id}/teams using the validated
 session actor, session-bound CSRF and existing composed idempotent create service.
 It returns the stored 201 result and explicitly handles outcome_uncertain without

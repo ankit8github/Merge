@@ -8,6 +8,10 @@ export type Team = Hackathon & {
 };
 export type Page<T> = { items: T[]; next_cursor: string | null };
 export type Credentials = { username: string; password: string };
+export type CreateTeamBody = { name: string };
+export type CreatedTeam = { schema_version: 1; data: {
+  team_id: string; hackathon_id: string; user_id: string; member_count: 1; team_version: 1;
+} };
 
 export class ApiError extends Error {
   constructor(public status = 0, public code = 'network_error', public retryable = false,
@@ -61,7 +65,8 @@ function page<T>(value: unknown, parse: (item: unknown) => T): Page<T> {
 }
 
 async function request<T>(path: string, parse: (value: unknown) => T,
-                          signal?: AbortSignal, body?: unknown, csrf?: string, expectedStatus = 200): Promise<T> {
+                          signal?: AbortSignal, body?: unknown, csrf?: string, expectedStatus = 200,
+                          idempotencyKey?: string): Promise<T> {
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal?.addEventListener('abort', abort, { once: true });
@@ -74,6 +79,7 @@ async function request<T>(path: string, parse: (value: unknown) => T,
       headers: body === undefined ? { Accept: 'application/json' } : {
         Accept: 'application/json', 'Content-Type': 'application/json',
         ...(csrf ? { 'X-CSRF-Token': csrf } : { 'X-Merge-Request': '1' }),
+        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
       }, ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     if (!response.ok) {
@@ -105,6 +111,19 @@ export const api = {
   login: (body: Credentials, signal?: AbortSignal) => request('/auth/login', session, signal, body),
   register: (body: Credentials & { display_name?: string }, signal?: AbortSignal) => request('/auth/register', identity, signal, body, undefined, 201),
   logout: (csrf: string, signal?: AbortSignal) => request('/auth/logout', () => undefined, signal, {}, csrf, 204),
+  createTeam: (id: string, body: CreateTeamBody, key: string, csrf: string, signal?: AbortSignal) => {
+    if (!/^[ -~]{1,128}$/.test(key) || !/^[A-Za-z0-9_-]{43}$/.test(csrf)) {
+      return Promise.reject(new ApiError(422, 'invalid_request'));
+    }
+    return request(scope(id) + '/teams', (value): CreatedTeam => {
+      const v = object(value), data = object(v.data), hackathonId = uuid(data.hackathon_id);
+      if (v.schema_version !== 1 || data.member_count !== 1 || data.team_version !== 1 || hackathonId !== id) {
+        throw new ApiError(0, 'invalid_response');
+      }
+      return { schema_version: 1, data: { team_id: uuid(data.team_id), hackathon_id: hackathonId,
+        user_id: uuid(data.user_id), member_count: 1, team_version: 1 } };
+    }, signal, { name: body.name }, csrf, 201, key);
+  },
   hackathons: (cursor: string | null, signal?: AbortSignal) => request('/api/hackathons' + query(cursor), value => page(value, hackathon), signal),
   teams: (id: string, cursor: string | null, signal?: AbortSignal) => request(scope(id) + '/teams' + query(cursor), value => page(value, item => team(item, id)), signal),
   team: (id: string, teamId: string, signal?: AbortSignal) => request(scope(id) + '/teams/' + uuid(teamId), value => {

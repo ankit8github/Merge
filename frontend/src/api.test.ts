@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { api, ApiError, errorMessage } from './api';
-import { csrf, failure, H1, H2, json, session, T1, team, U1 } from './test/fixtures';
+import { created, csrf, failure, H1, H2, json, session, T1, team, U1 } from './test/fixtures';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 it('sends only same-origin cookies and the exact auth/logout header contracts', async () => {
@@ -87,4 +87,40 @@ it('bounds slow requests and cancels a caller-aborted read', async () => {
   const cancelled = expect(api.session(controller.signal)).rejects.toBeInstanceOf(ApiError);
   controller.abort(); await cancelled;
   expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+it('posts only a name with the exact create headers and accepts the stored 201 envelope', async () => {
+  const fetch = vi.fn().mockImplementation(() => Promise.resolve(json({ ...created(), private_extra: 'ignore' }, 201)));
+  vi.stubGlobal('fetch', fetch);
+  const body = { name: ' Exact name ', actor_id: 'untrusted', max_team_size: 9 };
+  expect(await api.createTeam(H1, body, 'same-key', csrf)).toEqual(created());
+  expect(await api.createTeam(H1, body, 'same-key', csrf)).toEqual(created());
+  expect(fetch.mock.calls).toHaveLength(2);
+  for (const [url, options] of fetch.mock.calls) {
+    expect(url).toBe(`/api/hackathons/${H1}/teams`);
+    expect(options).toMatchObject({ method: 'POST', body: '{"name":" Exact name "}',
+      credentials: 'same-origin', cache: 'no-store', redirect: 'error', headers: {
+        Accept: 'application/json', 'Content-Type': 'application/json', 'Idempotency-Key': 'same-key', 'X-CSRF-Token': csrf,
+      } });
+    expect(Object.keys(options.headers)).toHaveLength(4);
+  }
+});
+it.each([
+  { ...created(), schema_version: 2 }, { data: created().data },
+  { ...created(), data: { ...created().data, hackathon_id: H2 } },
+  { ...created(), data: { ...created().data, team_version: 2 } },
+  { ...created(), data: { ...created().data, member_count: 2 } },
+  { ...created(), data: { ...created().data, user_id: 'invalid' } },
+])('rejects an invalid stored create response %#', async value => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(value, 201)));
+  await expect(api.createTeam(H1, { name: 'Team' }, 'key', csrf)).rejects.toMatchObject({ code: 'invalid_response' });
+});
+it.each([200, 202, 204])('does not accept create status %s as confirmation', async status => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(status === 204 ? new Response(null, { status }) : json(created(), status)));
+  await expect(api.createTeam(H1, { name: 'Team' }, 'key', csrf)).rejects.toMatchObject({ code: 'invalid_response' });
+});
+it.each([['', csrf], ['x'.repeat(129), csrf], ['bad\tkey', csrf], ['key', '']])('refuses invalid create security headers without fetching %#', async ([key, token]) => {
+  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+  await expect(api.createTeam(H1, { name: 'Team' }, key, token)).rejects.toMatchObject({ status: 422 });
+  expect(fetch).not.toHaveBeenCalled();
 });

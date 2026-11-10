@@ -4319,6 +4319,195 @@ only the requested name with that key and predict 409 mismatch; changing the key
 for the same assigned actor/hackathon instead yields already_assigned. Explain
 why unknown commit acknowledgement must preserve the command/key.
 
+## M-012B - React authenticated team creation, 2026-11-10
+
+**Implemented and offline verified only; stop for owner review, no commit.**
+Baseline remains `4ea4d6c81542080c9399207a699948d96b65d746`. The owner-verified
+M-012A 105-case / 140.81s result remains historical backend evidence, not a new
+frontend/browser/PostgreSQL run. G1 is open. No database connection, credential
+prompt, backend/browser launch, fixture write/reset/cleanup, manifest generation,
+schema/migration/role/permission change, staging, commit, remote or push.
+
+Added selected-hackathon Create Team form, exact api.createTeam transport/parser,
+App-lifetime useTeamCreation journal and current useSession generation signal.
+The request sends only name with browser-managed same-origin cookies, current
+memory CSRF, JSON and a crypto.getRandomValues 32-byte / 64-hex idempotency key.
+Never send actor/identity/size/team IDs. Validate the exact stored 201 envelope,
+UUID scope and authenticated response user; no optimistic fake TeamView. A new
+command after definite validation rejection may get a new key. Uncertain delivery,
+all 503s, mismatch, timeout/abort/network or unexpected replies freeze exact key/
+name. Explicit original retry only; earlier uncertainty survives later 401/403/
+422. Duplicate click/keyboard submission is blocked synchronously before render.
+Missing secure randomness fails before POST, without weak fallback.
+
+My Team is fetched for each selected hackathon before new creation is enabled;
+known membership or unknown/error state blocks it. An unresolved original-key
+replay remains allowed even if membership appears, because a GET alone cannot
+replace the immutable acknowledgement. Confirmed 201 (including replay) refreshes
+My Team and resets/refetches the active list; an inactive list is fetched fresh
+on reactivation. Already-assigned refreshes without claiming creation. Canonical
+read failure cannot erase successful creation and retry does not POST. Existing
+cursor pages, details, session bootstrap/expiry/logout and disabled join remain.
+Unknown error bodies/codes never establish rejection merely from HTTP status.
+Only documented pre-mutation status/code pairs permit editing, and earlier
+uncertainty still wins. Error messages are fixed/sanitized; 429 uses bounded Retry-After
+cooldown, retained across view navigation.
+
+Commands are isolated by validated account/hackathon UUID in App above the keyed
+workspace; no bearer/CSRF/Session is stored in command records. Active requests
+use current memory session CSRF. useSession.start invalidates its signal
+synchronously; logout/expiry/restore cancel and ignore old callbacks, retain the
+command as unresolved and cannot expire or populate another user's workspace.
+Same-account login/restoration reuses the original key/name with fresh CSRF.
+Hackathon changes retain the original operation without applying its result to
+the new selection. No abort is interpreted as stopped/rolled-back database work.
+No persistent storage, new dependency, backend/authentication/transaction change
+or additional endpoint. Full backend/manifests/config/schema match baseline.
+
+The form uses labels, helper/error descriptions, focused validation, read-only
+unresolved names, live status/error regions, native keyboard form submission,
+existing green/cream CSS and responsive layout. Code-point validation preserves
+valid 120-emoji names and exact input spaces, rejecting all-ASCII-space, NUL and
+unpaired-surrogate input. No raw HTML, browser cookie access, logging, fake live
+teams or production imports of test fixtures. Tests establish DOM behavior only,
+not a browser/assistive-technology/visual acceptance claim.
+
+Exact file inventory (16 files: 13 tracked modifications, three new):
+
+- `docs/ARCHITECTURE.md`
+- `docs/BROWSER_ACCEPTANCE.md`
+- `docs/DECISIONS.md`
+- `docs/FRONTEND.md`
+- `docs/PROGRESS.md`
+- `docs/TEAM_API.md`
+- `frontend/src/App.tsx`
+- `frontend/src/CreateTeam.test.tsx`
+- `frontend/src/api.test.ts`
+- `frontend/src/api.ts`
+- `frontend/src/components/CreateTeam.tsx`
+- `frontend/src/components/Discovery.tsx`
+- `frontend/src/hooks/useSession.ts`
+- `frontend/src/hooks/useTeamCreation.ts`
+- `frontend/src/style.css`
+- `frontend/src/test/fixtures.ts`
+
+Actual verification, Windows PowerShell, existing Python 3.11.9 venv / Node
+22.15.0 / npm 10.9.2, no package installation or update:
+
+- frontend `npm test`: **102 passed / four files in 22.59s**, exit 0. All original
+  52 tests retained; 50 added cases cover exact POST/201/parser/header behavior,
+  duplicate click/keyboard submits, uncertain/network/bad replies and same-key
+  replay, no editing/rekey while unresolved, fresh CSRF through same-account
+  logout/login/foreground restore, stale 201/401 after another user signs in,
+  hackathon switches, membership guards, already-assigned, 403 and 400/422 recovery,
+  mismatch/nonretryable 503, sticky uncertainty, 429 cooldown/navigation, secure
+  RNG failure, Unicode/invalid input/focus/labels, StrictMode, inactive list
+  invalidation and confirmed creation with failed canonical refresh. No skipped,
+  deleted or weakened tests. Earlier 93/96/98 green checkpoints are superseded.
+  Final review added four cases showing that status-only classification treated
+  malformed 400/422/403 and unexpected-status outcome_uncertain as definite
+  rejection. Before correction, the new module run had **4 failed / 32 passed
+  in 24.72s**. Actual invocation was `npm test -- --run src/CreateTeam.test.tsx -t
+  'undocumented error body|explicit outcome_uncertain'`; npm/PowerShell forwarded
+  filters as module arguments and ran all 36 module cases, not just four. Replaced
+  status-only proof with documented status/code pairs and unconfirmed wording.
+  All four unchanged regression assertions pass in the final 102-case run.
+- frontend `npm run typecheck`: passed, exit 0. An initial new test used an
+  unsupported ByRoleOptions.exact property; corrected the query option only.
+  Final source including a type-only import correction passed again afterward.
+- frontend `npm run build`: passed, exit 0; Vite 6.4.5, **38 modules / 3.02s**;
+  JS **218.61 kB / 68.37 kB gzip**, CSS **10.40 kB / 3.14 kB gzip**. Build repeats
+  typecheck. Earlier 1.98s/2.48s builds were green before the final error-pair
+  hardening. Bundle size is not load/performance proof.
+- frontend `npm ls --depth=0`: installed dependency tree valid, exit 0.
+- backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1020 passed, 32 deselected in 43.93s**, exit 0; one existing nonblocking
+  Starlette/HTTPX deprecation warning. No PostgreSQL fixtures executed.
+- backend `.\.venv\Scripts\python.exe -m pip check`: no broken requirements,
+  exit 0.
+- Root inline Python scope/whitespace/secret-format and production import-graph
+  checks passed: 12 source/CSS files reachable from main.tsx, no tests/fixtures,
+  storage/cookie/raw-HTML/logging/weak randomness primitives. Exactly one production
+  api.createTeam call and native 32-byte random key generation; entire backend,
+  dependency manifests/lockfiles and Vite/TypeScript config unchanged. No
+  configured separate frontend linter. `git -c safe.directory=I:/Merge diff --check`
+  passed with existing LF/CRLF notices only; final inventory/HEAD/index checks
+  recorded at handoff. Built fixture-marker exclusion and final checks completed
+  after this documentation entry. Candidate scans supplement manual review and
+  are not exhaustive secret-detection guarantees.
+
+Known limits: the journal is memory-only. Navigation/foreground checks/logout/
+login preserve it within this App instance, but **reload, tab closure or crash
+loses name/key/state**. beforeunload is best-effort; the UI says keep the tab open.
+Do not infer rollback or use a fresh key after losing an unresolved command;
+separately approved authoritative inspection/owner review is needed. Settled and
+unresolved operation metadata remains in memory for this App lifetime, isolated
+from other accounts' rendered workspaces. Browser cancellation does not prove
+transaction completion. Same-origin XSS remains outside this client boundary.
+A mismatched key/response stays unresolved for owner investigation, never silently
+rotated. The unchanged backend unknown-hackathon 503 limit remains.
+
+No real browser/cookie/Origin/proxy/HTTPS, screen-reader, keyboard-only or visual
+mobile/zoom acceptance was executed. The existing guarded browser host still
+excludes team creation; its manifest grants auth writes only. New live creation
+UI acceptance requires a separately reviewed host/write scope and retained
+fixtures/fresh invariants. Do not bypass it with ordinary app.serve/merge_dev.
+Registration/other browser prerequisites, deployment, authorized 50-way join,
+CI/load and G1 stay open. No join/invite/request/leave/transfer/delete UI was added.
+FRONTEND.md, TEAM_API.md and BROWSER_ACCEPTANCE.md record recovery and approval
+limits; architecture/decision notes explain the memory-only choice.
+
+Owner exercise: drop the first creation response in the mock, try changing the
+name, then navigate or restore the same account and retry. Trace identical name/
+key with fresh CSRF, and explain why the original stored count remains 1 while
+a canonical GET may already show more members. Stop for owner review before
+commit or any live acceptance action.
+
+### M-012B final review and local commit checkpoint, 2026-11-10
+
+The owner subsequently authorized exactly one local commit with subject
+`feat: add React authenticated team creation (M-012B)`, conditional on this final
+review and fresh checks. This supersedes the implementation handoff's no-commit
+instruction above. **Offline verified only; browser acceptance remains pending
+and G1 remains open.** No runtime source changes were needed during final review.
+The complete 16-file candidate set was reviewed against the current HTTP/CSRF/
+idempotency contracts: current validated-session CSRF, native 32-byte randomness,
+exact frozen original command on uncertain retries, synchronous duplicate guard,
+canonical refresh after stored 201/replay, account/session/hackathon isolation,
+disabled join and explicit memory-only recovery limits. Backend production code,
+test host, schema/migrations/permissions, dependency manifests and build config
+remain unchanged. No production fixture data or browser storage/logging added.
+
+Fresh final checks in Windows PowerShell with the existing local toolchain:
+
+- frontend `npm test`: **102 passed / four files in 28.63s**, exit 0.
+- frontend `npm run typecheck`: passed, exit 0.
+- frontend `npm run build`: passed, exit 0; Vite 6.4.5, **38 modules in 2.29s**;
+  JS 218.61 kB / 68.37 kB gzip, CSS 10.40 kB / 3.14 kB gzip.
+- frontend `npm ls --depth=0`: passed, exit 0; no dependency installation/update.
+- backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1020 passed, 32 deselected in 45.40s**, exit 0; one existing nonblocking
+  Starlette/HTTPX deprecation warning. No PostgreSQL fixtures executed.
+- backend `.\.venv\Scripts\python.exe -m pip check`: no broken requirements.
+- `git -c safe.directory=I:/Merge diff --check`: passed; existing LF/CRLF notices
+  only. Candidate scope/secret-format/whitespace checks passed for all 16 files;
+  the 12-file production source/CSS import graph excludes tests, browser storage,
+  cookie access, raw HTML, console logging and weak randomness. Built JavaScript
+  excludes fixture markers; original tests are retained. Reviewed content hashes
+  are recorded in ignored cache for staged-blob verification before commit.
+  These scans supplement manual review, not exhaustive secret detection or an
+  online vulnerability audit. No separate configured frontend linter.
+
+Retain the exact 16-file inventory above. The commit subject identifies this
+checkpoint; report the actual full hash and post-commit status after Git succeeds.
+No live database, credential prompt, backend/browser startup, test fixture writes,
+manifest generation, remote or push. Real-cookie/Origin/proxy/HTTPS, mobile/zoom,
+keyboard/screen-reader and creation browser acceptance remain outstanding. The
+existing guarded host still excludes team creation; separately reviewed host and
+write approval remain prerequisites. Reload/tab close/crash loses unresolved
+command/key state; no persistent recovery has been added. Unknown-hackathon 503
+is unchanged. The owner debugging exercise above remains applicable.
+
 ## Daily work log template
 ```
 ### YYYY-MM-DD — [component/task ID]

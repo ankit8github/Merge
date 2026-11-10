@@ -1,9 +1,108 @@
-# Merge authentication and discovery UI — M-011A
+# Merge authentication, discovery and team creation UI
 
-M-012A implements the backend create-only route; the next React milestone must
-use the exact typed command/stored-reply and same-key retry contract in
-[TEAM_API.md](TEAM_API.md). No frontend create flow is implemented here, and the
-existing guarded browser host still excludes team mutations.
+M-012B adds the selected-hackathon Create Team form using the committed M-012A
+contract in [TEAM_API.md](TEAM_API.md). **Offline verified only; real-browser
+acceptance remains pending.** No backend, schema, dependency or browser-host
+permission changes. Joining and other lifecycle actions remain unavailable.
+M-011A sections below retain their earlier checkpoint scope; current behavior and
+exceptions to discarded view state are recorded in this M-012B section.
+
+## M-012B - authenticated team creation
+
+The selected hackathon has a labelled, keyboard-submittable Create Team form with
+field help, focused validation errors, live progress/error/success messages and
+the existing responsive CSS/focus/reduced-motion policy. It waits for canonical
+My Team to return null before enabling new creation; present/unknown membership
+blocks new commands. Client rules match 1-120 Unicode code points, rejection of
+ASCII-space-only names, NUL and unpaired surrogates, without trimming or Unicode
+normalization. UTF-16 maxLength does not reject valid 120-emoji names.
+
+api.createTeam sends exactly `{name}` to the fixed relative scoped /teams POST,
+with same-origin cookies, no-store, application/json, current in-memory CSRF and
+one Idempotency-Key. No actor, identity, size or generated team UUID is submitted.
+The browser supplies Origin; cookie/auth/Origin/CSRF rules remain server authority.
+Accept exactly 201 and the V1 stored envelope, literal founder count/version 1,
+valid UUIDs and matching hackathon; also check the returned user UUID against the
+current session. Extra response fields are dropped. This is an acknowledgement,
+never a TeamView or synthetic live roster. Confirmed 201 (including replay)
+refreshes My Team; the visible list resets to page one/refetches, while an inactive
+list is invalidated and fetched fresh on its next activation. Details preserve
+scoped GETs. A failed canonical refresh does not erase creation success; retry
+reads without POST. Already-assigned 409 refreshes without claiming creation.
+
+### Command lifetime and recovery
+
+useTeamCreation lives in App above the workspace keyed by session generation.
+Its in-memory journal is scoped to validated account/hackathon UUIDs. Commands
+store exact name, random key, status, uncertainty and sanitized error metadata;
+no bearer, CSRF, Session or canonical Team is stored in commands. Active requests
+use the current session scope. Operation records (including settled records)
+remain until this App instance is destroyed. Other accounts cannot see/use them.
+No local/session storage, credential persistence, console logging or new library.
+
+Generate 32 bytes through native crypto.getRandomValues, encoded as 64 lowercase
+hex characters within the existing key contract. No time/Math.random fallback.
+An edited meaningful name after definite rejection gets a new key; explicit retry
+of an unchanged command reuses its key. Synchronous ref guards prevent duplicate
+POSTs before React renders. No mutation automatically retries.
+
+| Result | UI behavior |
+| --- | --- |
+| 201 initial/replay | Confirm success, disable more creation, refresh canonical reads |
+| First 400/422 invalid_request | Fixed validation message; permit correction/new command |
+| 401 | End the current workspace through useSession; no automatic retry |
+| 403 | Fixed denied message and explicit Restore session action |
+| 409 already_assigned | Block new creation, refresh My Team/list; no success claim |
+| 409 idempotency_mismatch | Keep original command locked/unconfirmed; check membership/contact owner |
+| 429 | Bounded Retry-After cooldown survives navigation; explicit retry only |
+| outcome_uncertain, any 503, network/timeout/abort, malformed/wrong-principal/unknown response | Unresolved; retain exact name/key and offer original-command retry only |
+
+Only documented pre-mutation status/code pairs establish a definite rejection:
+400/422 invalid_request, 401 invalid_session, 403 invalid_csrf/origin_rejected/
+client_identity_rejected/https_required, or 429 rate_limited. A status alone,
+HTML/malformed error or unrecognized code cannot unlock the name; even an
+outcome_uncertain body with an unexpected 400 stays unresolved.
+Uncertainty is sticky across later pre-mutation errors (including 401/403/422):
+such a response cannot prove the earlier outcome. The name is read-only until
+the original operation is resolved. Only an authoritative 201 replay or
+already_assigned resolves it. Membership becoming present alone cannot substitute
+for the stored reply: new creation stays blocked, but only frozen original-key
+replay remains available. No silent discard/new-key escape.
+
+useSession exposes the existing generation's AbortSignal. start() invalidates it
+synchronously on logout, expiry, restore or replacement. Creation callbacks check
+signal/epoch/account before affecting a workspace or expiring a session. Abort
+latches the old command unresolved because browser cancellation does not prove
+PostgreSQL work stopped. Logging back into the same account can retry the same
+command/key with newly restored CSRF; another account gets its own journal scope.
+Hackathon navigation lets a request finish only under its original hackathon,
+without changing selection or refreshing another scope. Existing read active
+flags, aborts, absolute session expiry and cursor/detail navigation are retained.
+No join/invite/request/leave/leadership/delete action is implemented.
+
+### Persistence and acceptance limits
+
+The journal survives in-app navigation, foreground checks and logout/login only
+while this App instance lives. beforeunload warns for pending/unresolved commands,
+but browsers may suppress it and crashes cannot run it. **Reload, tab closure or
+crash loses the journal/key.** The UI says keep this tab open until resolved.
+If the record is lost, do not infer rollback or submit a fresh key based on an
+ambiguous outcome; use separately approved authoritative inspection/owner review.
+Durable recovery across reloads is not claimed. Same-origin XSS remains outside
+this client boundary, as with the existing CSRF.
+
+Mocked HTTP/jsdom checks are not real cookie, browser layout/keyboard/screen-reader,
+production HTTPS or PostgreSQL UI acceptance. Manual 320px/375px/desktop/zoom/focus
+and approved delayed-response browser exercises remain pending. The existing
+guarded browser host excludes creation; its auth-only manifest grants no team
+writes. New live creation acceptance requires a separately reviewed host/write
+scope and retained fixtures/invariant checks. Never switch to ordinary app.serve
+to bypass it (ordinary Settings still target merge_dev). No live startup/credential
+prompt, browser execution or PostgreSQL access occurred here. M-012A's 105 owner-
+run backend passes remain separate evidence. G1 stays open.
+
+Final M-012B commands/results and exact inventory are in PROGRESS.md. The sections
+below describe earlier M-011A behavior/counts, not new M-012B live evidence.
 
 **M-011A-R4: shutdown defect corrected offline; stop for owner review.** The R3
 regression now passes. Timeout/incomplete drains remain unsuccessful independently

@@ -423,3 +423,28 @@ its manifest grants no team-write scope. Guarded HTTP tests have a separate fixe
 suite and retained scoped fixtures. The owner subsequently verified 105 HTTP
 cases in 140.81s at guarded 0003_auth. Codex did not rerun PostgreSQL. G1 remains
 open; browser/deployed HTTPS and other lifecycle authorization remain pending.
+
+### M-012B - owner-scoped React team creation, 2026-11-10
+
+Use the exact M-012A contract. Generate a cryptographic printable key per meaningful
+command and retain exact name/key after uncertain delivery; retry is explicit.
+Keep metadata in App above the session-generation workspace, scoped to validated
+account/hackathon IDs, never sending actor identity. Expose the existing frontend
+session generation's invalidation signal rather than introducing another auth
+model. Logout/restore/expiry abort and ignore callbacks, retaining unresolved
+metadata for the same account to resolve. Cancellation is not transaction proof.
+
+Unknown/network/503/mismatch responses lock the name. Only documented status/
+code pairs permit editing after definite rejection; proxy HTML or a status alone
+is not rollback proof. A later 401/403/422 cannot erase earlier uncertainty. Validated 201 acknowledges the stored founder result;
+refetch My Team and reset/invalidate the list rather than inventing TeamView data.
+Read-refresh failure cannot erase confirmed creation. Known membership blocks new
+creation, with only frozen original-key replay permitted for an unresolved command.
+Server auth/CSRF and membership/invariant enforcement remain authoritative.
+
+Rejected alternative for this milestone: persisting private command metadata to
+browser storage or adding a query/state library. Memory survives navigation and
+reauthentication but is lost on reload/tab close/crash; beforeunload is best-effort
+and the UI says keep the tab open. Durable recovery is not claimed. FRONTEND.md
+records offline tests and future browser prerequisites. No frontend join, new
+dependency, backend/schema change, browser-host scope expansion or G1 closure.

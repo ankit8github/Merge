@@ -10,3 +10,5 @@ export const hackathon = (id = H1) => ({ id, name: id === H1 ? 'Test Challenge' 
 export const team = (id = T1, scope = H1) => ({ ...hackathon(scope), id, hackathon_id: scope, name: id === T1 ? 'Test Team Alpha' : 'Test Team Beta', member_count: 2, readiness: 'ready', leader: { user_id: U1, display_name: 'Test Leader' }, created_at: '2026-11-10T00:00:00Z' });
 export const json = (body: unknown, status = 200, headers?: HeadersInit) => new Response(JSON.stringify(body), { status, headers });
 export const failure = (status: number, code = 'request_failed', retryable = false, headers?: HeadersInit) => json({ error: { code, message: 'Untrusted upstream message', retryable } }, status, headers);
+export const created = (scope = H1, user = U1, id = T1) => ({ schema_version: 1,
+  data: { team_id: id, hackathon_id: scope, user_id: user, member_count: 1, team_version: 1 } });

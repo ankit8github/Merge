@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError, type Session } from '../api';
 
 type State = { status: 'checking' } | { status: 'guest'; message?: string } |
-  { status: 'error'; error: ApiError } | { status: 'authenticated'; session: Session; epoch: number } |
+  { status: 'error'; error: ApiError } | { status: 'authenticated'; session: Session; epoch: number; signal: AbortSignal } |
   { status: 'ending'; session: Session; error: ApiError | null };
 
 export function useSession() {
@@ -19,9 +19,9 @@ export function useSession() {
     start(); setState({ status: 'guest', message: 'Your session has ended. Sign in again.' });
   }, [start]);
   const accept = useCallback((session: Session) => {
-    const { version } = start();
+    const { version, controller } = start();
     if (Date.parse(session.expires_at) <= Date.now()) return expired();
-    setState({ status: 'authenticated', session, epoch: version });
+    setState({ status: 'authenticated', session, epoch: version, signal: controller.signal });
   }, [start, expired]);
   const restore = useCallback(() => {
     const { controller, version } = start();
