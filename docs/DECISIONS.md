@@ -377,3 +377,27 @@ Owner checkpoint at 0003_auth: read API 87 passed in 73.35s, auth API regression
 54 in 28.28s; combined 141 passed, suite-time sum 101.63s. Three repetitions
 requested; one existing Starlette/HTTPX warning. These are owner-run PostgreSQL
 results, not Codex database executions. No public mutation or production/G1 claim.
+
+### M-011A ? React authentication and discovery, 2026-11-10
+
+Within the owner's approved frontend scope, use the existing React/TypeScript/
+Vite/plain-CSS stack and unchanged auth/read DTOs. Keep an explicit small session
+state machine and cancellable view-owned reads; no additional state/router/UI
+framework or persistence. Native cookie handling, memory-only CSRF, exact relative
+URLs and existing browser Origin/custom-header rules remain authoritative.
+No client identity is sent to the server. Generation changes discard private
+workspace state and ignore late responses; failed logout does not claim success.
+Registration confirms account creation before explicit login. No automatic retry
+of authentication mutations, even after an ambiguous transport failure.
+
+Catalog and team lists request bounded cursor pages and preserve server ordering;
+details/My Team use canonical GETs. Membership null is a distinct successful
+empty state. Readiness/counts confer no admission right. A future join control
+is disabled and no mutation endpoint or fake live fixture is introduced. UI view
+navigation stays local React state; deep-link routing/realtime are later work.
+
+FRONTEND.md records implementation, tests and browser steps. Offline/component/
+proxy checks are not PostgreSQL or real-browser proof. Ordinary backend Settings
+still require merge_dev, so authenticated browser testing requires a separately
+approved guarded HTTP host, not weakening that guard. No schema, dependency,
+backend transaction, authentication model or deployment topology change. G1 open.

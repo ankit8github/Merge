@@ -134,11 +134,16 @@ $env:MERGE_AUTH_ORIGIN = 'http://127.0.0.1:5173'
 .\.venv\Scripts\python.exe -m app.serve --host 127.0.0.1 --port 8000
 ```
 
-Vite proxies /health and /auth to 127.0.0.1:8000. Open the frontend at exactly
+Vite proxies /health, /auth and /api to 127.0.0.1:8000. Open the frontend at exactly
 http://127.0.0.1:5173 and use relative /auth URLs with normal same-origin cookies.
 Changing to localhost changes the origin and needs matching configuration.
-Origin is preserved by the proxy. The frontend UI remains the existing health
-screen; no login form/redesign is included. Development mode must remain local.
+Origin is preserved by the proxy. M-011A now implements frontend register/login,
+memory-only CSRF bootstrap and logout plus discovery, without changing these
+backend contracts. FRONTEND.md distinguishes component/proxy evidence from
+pending real-cookie browser checks. Development mode must remain local. The
+ordinary backend Settings target is unchanged; do not submit credentials through
+it when merge_dev access is prohibited. A guarded browser HTTP environment is a
+separate prerequisite, not a reason to override the existing database guard.
 
 The runtime Engine is initialized lazily by the service dependency, never by
 /health or a missing-cookie request. Guarded tests replace that dependency with

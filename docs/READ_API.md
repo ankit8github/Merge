@@ -180,16 +180,16 @@ offline regressions include them. No credential or ordinary development DB acces
 
 ## Next frontend integration
 
-The existing frontend is still a health screen. Its Vite proxy covers /health
-and /auth only; add a same-origin `/api` proxy in the frontend integration task,
-preserving Origin and the controlled backend launcher. Production must route /api
-under the same trusted HTTPS origin. Use relative URLs and normal session cookies;
-never send actor IDs or identity headers. Keep the session/bootstrap flow separate
-from these DTOs. Handle 401 with reauthentication, 404 with refresh, 422 with
-cursor reset and 503 with a bounded user-visible retry option. Reset the cursor
-when hackathon changes; discard stale responses after navigation. Render names
-as text, show empty/current-team states, and treat counts as snapshot information,
-not an admission guarantee. No join button may call a nonexistent mutation route.
+M-011A implements this integration for owner review: authentication forms/session
+bootstrap, hackathon and team pages, details and exact null/present membership
+states. Vite now includes the same-origin `/api` proxy, preserving Origin and
+the controlled launcher convention. Typed relative cookie-authenticated fetches
+never send actor IDs or identity headers; navigation/session changes cancel and
+ignore stale responses. Names are text, counts are fetched snapshots and join
+is visibly disabled. No public team mutation is added. Component/build and safe
+proxy evidence, browser prerequisites and remaining work are in FRONTEND.md.
+Production must still route /api under the same trusted HTTPS origin; deployed
+HTTPS and authenticated browser integration remain unverified.
 
 Owner exercise: hold a join before COMMIT and explain why count and `/me/team`
 remain old; change the offline page limit and predict the exact lookahead/next

@@ -12,15 +12,15 @@ import subprocess
 import sys
 import time
 from urllib.error import HTTPError, URLError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 THROTTLE_TEST_SECRET = secrets.token_hex(32)
 
 
-def get(path: str, timeout: float = 2) -> tuple[int, bytes]:
+def get(path: str, timeout: float = 2, headers: dict[str, str] | None = None) -> tuple[int, bytes]:
     try:
-        with urlopen(path, timeout=timeout) as response:
+        with urlopen(Request(path, headers=headers or {}), timeout=timeout) as response:
             return response.status, response.read()
     except HTTPError as error:
         return error.code, b""
@@ -81,6 +81,18 @@ def main() -> None:
         assert get('http://127.0.0.1:8000/auth/session')[0] == 401
         assert get('http://127.0.0.1:5173/auth/session')[0] == 401
         print('PASS: auth proxy forwards missing-session 401 without database access')
+        # Every new read route must proxy unchanged, not fall back to SPA HTML.
+        for path in ('/api/hackathons',
+                     '/api/hackathons/00000000-0000-0000-0000-000000000001/teams',
+                     '/api/hackathons/00000000-0000-0000-0000-000000000001/teams/00000000-0000-0000-0000-000000000002',
+                     '/api/hackathons/00000000-0000-0000-0000-000000000001/me/team'):
+            assert get('http://127.0.0.1:5173' + path)[0] == 401
+        print('PASS: all four read routes proxy missing-session 401 without database access')
+        assert get('http://127.0.0.1:5173/api/hackathons',
+                   headers={'Origin': 'http://127.0.0.1:5173'})[0] == 401
+        assert get('http://127.0.0.1:5173/api/hackathons',
+                   headers={'Origin': 'https://untrusted.example'})[0] == 403
+        print('PASS: read proxy preserves allowed and rejected Origin headers')
         stop(api)
         # Allow the proxy to finish detecting the stopped upstream on Windows.
         # Still require an actual HTTP failure; a client timeout is not a pass.

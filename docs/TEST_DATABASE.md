@@ -1,5 +1,20 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+**M-011A-R4: shutdown defect corrected offline; stop for owner review.** The R3
+regression now passes. Timeout/incomplete drains remain unsuccessful independently
+of later snapshots; final success is printed only after Engine/listener cleanup.
+[BROWSER_HOST_AUDIT.md](BROWSER_HOST_AUDIT.md) records the minimal source diff and
+R3/R4 evidence. Live reads, scoped auth writes and all account/fixture prerequisites
+still require separate owner approval; no live startup is authorized by this fix.
+
+M-011A-R2 implements a separate retained-account-only test browser launcher in
+`backend/test_support/browser.py`. Exact guarded inspect/serve/verify commands,
+manifest budgets, per-connection/dependency checks and shutdown procedure are in
+[BROWSER_ACCEPTANCE.md](BROWSER_ACCEPTANCE.md). Registration remains blocked;
+ordinary app.serve is not safe for merge_test browser acceptance. Implementation
+is offline verified only; live reads and scoped session/throttle writes require
+separate owner approval. No browser, database access or G1 closure is claimed.
+
 M-010A adds fixed guarded `--suite reads`, requiring explicit revision 0003_auth
 before credentials. Owner verified at 0003_auth: reads 87 passed in 73.35s and
 auth API regressions 54 in 28.28s; total 141 passed, suite-time sum 101.63s.

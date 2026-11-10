@@ -1,52 +1,29 @@
-import { useEffect, useState } from 'react';
-
-type HealthState = 'loading' | 'success' | 'error';
+import AuthForm from './components/AuthForm';
+import Discovery from './components/Discovery';
+import HealthStatus from './components/HealthStatus';
+import { ErrorNotice, Loading } from './components/Feedback';
+import { useSession } from './hooks/useSession';
 
 export default function App() {
-  const [state, setState] = useState<HealthState>('loading');
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let active = true;
-    setState('loading');
-    const timeout = window.setTimeout(() => controller.abort(), 5000);
-
-    async function checkHealth() {
-      try {
-        const response = await fetch('/health', { signal: controller.signal });
-        if (!response.ok) throw new Error('Health request failed');
-        const body: unknown = await response.json();
-        if (typeof body !== 'object' || body === null || !('status' in body) || body.status !== 'ok') {
-          throw new Error('Unexpected health response');
-        }
-        if (active) setState('success');
-      } catch {
-        if (active) setState('error');
-      } finally {
-        window.clearTimeout(timeout);
-      }
-    }
-    void checkHealth();
-    return () => {
-      active = false;
-      window.clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [attempt]);
-
-  return (
-    <main>
-      <p>Merge · Phase 0</p>
-      <h1>Development health</h1>
-      <div role="status" aria-live="polite">
-        {state === 'loading' && <p>Checking backend…</p>}
-        {state === 'success' && <p>Backend is healthy.</p>}
-        {state === 'error' && <p>Backend unavailable. Start the API and try again.</p>}
-      </div>
-      <button disabled={state === 'loading'} onClick={() => setAttempt(value => value + 1)}>
-        Check again
-      </button>
+  const auth = useSession();
+  return <>
+    <a className="skip-link" href="#main">Skip to content</a>
+    <header className="site-header"><div className="header-inner">
+      <a className="brand" href="#main" aria-label="Merge home"><span className="brand-mark" aria-hidden="true">m</span>merge<span className="brand-period">.</span></a>
+      <span className="header-tagline">Better, together.</span>
+      {auth.state.status === 'authenticated' && <div className="account"><span className="username">@{auth.state.session.identity.username}</span><button className="button secondary" onClick={() => { if (auth.state.status === 'authenticated') auth.logout(auth.state.session); }}>Sign out</button></div>}
+    </div></header>
+    <main id="main" className="app-main" tabIndex={-1}>
+      {auth.state.status === 'checking' && <div className="center-state panel"><Loading>Restoring your session...</Loading></div>}
+      {auth.state.status === 'error' && <div className="center-state panel"><h1>Let us reconnect.</h1><ErrorNotice error={auth.state.error} retry={auth.restore} /><p className="muted">We could not verify your session. Your workspace will stay hidden until we can.</p></div>}
+      {auth.state.status === 'guest' && <AuthForm onSession={auth.accept} restore={auth.restore} message={auth.state.message} />}
+      {auth.state.status === 'authenticated' && <Discovery key={auth.state.epoch} onExpired={auth.expired} />}
+      {auth.state.status === 'ending' && <div className="center-state panel"><h1>Signing out</h1>{auth.state.error ? <>
+        <ErrorNotice error={auth.state.error} retry={() => { if (auth.state.status === 'ending') auth.logout(auth.state.session); }} />
+        <p>Sign-out is not confirmed. Your server session may still be active. Your workspace has been cleared from this view.</p>
+        <button className="text-button" onClick={auth.restore}>Check session</button>
+      </> : <Loading>Closing your session...</Loading>}</div>}
     </main>
-  );
+    <footer className="site-footer"><span>Merge - Built for connection.</span><details><summary>Service status</summary><HealthStatus /></details></footer>
+  </>;
 }
