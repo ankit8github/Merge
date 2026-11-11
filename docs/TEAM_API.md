@@ -1,5 +1,13 @@
 # Authenticated team creation HTTP API - M-012A
 
+M-013A adds only scoped join-request creation, own status, leader pending list
+and leader decision routes; [ADMISSION.md](ADMISSION.md) is their exact contract.
+No unrestricted join is exposed. Existing creation/read contracts and the
+unknown-hackathon 503 limitation remain. Owner separately verified applied 0004
+and 35 + 70 admission executions, exit 0/completed fixture checks in both runs;
+this does not close distinct-caller G1. M-012A's own 105 passes below remain
+separate historical evidence. No frontend admission UI or browser-host expansion.
+
 Final checkpoint against `2e5f678efd7348584eed2b6281c7448bc45f5d8e`: the owner
 verified guarded merge_test / merge_app, READ COMMITTED, **0003_auth (head)** and
 reported **105 team API cases passed in 140.81 seconds** after the R1 fixture

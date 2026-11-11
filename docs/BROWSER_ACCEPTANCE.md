@@ -1,5 +1,12 @@
 # M-011A-R4 - test-only guarded browser host
 
+M-013A's admission router is also explicitly excluded by router identity; the
+exact dependency/route inventory still guards every request. The host remains
+0003_auth-only and its manifest authorizes no request/team writes. The owner now
+reports applied 0004 on merge_test, so this host refuses that target. Do not
+downgrade or bypass guards to start it. No browser scope expansion
+or acceptance claim; see [ADMISSION.md](ADMISSION.md).
+
 M-012B now exposes a Create Team form in React. This host still excludes that
 router and its manifest authorizes no team mutations. Do not exercise creation
 through it or switch to ordinary app.serve to bypass the guard. Separately reviewed

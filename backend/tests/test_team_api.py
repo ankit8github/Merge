@@ -229,12 +229,16 @@ def test_lazy_mutation_dependency_reuses_engine_without_connecting():
     assert caught.value.code == ErrorCode.TRANSACTION_CONFIGURATION
 
 
-def test_openapi_has_only_one_new_mutation_with_required_key(creation):
+def test_openapi_has_only_scoped_create_and_admission_mutations_with_required_keys(creation):
     schema = creation.api.client.get('/openapi.json').json()
     paths = schema['paths']
     mutations = [(path,method) for path,operations in paths.items() if path.startswith('/api/')
                  for method in operations if method != 'get']
-    assert mutations == [('/api/hackathons/{hackathon_id}/teams','post')]
+    base='/api/hackathons/{hackathon_id}/teams'
+    assert mutations == [(base,'post'),(base+'/{team_id}/join-requests','post'),
+        (base+'/{team_id}/join-requests/{request_id}/decision','post')]
+    for path,method in mutations:
+        assert next(p for p in paths[path][method]['parameters'] if p['name']=='Idempotency-Key')['required']
     operation = paths[mutations[0][0]]['post']
     assert next(p for p in operation['parameters'] if p['name'] == 'Idempotency-Key')['required']
     assert {'201','401','403','404','409','415','422','503'} <= set(operation['responses'])

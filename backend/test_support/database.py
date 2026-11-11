@@ -9,7 +9,8 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import URL, create_engine, text
-from test_support.revisions import AUTH_REVISION, DOMAIN_REVISION, TARGET_REVISIONS, domain_snapshot, validate_migration_start
+from test_support.revisions import (AUTH_REVISION, DOMAIN_REVISION, ADMISSION_REVISION,
+    TARGET_REVISIONS, domain_snapshot, admission_snapshot, validate_migration_start)
 
 
 class DiagnosticFailure(ValueError):
@@ -124,11 +125,11 @@ def verify(connection, revision=DOMAIN_REVISION):
     with diagnostic_stage('migration-state'):
         exists = connection.execute(text("SELECT to_regclass('public.alembic_version') IS NOT NULL")).scalar_one()
         revisions = connection.execute(text('SELECT version_num FROM public.alembic_version')).scalars().all() if exists else []
-        allowed = ([], [DOMAIN_REVISION]) if revision == DOMAIN_REVISION else ([AUTH_REVISION],)
+        allowed = ([], [DOMAIN_REVISION]) if revision == DOMAIN_REVISION else ([revision],)
         if revisions not in allowed:
             raise DiagnosticFailure('migration-state')
     print('Verified merge_test / merge_app, READ COMMITTED, CONNECT and schema USAGE/CREATE')
-    print('Alembic revision:', (revisions[0] + (' (head)' if revisions[0] == AUTH_REVISION else '')) if revisions else 'base (no recorded revision)')
+    print('Alembic revision:', (revisions[0] + (' (head)' if revisions[0] == ADMISSION_REVISION else '')) if revisions else 'base (no recorded revision)')
     connection.rollback()
 
 
@@ -155,12 +156,13 @@ def migrate(connection, revision=DOMAIN_REVISION):
     # This transaction owns both DDL and preservation validation. The dedicated
     # Alembic env must never commit/rollback this caller-owned transaction itself.
     with connection.begin():
-        before = domain_snapshot(connection) if revision == AUTH_REVISION else None
+        snapshot = admission_snapshot if revision == ADMISSION_REVISION else domain_snapshot
+        before = snapshot(connection) if revision in (AUTH_REVISION, ADMISSION_REVISION) else None
         command.upgrade(config, revision)
-        if before is not None and domain_snapshot(connection) != before:
-            raise ValueError('Domain rows changed during auth migration; rolling back DDL')
+        if before is not None and snapshot(connection) != before:
+            raise ValueError('Existing rows changed during migration; rolling back DDL')
     if before is not None:
-        print('Existing domain row counts/fingerprints preserved')
+        print('Existing row counts/fingerprints preserved')
     print('Test migration command completed')
 
 

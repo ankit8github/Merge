@@ -1,5 +1,14 @@
 # Atomic composed team mutations — M-008D
 
+M-013A composes request creation/decisions through the existing retry/reservation/
+completion and _execute owner. Approval uses the shared already-locked admission
+helper with current leader and request locks. Actual request transitions each
+increment team version and write one audit/outbox chain; duplicate request with a
+new key completes only a stored outcome. Replay proof is recorded only AFTER
+current authorization, because _run_composed can return noted replay proof even
+after later errors. Existing create/join composition remains unchanged. Details
+and offline/live distinctions: [ADMISSION.md](ADMISSION.md).
+
 M-012A exposes only create_team_idempotent through authenticated HTTP. The
 composed services, transaction/retry/lock/audit/outbox contracts remain unchanged.
 The owner verified 105 guarded HTTP cases in 140.81s at 0003_auth; Codex did not

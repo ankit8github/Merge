@@ -1,5 +1,14 @@
 # HTTP authentication — M-007B.3A-R1
 
+M-013A request mutations reuse creation_session and the existing strict
+Idempotency-Key dependency. Cookie/session/CSRF/Origin/Fetch Metadata/actual-peer/
+HTTPS/cache/throttle rules are unchanged. Leader authorization happens inside the
+owned admission transaction, including stored replay; private reads use only the
+session actor/current team leader. No requester selector or identity body/header
+is accepted. Contract: [ADMISSION.md](ADMISSION.md). Owner completed 35 + 70 live
+admission executions with successful exits/fixture checks; no browser/HTTPS or
+distinct-caller G1 acceptance is claimed.
+
 M-012A adds one authenticated, session-CSRF-protected team-create POST on /api.
 Existing cookie, Origin/Fetch Metadata, custom-header, throttle and peer/proxy
 policies are unchanged. [TEAM_API.md](TEAM_API.md) defines the stored 201 reply,

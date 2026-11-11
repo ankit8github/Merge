@@ -448,3 +448,19 @@ reauthentication but is lost on reload/tab close/crash; beforeunload is best-eff
 and the UI says keep the tab open. Durable recovery is not claimed. FRONTEND.md
 records offline tests and future browser prerequisites. No frontend join, new
 dependency, backend/schema change, browser-host scope expansion or G1 closure.
+
+### M-013A - leader-approved admission design, 2026-11-10
+
+Owner-requested backend scope: proposed additive 0004_admission request state,
+retained terminal history, explicit cookie/CSRF protected request/decision API,
+and single-owner atomic authorized admission. The design/lock order is recorded
+before coding in [ADMISSION.md](ADMISSION.md). No live migration approval is
+implied; real races and G1 remain unverified until a separate owner-run test.
+
+Final checkpoint, 2026-11-11: owner verified already-applied 0004_admission on
+merge_test and successful one- and two-repetition admission runs (35 + 70 cases,
+exit 0 and completed fixture checks in each). This records evidence for the
+existing approved protocol, not a new transaction/auth/locking decision. No
+manual migration rerun is authorized. The 50-candidate test uses one leader's
+decision session, so distinct-caller G1 remains open. No frontend admission UI,
+legacy-suite compatibility port or browser-host scope expansion is approved.

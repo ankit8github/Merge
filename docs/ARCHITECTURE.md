@@ -1,5 +1,15 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
+M-013A adds the owner-scoped leader-approved request workflow described in
+[ADMISSION.md](ADMISSION.md). Additive 0004_admission and one shared
+already-locked membership helper keep authorization, resolution, membership,
+version/audit/outbox and stored outcome under TeamService._execute. Owner verified
+merge_test at 0004 and 105 admission executions across successful one- and
+two-repetition runs (35 + 70), both exit 0 with completed fixture checks. Migration
+is already applied; do not rerun it manually. No React admission UI or unrestricted
+join. The race uses one leader's decision session; distinct-caller G1 remains open.
+Older milestone statements below retain their checkpoint scope.
+
 M-012B adds React team creation through the existing M-012A POST only. An App-
 lifetime account/hackathon in-memory journal preserves exact command/key after
 uncertain delivery or session/view changes. The existing session generation now

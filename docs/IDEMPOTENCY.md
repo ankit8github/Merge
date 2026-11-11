@@ -1,5 +1,16 @@
 # Private idempotency primitives — M-008C
 
+M-013A extends the private operation allowlist with request.create.v1 and
+request.decide.v1. Existing team.create.v1/team.join.v1 fingerprints are unchanged.
+Request commands bind team plus hackathon/actor; decisions additionally bind
+request UUID and approve/reject. Key syntax, reservation/completion, retained
+success bounds and same-key COMMIT reconciliation are unchanged. Request replay
+proof is noted only after current authorization. [ADMISSION.md](ADMISSION.md)
+defines the new stored reply and duplicate/terminal semantics. Owner completed
+35 + 70 admission executions at 0004 in two successful guarded runs with completed
+fixture checks; this includes the repaired admission COMMIT fault. It does not
+certify legacy suites at 0004 or close the distinct-caller G1 requirement.
+
 M-012A adds the create-only HTTP adapter using this unchanged exact key and
 stored-reply contract. HTTP 201 replays and explicit outcome_uncertain same-key
 retry instructions are in [TEAM_API.md](TEAM_API.md). No primitive/schema change;

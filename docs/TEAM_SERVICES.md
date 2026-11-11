@@ -1,5 +1,13 @@
 # Internal team services — M-007A
 
+M-013A extracts _admit_locked_in_tx from the existing join body. Legacy and
+composed create/join public signatures and transaction ownership remain intact;
+AdmissionService inherits the same owner and invokes only the already-locked
+eligibility/count/insert helper after current leader/request authorization.
+[ADMISSION.md](ADMISSION.md) specifies the multi-user lock order and owner-accepted
+35 + 70 admission executions at 0004. No HTTP route exposes trusted self-join.
+Legacy runner revision limits remain; older no-request text is history.
+
 M-012A uses only the composed create_team_idempotent entry point for its new
 authenticated HTTP route. Legacy facades and join remain internal; no service
 source or transaction protocol changes. See [TEAM_API.md](TEAM_API.md) for the

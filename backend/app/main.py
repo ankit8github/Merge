@@ -16,6 +16,8 @@ from app.read_api import router as read_router, read_error_handler
 from app.services.team_reads import ReadError
 from app.team_api import router as team_router, team_error_handler
 from app.services.errors import DomainError
+from app.admission_api import router as admission_router, admission_error_handler
+from app.services.admission import AdmissionError
 
 
 def create_app(policy: AuthSettings | None = None) -> FastAPI:
@@ -48,9 +50,11 @@ def create_app(policy: AuthSettings | None = None) -> FastAPI:
     app.add_exception_handler(HTTPException, http_handler)
     app.add_exception_handler(ReadError, read_error_handler)
     app.add_exception_handler(DomainError, team_error_handler)
+    app.add_exception_handler(AdmissionError, admission_error_handler)
     app.include_router(router)
     app.include_router(read_router)
     app.include_router(team_router)
+    app.include_router(admission_router)
 
     @app.get('/health')
     def health() -> dict[str, str]:

@@ -1,5 +1,101 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+## Current M-013A checkpoint - 2026-11-11
+
+Owner verified merge_test at 0004_admission and completed guarded admission runs
+of one repetition (35 cases) and two repetitions (70 cases). Both exited 0 with
+suite_and_fixture_checks_completed; total 105 executions across three repetitions
+in two runs. Existing local reports match; PROGRESS.md records the report IDs and
+distinguishes owner execution from Codex's database-free review.
+
+**0004 is already applied. Do not manually rerun migrations, provisioning,
+downgrade, reset or cleanup against this database.** Earlier setup/migration
+commands and pending/unknown-revision statements below are dated history, not
+current execution instructions. No live command is authorized by this review.
+Legacy auth-dependent suites/browser host remain 0003-only; schema/services
+accept explicit 0004 at CLI but lack per-connection revision checks and are not
+certified here. Preserve ADMISSION.md's exact compatibility matrix and guards.
+The successful race uses one leader's decision identity; distinct-caller G1,
+browser/HTTPS, CI/load and deployment acceptance remain open.
+
+## M-013A-R3: guarded-run diagnostics (offline verified only)
+
+R2 could not identify the owner's reported 90-pass/one-failure run. No local
+traceback or migration execution record established its suite or cause. The live
+PostgreSQL revision is **unknown**; older revision/run statements below are
+historical evidence, not a current inspection. R3 does not authorize any live run.
+
+The existing `test_support.concurrency` commands and exact revision/identity/
+transaction gates remain in force. Each future invocation that passes CLI gates
+creates a unique report before credential acquisition and prints its relative
+path: `test-results/guarded/run-<printed-run-id>.json` (relative to backend).
+This fixed directory is covered by Git's existing `test-results/` exclusion.
+There is no arbitrary output-path option, credential argument, rerun or cleanup.
+An unavailable/redirected diagnostic destination fails before a database opens.
+
+Reports contain only approved suite/revision/repetition metadata, progress counts,
+exit code, status, active node and bounded failure records (maximum 16). A failure
+record has node ID, setup/call/teardown/collection phase and a fixed assertion/
+exception/collection_error category. Exception messages, assertion operands,
+source/tracebacks, locals, SQL/parameters, headers, captured output and warnings
+are deliberately omitted: safely redacting arbitrary values cannot be guaranteed.
+The current static parameter labels are allowlisted; unfamiliar parameter labels
+are replaced with `[parameter_id_withheld]`, and unsafe node paths are withheld.
+Normal reviewed IDs, including both R2 candidate nodes, are preserved exactly.
+Future static labels require review before adding them to the output allowlist.
+
+Pytest terminal rendering, Python stdout/stderr and OS descriptors 1/2 are sent
+directly to the null device without captured-output temp files. Warning/short-
+summary rendering and file/CLI logging are disabled. The existing `-s`, `-x`, plain
+assertions, disabled cache/plugin autoload,
+fixed suite and private settings injection remain. Fresh invariant checks still
+execute in the existing fixtures; no fixture/assertion was changed or bypassed.
+The launcher prints sanitized failed nodes/categories and final metadata instead
+of private pytest output. Reports remain bounded below 16 KiB and are atomically
+replaced, preserving the previous complete record if an update is interrupted.
+On Windows only the metadata rename gets up to four attempts with 25 ms pauses
+for transient file-sharing errors; no fixture, test or database operation retries.
+
+Initial status is `incomplete`, with exit_code null and invariants `not_certified`.
+`suite_and_fixture_checks_completed` requires exit 0, nonempty collection, every
+teardown completed, and no recorded failure/skip/interruption. It means existing
+suite fixture checks returned; it is not an independent database inspection.
+Failure in a test or fixture (including final invariants), interruption, internal
+error, zero collection or skip leaves invariants uncertified. Setup/teardown
+phases do not distinguish an invariant assertion from other fixture assertions.
+Pytest exit codes are preserved; an uncaught interrupt returns 2, unexpected
+runner errors return 1, and report-finalization failure cannot turn failure into
+success (a would-be exit 0 becomes 1). A second interrupt during finalization also
+remains nonzero. A hard kill may leave only the last incomplete record or a temp
+file; it cannot prove workers/transactions stopped. Accept completion only with
+the matching run's terminal exit code and complete report, never a report alone.
+
+To retrieve existing evidence without opening PostgreSQL:
+
+```powershell
+Set-Location I:\Merge\backend
+Get-ChildItem -LiteralPath .\test-results\guarded -Filter 'run-*.json'
+# Substitute the exact filename printed for the run being investigated:
+Get-Content -LiteralPath '.\test-results\guarded\run-PRINTED_RUN_ID.json'
+```
+
+Match the printed run ID rather than assuming the newest file is the failed run.
+Keep its exit code, suite, revision, failed node, phase and category together.
+There is no raw traceback to retrieve from this metadata-only report. If this is
+insufficient, stop for a separately reviewed focused diagnostic; never enable raw
+exception/SQL/header dumps or rerun the entire suite merely to recover a name.
+No report exists retroactively for the unidentified earlier run. No PostgreSQL
+connection, migration, live test or credential inspection occurred during R3.
+
+M-013A prepares explicit 0004_admission migration and fixed --suite admission.
+Nothing has been applied or run live. The separate owner-approved sequence in
+[ADMISSION.md](ADMISSION.md) preserves existing domain/auth fingerprints atomically,
+retains scoped fixtures and verifies fresh committed invariants. Existing runner
+defaults and legacy 0003_auth suite gates are intentionally unchanged. After
+upgrade, auth-dependent suites/browser host refuse 0004. R1's exact compatibility
+matrix in ADMISSION.md notes that schema/services accept explicit 0004 at CLI but
+lack per-connection revision checks; this is not reviewed upgrade compatibility.
+
 M-012A adds fixed guarded `--suite team-api`, requiring explicit 0003_auth before
 credentials. Real auth/read/team dependencies share the guarded test Engine; new
 UUID fixtures are retained and fresh committed chains/invariants checked. The

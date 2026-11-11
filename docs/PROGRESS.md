@@ -1,11 +1,12 @@
 # Merge — Verified Progress, Risks & Next Actions
 
-**Last updated:** 2026-11-10
+**Last updated:** 2026-11-11
 **Competition:** Hack4Hack Crew Hiring Challenge 2026, PS1.
 **Official deadline:** 2026-11-15 23:59 IST.
 **Status policy:** Mark DONE only with recorded evidence. 'Planned', 'in progress', 'implemented', 'tested' and 'verified' are not interchangeable.
 
 ## Current verified context
+- [x] M-013A final review, 2026-11-11: owner verified applied 0004_admission and two successful admission runs, 35 + 70 executions across one + two repetitions, each exit 0 with completed fixture checks. Final Codex database-free backend: 1180 passed / 32 deselected; focused: 214 passed; frontend final run: 102 passed, typecheck/build passed. An earlier unchanged frontend fetch-count timing failure is retained in the final evidence entry. Exactly one local M-013A commit is owner-authorized after final staged review. G1 remains open for the distinct authenticated caller race; no frontend admission UI or new live action.
 - [x] M-011A implemented for owner review, uncommitted: 52 frontend component/transport tests passed in 11.83s; TypeScript/production build and controlled HTTP/Vite proxy/Origin/outage checks passed; 806 backend offline regressions passed in 20.51s (one existing warning). No new PostgreSQL or authenticated browser run; safe guarded HTTP browser environment remains a prerequisite. See FRONTEND.md. G1 remains open.
 - [x] User confirmed registration in Hack4Hack (screenshot in prior conversation; not stored in this repository).
 - [x] User selected **PS1** for this project.
@@ -4507,6 +4508,624 @@ existing guarded host still excludes team creation; separately reviewed host and
 write approval remain prerequisites. Reload/tab close/crash loses unresolved
 command/key state; no persistent recovery has been added. Unknown-hackathon 503
 is unchanged. The owner debugging exercise above remains applicable.
+
+## M-013A - leader-approved admission backend, 2026-11-10
+
+**Implemented and offline verified only; stop for owner review. No commit or live
+migration/test execution.** Baseline HEAD remains
+`b5a04876528f6ca40dce742f86b23186b23e5391`. Current live revision is still the
+owner-reported 0003_auth; new 0004_admission has NOT been applied. G1 remains open.
+No PostgreSQL/merge_dev access, credential prompts, server/browser launch,
+fixture writes/reset/cleanup, privilege/dependency/deployment change, staging,
+commit, remote or push occurred in this task.
+
+The design and lock order were recorded in ADMISSION.md/DECISIONS.md before code.
+One retained request per team/requester moves pending -> approved/rejected;
+pending requests reserve no seat. Additive frozen migration/model supplies
+composite team/hackathon FK, user FKs, unique team/requester, checked timestamps/
+state, immutable identity/terminal retention guards, no DELETE/TRUNCATE and a
+deferred approved-membership check. No previous migration is edited; downgrade
+refuses pending a separate owner plan. No roles/permissions are changed.
+
+AdmissionService inherits TeamService's sole _execute owner, connection guards,
+bounded retry and same-key ambiguous-COMMIT reconciliation. Only the existing
+join's fresh eligibility/count/insert tail is extracted into an already-locked
+helper, reused by both paths. AST comparison verified all other TeamService
+methods and the original join prefix/tail unchanged. Authorization/resolution/
+membership/version/audit/outbox/completion commit together. Lock order is
+reservation -> hackathon SHARE -> affected users sorted NO KEY UPDATE -> team
+NO KEY UPDATE -> request NO KEY UPDATE. A preliminary immutable identity lookup
+is rechecked under locks; no new user locks after the team lock. Approval rechecks
+current leader, request scope/pending status, membership and fresh capacity.
+Rejection creates a terminal state without membership. Failed approvals leave
+the request pending. Repeated matching keys replay; other-key terminal decisions
+conflict. Duplicate request/new key returns the existing request and completes
+only its idempotency record, with no second transition/audit/outbox.
+
+New routes (under /api/hackathons/{hackathon_id}/teams/{team_id}):
+POST /join-requests with JSON {} and key (201, duplicate 200);
+GET /join-requests/mine (own request or null);
+GET /join-requests with bounded UUID cursor pagination (leader only);
+POST /join-requests/{request_id}/decision with approve/reject and key (200).
+Session actor comes exclusively from validated cookies; mutations reuse existing
+session CSRF/Origin/Fetch Metadata/peer/HTTPS protections and strict extra-forbid
+JSON. No actor/requester/leader selector is accepted. Current authorization is
+required even on stored replay. Private read DTOs exclude decision actor and
+credential/session/audit details. No-store policy is unchanged. No unrestricted
+join, invite, leave, removal, deletion or transfer endpoint; no React changes.
+The browser host excludes the entire admission router and latches closed if it
+is reintroduced, preserving R4 shutdown/dependency guards and original scope.
+
+Review corrections and evidence: output DTOs must parse UUID/timestamp wire
+strings without applying strict input-only body rules (the first focused run
+reported 1 failed / 291 passed before correction). More significantly, the
+existing retry runner can return an already-noted replay despite later errors.
+A replaced-leader regression reproduced a bypass when replay proof was recorded
+before authorization: **1 failed / 2 passed in 0.82s**. Admission now notes new
+reservations immediately but notes replay proof only AFTER locked current
+authorization/scope checks; the unchanged regression passes. The shared retry
+runner is untouched. Admission-specific mapping also wraps deferred DB errors so
+capacity failures keep the documented 409 contract without changing team-create
+error mapping. Existing API inventory/head assertions were updated to exact new
+routes/required keys and the full migration chain, retaining old contract checks.
+
+Actual checks, Windows PowerShell, existing Python 3.11 / Node 22.15.0 toolchain:
+
+- Backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1126 passed, 32 deselected in 48.42s**, exit 0. One existing nonblocking
+  Starlette/HTTPX deprecation warning. Earlier full runs (3 structural failures /
+  1101 passed, then 1125 passed before the final deferred-capacity regression)
+  are superseded. No test weakening, skipping or deletion.
+- Focused `.\.venv\Scripts\python.exe -m pytest -q tests/test_admission.py
+  tests/test_admission_api.py tests/test_read_api.py tests/test_team_api.py
+  tests/test_test_database_safety.py tests/test_auth_schema_support.py --tb=short`:
+  **295 passed in 30.17s** at that checkpoint. Later focused admission/API/browser
+  run: **230 passed in 16.59s** before the final regression; final full run above
+  covers all final source changes.
+- `.\.venv\Scripts\python.exe -m pytest admission_tests --collect-only -q`:
+  **105 cases collected in 0.51s**, default three repetitions; no fixtures ran.
+  Includes 2/50-candidate authenticated approval races, same/different-key request
+  and decision races, competing teams, stale/replaced leader including replay,
+  private cursor/status, auth/CSRF/Origin/metadata/input failures, FK/uniqueness/
+  terminal/approved-membership constraints, real statement/deferred-COMMIT faults
+  and ambiguous-COMMIT reconciliation. Collection is not PostgreSQL evidence.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements.
+- `.\.venv\Scripts\python.exe -m compileall -q app test_support admission_tests
+  tests alembic/versions`: passed. Offline Alembic SQL rendering, ORM constraint
+  checks, atomic migration-preservation doubles and wrong-target revision gates
+  pass in the test suite. No live reflection/alembic drift check was run.
+- Unchanged frontend: `npm test` **102 passed / four files in 24.95s**;
+  `npm run typecheck`, `npm run build` and `npm ls --depth=0` passed. Build:
+  Vite 6.4.5, 38 modules in 3.08s, unchanged 218.61 kB JS / 10.40 kB CSS.
+- AST/scope checks confirm unchanged _execute/guards/retry/authentication/
+  credentials/sessions/read/create runtime code, old migration files, frontend,
+  config and dependency manifests. Only the bounded join-tail helper refactor,
+  new admission composition/HTTP/model/migration and error/operation registry
+  additions affect production. Secret-format/artifact/whitespace and Python
+  parse/compile checks passed for candidates. `git diff --check` passes with
+  existing LF/CRLF notices. Scans supplement review, not exhaustive secret or
+  online dependency-vulnerability audits. No separate configured backend linter.
+
+Exact changed-file inventory (33, all unstaged):
+
+- backend/admission_tests/conftest.py
+- backend/admission_tests/test_admission.py
+- backend/alembic/versions/0004_admission.py
+- backend/app/admission_api.py
+- backend/app/main.py
+- backend/app/models/__init__.py
+- backend/app/models/admission.py
+- backend/app/services/admission.py
+- backend/app/services/errors.py
+- backend/app/services/idempotency.py
+- backend/app/services/teams.py
+- backend/test_support/browser.py
+- backend/test_support/concurrency.py
+- backend/test_support/database.py
+- backend/test_support/revisions.py
+- backend/tests/test_admission.py
+- backend/tests/test_admission_api.py
+- backend/tests/test_browser_harness.py
+- backend/tests/test_read_api.py
+- backend/tests/test_team_api.py
+- backend/tests/test_test_database_safety.py
+- docs/ADMISSION.md
+- docs/ARCHITECTURE.md
+- docs/BROWSER_ACCEPTANCE.md
+- docs/DECISIONS.md
+- docs/HTTP_AUTH.md
+- docs/IDEMPOTENCY.md
+- docs/PROGRESS.md
+- docs/SCHEMA.md
+- docs/TEAM_API.md
+- docs/TEAM_MUTATIONS.md
+- docs/TEAM_SERVICES.md
+- docs/TEST_DATABASE.md
+
+Separate owner prerequisites and exact guarded PowerShell migration/test commands,
+all potential writes and fault injections are in ADMISSION.md. The migration
+preserves domain AND auth row fingerprints atomically; existing defaults never
+advance silently. The new admission suite requires explicit 0004_admission before
+credentials and guards every pooled/new connection. Existing legacy live suites
+and browser host remain 0003-only and deliberately refuse an upgraded target;
+porting those suites needs separate review. No new successful live regression is
+claimed. Test cases retain scoped fixtures and run fresh independent committed
+invariant/chain checks; test or invariant failure is nonzero.
+
+Remaining limits: actual DDL/triggers/deferred-COMMIT/connection/concurrency
+behavior, authenticated 50-way acceptance and G1 need approved PostgreSQL runs.
+No cancel/expiration/re-request after terminal rejection, new admission rate
+limiter, UI, real browser, CI/load/deployment evidence. Auth/request checks are
+point-in-time; session revocation cannot cancel already authenticated work.
+Raw/privileged writers are outside HTTP authorization, and future leader/member
+writers must use the same lock order. Unknown-hackathon reservation 503 persists.
+
+Owner exercise: make the capacity fixture full, attempt approval and trace why
+pending status and every record chain remain unchanged. Then change the current
+leader in the scoped fake and retry an old decision key: explain why replay proof
+cannot be noted before current authorization. Stop for owner review before any
+live database change/test or commit.
+
+## M-013A-R1 - admission migration/live concurrency readiness, 2026-11-10
+
+**Offline safety review; stop for separate owner approval before any PostgreSQL
+inspection, DDL or tests. No commit.** HEAD remains
+`b5a04876528f6ca40dce742f86b23186b23e5391`; current live revision remains known
+only from the owner's 0003_auth report. No database connection, private credential
+inspection/prompt, server/browser launch, migration, fixture write/delete/cleanup,
+production-authentication change, dependency/deployment change, staging, commit,
+remote or push occurred. G1 stays open.
+
+Blocking finding fixed: the pending-list response applied StrictBody to its outer
+RequestPage, while the real service produces next_cursor as a string UUID. The
+first non-final page would become sanitized 503. A new exact HTTP regression
+reproduced **1 failed in 2.35s** before the minimal change from strict input body
+to extra-forbid, UUID-validating output model. After correction, API module:
+**45 passed in 6.28s**. A further negative cursor test confirms invalid UUIDs still
+fail without echo. Strict mutation input/query/body/auth checks are unchanged.
+
+Readiness assertion gap fixed: the 50-candidate case previously checked HTTP
+outcome counts and roster length without explicitly proving all losers remain
+pending or exact success-chain/version totals. It now runs a fresh committed
+oracle requiring the winner approved, losers pending with no resolution, founder
+plus winner only, team capacity 2, version N+2, exactly N+2 completed idempotency/
+audit/outbox rows, contiguous audit versions and linked records, with correct
+admission audit/request/subject states. Snapshot comparisons include scoped
+outbox rows, and all fixture teams require audit-count/version equality. Seven
+negative offline corruption cases prove the oracle rejects false evidence.
+No successful PostgreSQL race is inferred from these doubles.
+
+Migration/locking review: every 0004 operation was inspected. It is unchanged by
+R1 and additive: collision refusal, empty request table plus FK/PK/unique/checks,
+pending partial index, two invoker functions, three triggers, Alembic version row.
+No old row backfill/rewrite/drop, CREATE OR REPLACE, grant or automatic cleanup.
+The runner fingerprints all seven existing domain and three auth tables under
+SHARE locks in the same external PostgreSQL DDL transaction. Installed Alembic
+source respects that external transaction; mismatch/failure rolls back DDL and
+version update. Nonempty tables are scanned, not copied. Repeat at 0004 is a
+no-op. Actual server execution/privileges/drift remain unverified. Downgrade raises
+before DDL; a hypothetical table drop destroys retained request history and needs
+its own owner-approved retention plan, never a test compatibility workaround.
+
+Role/impact: existing merge_app needs CONNECT, schema USAGE/CREATE, SELECT and
+SHARE-lock authority over the ten old tables, REFERENCES on team/user columns,
+language/type USAGE and Alembic-version read/update. Creating the new objects
+supplies their owner privileges; no grants were added. Preflight checks identity,
+isolation, CONNECT, schema permissions and revision, not every object permission.
+FK creation also takes SHARE ROW EXCLUSIVE on referenced users/teams. This is a
+writer-blocking maintenance window with existing 5s/15s lock/statement deadlines;
+stop all writers and use one migration process. PostgreSQL 17 primary references
+and full requirements are linked in ADMISSION.md. No real permission check here.
+
+Request decisions keep reservation -> hackathon SHARE -> sorted affected users
+NO KEY UPDATE -> team NO KEY UPDATE -> request NO KEY UPDATE. Current leader is
+checked before noting/serving replay proof. Shared admission helper checks current
+assignment/fresh locked count, and failed capacity unwinds everything, leaving
+pending. Rejection never inserts membership. Same-key decisions replay; distinct
+keys on terminal requests conflict. Distinct candidates serialize leader/team;
+cross-team attempts share the requester user lock. Team create and legacy join
+retain the documented order; AST review proves unchanged owner/guards/retry and
+the exact moved join tail. No new transaction owner or business-rule expansion.
+
+Compatibility correction: earlier broad wording that all legacy suites reject
+0004 was incomplete. The exact 0003-only CLI gates are auth, credentials, sessions,
+auth-api, throttles, idempotency, mutations, retries, reads and team-api. Browser
+CLI/guard also stays 0003-only. Default schema/services preflight 0002 and refuse
+actual 0004, BUT explicit 0004 is already accepted by their CLI; their fixtures
+lack per-connection revision verification and are NOT certified here. R1 changes
+no runner gates. Keep existing guards, run separately approved 0003 regressions
+before upgrade if desired, and use only the reviewed admission suite afterward.
+Future compatibility work must carry an explicit expected revision through every
+fixture/connection/observer with negative tests, not use head/either-revision
+bypass or downgrade. ADMISSION.md/TEST_DATABASE.md now distinguish these cases.
+
+The 50-candidate case creates requests through HTTP with each candidate's real
+session/CSRF, then barrier-starts HTTP approval decisions with the current leader
+cookie/CSRF and distinct keys, using real guarded services. It is in-process ASGI,
+not direct-service approval and not a browser/network listener. All decision
+actors are one leader account, so this is not the official 50-distinct-caller
+admission scenario and does not close G1. Thread/pool scheduling may queue calls;
+simultaneous PostgreSQL lock overlap/performance is unproven. Worker timeout is
+nonzero and cannot prove residual work stopped. No cleanup follows any failure.
+
+Actual R1 evidence, existing Windows PowerShell/Python 3.11 environment:
+
+- Focused admission/readiness/migration/runner suite: **171 passed in 12.64s**.
+- Latest focused `.\.venv\Scripts\python.exe -m pytest -q
+  tests/test_admission_readiness.py tests/test_admission_api.py --tb=short`:
+  **61 passed in 7.47s**. An interim full run had one newly added metadata-double
+  failure / 1142 passes in 45.68s: its execute callback required a parameters
+  argument even though identity SQL has none. Corrected only that callback to
+  accept parameters=None; no production guard weakened.
+- Final `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1143 passed, 32 deselected in 46.55s**, exit 0; one existing nonblocking
+  Starlette/HTTPX deprecation warning. This supersedes the interim fake failure.
+- `.\.venv\Scripts\python.exe -m pytest admission_tests --collect-only -q`:
+  **105 cases collected in 0.31s**, three repetitions; no fixture execution.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements.
+- `.\.venv\Scripts\python.exe -m compileall -q app test_support admission_tests
+  tests alembic/versions`: passed. Offline migration rendering/constraint/collision/
+  preservation cases pass. AST/scope review confirms the unchanged legacy owner,
+  guard/retry methods and exact shared join tail. Final 34-file scope, candidate
+  secret-format/artifact/whitespace/AST/compile checks and git diff --check passed;
+  existing LF/CRLF notices only. Scans supplement review, not exhaustive secret
+  detection or online vulnerability auditing. Index empty and HEAD unchanged.
+  Frontend unchanged and not rerun
+  for R1; preceding M-013A's 102-pass/typecheck/build evidence remains historical.
+
+R1 delta: backend/app/admission_api.py (output model only),
+backend/admission_tests/conftest.py and test_admission.py (fresh oracles),
+backend/tests/test_admission_api.py, new backend/tests/test_admission_readiness.py,
+docs/ADMISSION.md, docs/TEST_DATABASE.md and this progress record. Total pending
+inventory is the original 33 plus that new offline test file; nothing staged.
+No new dependency/migration/privilege/auth change in R1. The complete migration/
+locking/compatibility review and exact implemented owner PowerShell sequence are
+in ADMISSION.md. Potential persistent writes remain its listed retained accounts,
+sessions, teams/memberships/requests, versions and complete record chains, with
+the disclosed scoped stale-leader fixture and rollback-only fault injections.
+
+Nonblocking limits: no live permission/DDL/drift/concurrency/COMMIT evidence;
+fingerprint scans can time out; old-suite port pending; no new request limiter,
+cancel/expiry/re-request or frontend scope. Owner must separately approve read
+preflight, DDL/preservation locks, and all retained fixture/fault writes. Never use
+ordinary Settings/Alembic/app.serve, merge_dev, downgrade or cleanup to bypass a
+failure. Owner exercise: corrupt a loser status or remove one outbox record in
+the offline oracle fixture and explain why a nominal 200/409 result count is no
+longer sufficient. Stop for owner review before live actions or committing.
+
+## M-013A-R3 - safe guarded-run diagnostics (offline only)
+
+R2's owner-reported 90-pass/one-failure run remains unidentified. No original
+traceback or migration execution record was recovered; current live PostgreSQL
+revision is unknown. No live action is authorized or claimed here; G1 stays open.
+
+R3 changes only backend/test_support/concurrency.py, new test_support/diagnostics.py,
+new tests/test_runner_diagnostics.py and ADMISSION.md/TEST_DATABASE.md/this record.
+The fixed-target identity/role/revision/read-only preflight and per-connection
+transaction guards, opt-in/revision/optimization gates, fail-fast, fixture
+persistence and final fresh invariant checks remain unchanged. No production
+service, authentication, schema, migration, privilege or dependency change in R3.
+
+Future runs create a unique, fixed Git-ignored test-results/guarded/run-<id>.json
+before credentials and print its path. Metadata-only failures preserve reviewed
+exact node IDs, phase and assertion/exception/collection category. Arbitrary
+exception/traceback/assertion text and values are omitted rather than guessed
+redaction; unknown parameter labels are withheld. Pytest output is discarded,
+Python/OS stdout/stderr sent directly to the null device without captured-output
+temp files, warning/short-summary/file/CLI logging disabled. Original -s preserved.
+Reports are bounded below 16 KiB, with at most 16 failures and atomic replacement.
+A Windows metadata rename alone has four bounded attempts (25 ms pauses), never
+a test/database retry. Earlier evidence is not overwritten by a later run.
+
+Initial/interrupted/error/skipped/failed or incomplete fixture checks remain
+invariants not_certified. A zero exit, nonempty collection, all teardowns and no
+failures/skips are required for suite_and_fixture_checks_completed. This means
+the existing fixture checks returned, not an independent database inspection.
+Pytest exit codes 0-5 are preserved; uncaught interruption is 2; unexpected runner
+error or incomplete report finalization is nonzero. A second interruption during
+finalization cannot erase failure. Report success must match terminal exit 0;
+a hard kill/failed filesystem cannot prove residual database work stopped.
+
+Evidence in Windows PowerShell, existing Python 3.11 venv (no PostgreSQL):
+
+- Focused `.\.venv\Scripts\python.exe -m pytest -q
+  tests/test_runner_diagnostics.py tests/test_concurrency_harness.py
+  tests/test_auth_schema_support.py tests/test_admission.py --tb=short`:
+  **139 passed in 9.77s** after direct-null output hardening. Includes installed-pytest success, setup/call/teardown,
+  collection and interruption checks; synthetic secret canaries in assertion/
+  exception values, stdout/stderr/logs/warnings/parameter IDs remain absent from
+  terminal/reports. Fakes cover revision rejection before pytest, original exit
+  codes, internal/report errors, double interruption, unsafe destination and
+  bounded rename recovery/failure. No assertion was weakened or skipped.
+- Interim focused runs exposed a parser reference lost during extraction (fixed
+  by passing the existing parser) and transient Windows atomic-rename denial
+  (fixed by bounded metadata-only retry). Both required regressions remain green.
+- Full `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1176 passed, 32 deselected, 1 existing Starlette/HTTPX warning in 38.66s**,
+  exit 0. Final code includes direct-null output and explicit descriptor-restoration
+  assertions after success/failure/interruption; no private output temp files.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements.
+- `.\.venv\Scripts\python.exe -m compileall -q app test_support tests
+  admission_tests alembic/versions`: passed. R3 AST/targeted secret-format checks
+  passed; the only private-URL-shaped literal is a documented synthetic canary
+  in offline test code. Existing test-results/ ignore verified, no report tracked,
+  production package discovery remains app* only. These checks are not an online
+  vulnerability audit or exhaustive secret detection.
+
+Owner retrieval: use the exact printed run filename with Get-Content -LiteralPath
+as documented in TEST_DATABASE.md; retain suite/revision/exit/node/phase/category.
+There is no raw traceback and no retrospective report for the earlier run. Owner
+exercise: change an assertion into a RuntimeError in a synthetic offline case and
+observe category exception without exposing the exception message. Further live
+inspection/migration/testing needs separate owner approval. No credentials were
+inspected, no database/browser launched, no database fixture created/cleaned, no commit/push.
+
+## M-013A-R5 - admission ambiguous-COMMIT fixture diagnosis, 2026-11-11
+
+**Offline reproduction and minimal test correction verified; live rerun pending
+owner review. No commit.** Owner now reports merge_test verified at 0004_admission;
+Codex did not inspect PostgreSQL. This supersedes R3's unknown revision only as
+owner evidence. The older unidentified run remains unidentified.
+
+Read the local metadata-only report
+`backend/test-results/guarded/run-a582e8235c9c4f1d82e6207dd8594893.json`:
+suite admission, revision 0004_admission, repetitions 3, collected 105,
+teardowns_completed 91, skipped 0, one call/assertion failure at
+`admission_tests/test_admission.py::test_real_failure_rolls_back_or_reconciles_same_key[0-ambiguous-commit]`,
+status failed, exit 1, invariants not_certified. No raw assertion/response exists
+in the report, and it was not modified. This is not a successful live run.
+
+The exact test body was reproduced offline through real HTTP authentication,
+SessionService/CredentialService transaction ownership and admission services,
+using the existing in-memory SQL double and a physical-connection tripwire.
+The original assertion at line 298 expected outcome_uncertain for a 503, but
+the engine-wide COMMIT listener instead fired in the first authentication READ
+ONLY transaction, before approval. A separate regression verifies injection kind
+authentication, 503 service_unavailable, and no domain change. This deterministic
+fault-placement defect explains the reported category without requiring timing.
+The old report alone cannot establish its exact live assertion/response or exclude
+additional live defects. No production service defect was demonstrated offline.
+
+Minimal fix: backend/admission_tests/test_admission.py arms after its exact request
+UPDATE succeeds and binds the fault to the Connection/root transaction pair.
+Its callback physically commits that approval once and loses acknowledgement.
+It now requires fired plus committed approval, one decision record, approved
+same-key replay, initial/replay response equality when available, and no scoped
+snapshot change on replay. No original assertion removed or loosened; all fresh
+fixture invariants/retention remain. New backend/tests/test_admission_commit_fault.py
+covers the old auth failure, corrected available/unavailable reconciliation and
+refusal to pass when no targeted fault fired. SQLAlchemy events/physical commit
+are simulated over the memory double; real DBAPI/network/deferred constraints
+and fresh physical PostgreSQL connections are not certified by these tests.
+
+Trace review: approval writes membership/request resolution/version/audit/outbox/
+stored 200 under the existing _execute owner. Unknown COMMIT re-enters the same-key
+reservation protocol. Matching stored replay is noted only after current leader
+authorization and exact request locking; it returns before the pending-only guard
+for new decisions. Approved terminal state therefore preserves the original
+response and one chain. Unavailable proof remains retryable outcome_uncertain;
+auth errors remain service_unavailable. Existing HTTP/service contract unchanged.
+
+Evidence, Windows PowerShell / existing Python 3.11 venv, from backend:
+
+- Before the live-test correction:
+  `.\.venv\Scripts\python.exe -m pytest -q tests/test_admission_commit_fault.py
+  -k exact_live_fault --tb=short`: **2 failed, 1 deselected in 4.84s**, both at
+  original admission_tests/test_admission.py:298. These expected red reproductions
+  were corrected by scoping the fault, not by changing the expected error code.
+- After correction:
+  `.\.venv\Scripts\python.exe -m pytest -q tests/test_admission_commit_fault.py
+  --tb=short`: **4 passed in 2.71s**.
+- `.\.venv\Scripts\python.exe -m pytest -q tests/test_admission_commit_fault.py
+  tests/test_admission.py tests/test_admission_api.py tests/test_admission_readiness.py
+  tests/test_transaction_retry.py tests/test_team_mutations.py tests/test_idempotency.py
+  tests/test_runner_diagnostics.py --tb=short`: **305 passed in 15.60s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1180 passed, 32 deselected in 34.08s**, exit 0. Each run has the one existing
+  Starlette/HTTPX deprecation warning; no PostgreSQL or live-suite execution.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements, exit 0.
+- `.\.venv\Scripts\python.exe -m compileall -q app test_support tests
+  admission_tests alembic/versions`: passed, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest admission_tests --collect-only -q
+  --race-repetitions=1`: **35 tests collected in 0.18s**, no fixture execution.
+- From repository root, `git -c safe.directory=I:/Merge -c core.safecrlf=false
+  diff --check`: passed, exit 0. Inline Python AST checks passed for both R5
+  Python files; no print/eval/exec calls. Targeted credential-URL/private-key/token
+  patterns and whitespace checks passed for the four R5 files. Installed
+  SQLAlchemy engine/base.py confirms commit event dispatch precedes dialect driver
+  commit. These checks supplement source review, not exhaustive secret detection
+  or an online vulnerability audit. No separate backend linter is configured.
+
+R5 scope is the corrected admission live-test file, one new offline regression
+file, docs/ADMISSION.md and this record. No new dependency/migration or production
+code/contract/lock/retry/guard change. Original 36-file pending scope is retained
+plus the new offline regression (37 files); index empty, HEAD remains
+`b5a04876528f6ca40dce742f86b23186b23e5391`. No credential read/prompt, database
+connection, migration, fixture reset/cleanup, schema/permission change, commit,
+push or production action occurred. G1 remains open and the owner live report
+remains invariants not_certified.
+
+ADMISSION.md records the proposed existing guarded --suite admission / exact
+0004_admission / --repetitions 1 command for separate owner approval. It runs the
+fixed 35-case suite with retained writes and fresh checks; no single-node selector
+is implemented and no raw diagnostic bypass is proposed. A successful live run
+and later three-repetition validation remain prerequisites. Owner exercise:
+trace why a terminal approved row replays the original authorized stored reply,
+and why widening the 503 assertion would hide the wrong fault target.
+
+## M-013A final review and authorized local checkpoint - 2026-11-11
+
+The owner authorized exactly one local commit after a nonblocking final review:
+`feat: add authorized team admission workflow (M-013A)`.
+Baseline HEAD is `b5a04876528f6ca40dce742f86b23186b23e5391`. The resulting full hash
+and final Git status must be read and reported after commit; this record cannot
+embed the hash of its own commit. No remote creation or push is authorized.
+Earlier M-013A/R1/R3/R5 pending-live/no-commit statements retain their dated task
+scope and are superseded by this owner acceptance and commit authorization.
+
+**Owner PostgreSQL acceptance, not Codex execution:** merge_test is verified at
+0004_admission. The owner reports matching successful terminal exits and completed
+invariants for these two runs. Existing local metadata-only reports were reviewed
+and validated without a database connection:
+
+| Existing report under backend/test-results/guarded | Repetitions | Collected / teardowns | Status / exit | Invariant verification |
+| --- | --- | --- | --- | --- |
+| run-baa4640c05604be7b5bb15aed0ec2fd4.json | 1 | 35 / 35 | passed / 0 | suite_and_fixture_checks_completed |
+| run-0bcbe5b212b945b3ab33722e2fbf0b8b.json | 2 | 70 / 70 | passed / 0 | suite_and_fixture_checks_completed |
+
+Both are suite admission, revision 0004_admission, stage pytest, zero failures/
+skips and no active node. Total **105 successful admission executions across
+three repetitions in two runs**; this is not a single three-repetition process.
+No live durations were supplied or inferred. Earlier failed/interrupted reports
+remain unsuccessful and are excluded from that total. Reports stay Git-ignored;
+only approved metadata/identifiers are documented here.
+
+**0004_admission is already applied to merge_test. Do not rerun migration SQL,
+ordinary Alembic, provisioning, downgrade, reset or cleanup manually.** The
+historical preparation sequence is labeled accordingly in ADMISSION.md. Source
+review confirms additive empty request storage/index/functions/triggers and
+Alembic revision advancement, without old data backfill/rewrite/drop or grants.
+The existing guarded migration runner owns DDL and preservation fingerprint
+comparison for seven domain plus three auth tables in the same transaction.
+No new preservation measurements, independent schema drift audit or PostgreSQL
+inspection were performed for this checkpoint.
+
+Complete pending diff/source review found no admission blocker. Actor IDs come
+only from validated session cookies; mutations retain current-session CSRF,
+exact Origin, HTTPS/actual-peer/Fetch Metadata and strict input protections.
+Authorization runs inside the owned transaction: reservation, immutable subject
+lookup, hackathon SHARE, sorted affected users NO KEY UPDATE, team NO KEY UPDATE,
+request NO KEY UPDATE. Current leader/exact scope are checked before noting
+stored replay proof. Approval uses the extracted original membership eligibility/
+fresh-count/insert helper; PostgreSQL membership uniqueness/capacity/leader/FK
+constraints remain unchanged. Request resolution, membership, team version,
+audit/outbox and immutable success response are atomic and idempotent under the
+same _execute/retry owner. Full/assigned failures retain pending status; rejection
+does not admit a member. No public unrestricted join route exists.
+
+R5 injection is armed only after its exact request UPDATE succeeds and matches
+the same Connection/root transaction at commit, excluding prior authentication
+and CSRF commits. Original assertions remain; targeted fault, committed approval,
+exact stored replay and unchanged fresh scoped snapshots are required. Diagnostic
+reports serialize bounded counters, reviewed node labels and fixed categories;
+they discard exception/assertion values, tracebacks, SQL/parameters, headers,
+stdout/stderr/logs and warnings. Synthetic privacy regressions cover these paths.
+
+Existing authentication/security/credential/session/throttle/retry/read/create
+runtime files, previous migrations, dependency/configuration manifests and all
+frontend files match HEAD. TeamService's unchanged methods and original moved
+join tail were compared as ASTs. Browser harness removes the whole admission
+router and still rejects reintroduction. No new core dependency, contract
+relaxation, production privilege change or business rule was introduced in review.
+
+Actual final checks, existing Windows PowerShell / Python 3.11 venv / Node
+22.15.0 and npm 10.9.2 toolchain; backend commands run from backend:
+
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1180 passed, 32 deselected in 52.33s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest -q tests/test_admission.py
+  tests/test_admission_api.py tests/test_admission_readiness.py
+  tests/test_admission_commit_fault.py tests/test_runner_diagnostics.py
+  tests/test_concurrency_harness.py tests/test_test_database_safety.py
+  tests/test_auth_schema_support.py --tb=short`: **214 passed in 23.82s**, exit 0.
+  Both backend runs have the one existing Starlette/HTTPX deprecation warning.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements, exit 0.
+- `.\.venv\Scripts\python.exe -m compileall -q app test_support tests
+  admission_tests alembic/versions`: passed, exit 0. This compiles only; it does
+  not execute migrations. There is no separately configured backend linter.
+- From frontend, initial `npm test`: **101 passed, 1 failed in 26.34s**, exit 1.
+  The unchanged CreateTeam.test.tsx:236 test, "keeps a pending result scoped when
+  switching hackathons", observed five fetches after recording three. Source
+  review shows success-message rendering can precede the active second
+  hackathon's own membership/list effect refreshes; flushing the older request
+  can also flush those pending effects. This is consistent with an existing test
+  synchronization race, not proof of a new cross-hackathon mutation defect.
+  No assertion/frontend file was changed or disabled. Follow-up
+  `npm test -- src/CreateTeam.test.tsx -t 'keeps a pending result scoped when switching hackathons'`
+  actually ran the entire CreateTeam file (the npm wrapper did not forward -t):
+  **36 passed in 12.45s**. Final independent full `npm test`: **102 passed / four
+  files in 15.14s**, exit 0. The initial failure is retained as a nonblocking
+  intermittent baseline-test limitation; a deterministic test synchronization
+  repair is separate work, not hidden by a weakened assertion.
+- From frontend, `npm run typecheck`, `npm run build`, `npm ls --depth=0`:
+  passed, exit 0. Vite 6.4.5 built 38 modules in 2.30s, 218.61 kB JavaScript /
+  10.40 kB CSS. No dependency installation, frontend edits or admission UI.
+- Root `git -c safe.directory=I:/Merge -c core.safecrlf=false diff --check`:
+  passed. Inline Python AST/scope/whitespace checks passed for all **37** source/
+  documentation candidates, including **25** Python ASTs. Targeted credential-
+  URL/private-key/token scans found only the reviewed synthetic diagnostic URL
+  canary; no actual secrets detected. Candidate inventory contains only .py/.md,
+  no env files, reports, caches, compiled files, logs, datasets or build artifacts.
+  These are targeted checks, not exhaustive secret detection or a vulnerability
+  audit. Existing test-results/, frontend/dist and backend/.venv exclusions were
+  verified. No configured custom commit hook was found.
+
+Exact 37-file commit inventory (reviewed; staging follows these checks):
+
+- backend/admission_tests/conftest.py
+- backend/admission_tests/test_admission.py
+- backend/alembic/versions/0004_admission.py
+- backend/app/admission_api.py
+- backend/app/main.py
+- backend/app/models/__init__.py
+- backend/app/models/admission.py
+- backend/app/services/admission.py
+- backend/app/services/errors.py
+- backend/app/services/idempotency.py
+- backend/app/services/teams.py
+- backend/test_support/browser.py
+- backend/test_support/concurrency.py
+- backend/test_support/database.py
+- backend/test_support/diagnostics.py
+- backend/test_support/revisions.py
+- backend/tests/test_admission.py
+- backend/tests/test_admission_api.py
+- backend/tests/test_admission_commit_fault.py
+- backend/tests/test_admission_readiness.py
+- backend/tests/test_browser_harness.py
+- backend/tests/test_read_api.py
+- backend/tests/test_runner_diagnostics.py
+- backend/tests/test_team_api.py
+- backend/tests/test_test_database_safety.py
+- docs/ADMISSION.md
+- docs/ARCHITECTURE.md
+- docs/BROWSER_ACCEPTANCE.md
+- docs/DECISIONS.md
+- docs/HTTP_AUTH.md
+- docs/IDEMPOTENCY.md
+- docs/PROGRESS.md
+- docs/SCHEMA.md
+- docs/TEAM_API.md
+- docs/TEAM_MUTATIONS.md
+- docs/TEAM_SERVICES.md
+- docs/TEST_DATABASE.md
+
+Before committing, match exact staged paths/blobs to this reviewed working tree,
+repeat staged whitespace/secret/artifact checks, and keep reports/local secrets/
+build outputs excluded. No second commit or amendment is authorized here.
+
+Remaining scope: **G1 stays open**. The 50-candidate admission test executes
+decisions as one authenticated leader; it does not prove the official 50 distinct
+authenticated admission callers. No frontend request/decision UI, browser/mobile/
+keyboard/HTTPS E2E, CI, load/seed, deployment or production-readiness acceptance.
+No request cancellation/expiration/re-request after rejection or new request
+limiter. Auth revocation remains point-in-time; raw/privileged writers are outside
+HTTP authorization, and future membership/leader writers must use this lock order.
+The unknown-hackathon reservation 503 limit is unchanged.
+
+Legacy restrictions remain exact: auth, credentials, sessions, auth-api, throttles,
+idempotency, mutations, retries, reads and team-api stay 0003-only. Browser
+inspect/serve/verify also stays 0003-only, with no team/request write permission;
+it refuses the now-upgraded merge_test. Schema/services defaults stay 0002;
+explicit 0004 is accepted by their CLI but lacks per-connection revision checks
+and is not certified. No downgrade, either-revision/head bypass, ordinary Settings
+fallback or browser-host expansion is a compatibility workaround.
+
+No Codex database access, credential read/prompt, live rerun, migration, schema/
+permission operation, fixture reset/cleanup or production action occurred in
+this review. Owner exercise: fill capacity in the offline fixture and trace why
+approval leaves the request pending with no partial chain; then replace the
+leader and explain why the old stored decision cannot bypass authorization.
 
 ## Daily work log template
 ```

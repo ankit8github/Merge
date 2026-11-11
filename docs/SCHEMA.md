@@ -1,5 +1,15 @@
 # PostgreSQL domain schema — M-006A
 
+M-013A adds 0004_admission, already applied to owner-verified merge_test:
+retained join_requests,
+composite team/hackathon FK, requester/decider FKs, unique team/requester, checked
+state/time, identity/terminal/retention guards and deferred approved-membership
+validation. Existing table DDL and privileges are unchanged. Model/DDL and exact
+guarded preparation history: [ADMISSION.md](ADMISSION.md). Do not rerun migration
+SQL or ordinary Alembic manually against the existing merge_test; no downgrade,
+reset or cleanup is authorized. Owner acceptance: 35 + 70 admission executions,
+both exit 0 with completed fixture checks. No independent drift inspection here.
+
 M-007B.1 adds authentication storage in additive 0003_auth. Owner verified guarded
 merge_test migration/repeat, 0003_auth (head), preserved domain row counts and
 fingerprints, and 78 live auth schema cases in 11.75s (three repetitions requested).

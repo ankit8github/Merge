@@ -130,6 +130,15 @@ class TeamService:
             raise DomainError(ErrorCode.TEAM_NOT_FOUND)
         if team.deleted_at is not None:
             raise DomainError(ErrorCode.TEAM_DELETED)
+        return self._admit_locked_in_tx(c, command, team)
+
+    def _admit_locked_in_tx(self, c: Connection, command: _JoinTeamCommand, team) -> TeamResult:
+        """Caller holds hackathon, subject user and exact live team locks.
+
+        No lifecycle or new locks here: authorization workflows must check their
+        own durable capability under the same owner before calling this helper.
+        """
+        hackathon_id, team_id, actor_id = command.hackathon_id, command.team_id, command.actor_id
         self._require_unassigned(c, hackathon_id, actor_id)
         # Fresh statement after parent lock: no ORM identity-map count reuse.
         if self._count(c, team_id) >= team.max_team_size:
