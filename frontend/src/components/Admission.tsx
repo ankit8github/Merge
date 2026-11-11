@@ -2,10 +2,11 @@ import { useCallback, useId, useState } from 'react';
 import { api, ApiError, type JoinRequest, type Team } from '../api';
 import { type Admission, type AdmissionCommand } from '../hooks/useAdmission';
 import { useRead } from '../hooks/useRead';
+import type { WorkspaceSignal } from '../hooks/useWorkspaceSignal';
 import { ErrorNotice, Loading, useCooldown } from './Feedback';
 
 type Membership = ReturnType<typeof useRead<Team | null>>;
-type Props = { team: Team; admission: Admission; membership: Membership; onExpired: () => void; restore: () => void };
+type Props = { team: Team; admission: Admission; membership: Membership; onExpired: () => void; restore: () => void; workspace: WorkspaceSignal };
 
 function CommandFeedback({ command, restore }: { command: AdmissionCommand | null; restore: () => void }) {
   const failure = command?.error;
@@ -30,7 +31,7 @@ function CommandFeedback({ command, restore }: { command: AdmissionCommand | nul
   </>;
 }
 
-function MemberRequest({ team, admission, membership, onExpired, restore }: Props) {
+function MemberRequest({ team, admission, membership, onExpired, restore, workspace }: Props) {
   const h = team.hackathon_id, t = team.id;
   const load = useCallback((signal: AbortSignal) => api.ownRequest(h, t, signal).then(row => {
     if (row && row.requester_id !== admission.actor) throw new ApiError(0, 'invalid_response');
@@ -54,7 +55,7 @@ function MemberRequest({ team, admission, membership, onExpired, restore }: Prop
     {membership.state.status !== 'success' && <p className="muted">Membership must be verified before sending a new request.</p>}
     <CommandFeedback command={command} restore={restore} />
     <div className="admission-actions">
-      <button className="button primary" disabled={disabled} onClick={() => { if (!disabled) admission.submit(h, t); }}>
+      <button className="button primary" disabled={disabled} onClick={() => { if (!disabled) admission.submit(h, t, workspace()); }}>
         {command?.status === 'pending' ? 'Request in progress…' : command?.uncertain ? 'Retry original join request' : 'Request membership'}
       </button>
       <button className="button secondary" onClick={() => admission.refresh(h)}>Refresh request and membership</button>
@@ -63,9 +64,10 @@ function MemberRequest({ team, admission, membership, onExpired, restore }: Prop
   </section>;
 }
 
-function DecisionActions({ row, command, team, admission, restore }: {
+function DecisionActions({ row, command, team, admission, restore, workspace }: {
   row: Pick<JoinRequest, 'id' | 'requester_id'>; command: AdmissionCommand | null;
   team: Team; admission: Admission; restore: () => void;
+  workspace: WorkspaceSignal;
 }) {
   const id = useId(), seconds = useCooldown(command?.error ?? null);
   const pending = command?.status === 'pending', settled = command?.status === 'success';
@@ -74,20 +76,20 @@ function DecisionActions({ row, command, team, admission, restore }: {
     <CommandFeedback command={command} restore={restore} />
     <div className="admission-actions">
       {command?.uncertain ? <button className="button primary" disabled={pending || seconds > 0}
-        onClick={() => admission.submit(team.hackathon_id, team.id, row.id, command.decision)}>
+        onClick={() => admission.submit(team.hackathon_id, team.id, workspace(), row.id, command.decision)}>
         Retry original {command.decision === 'approve' ? 'approval' : 'rejection'}
       </button> : <>
         <button className="button primary" disabled={pending || settled || seconds > 0}
-          onClick={() => admission.submit(team.hackathon_id, team.id, row.id, 'approve')} aria-label={`Approve applicant ${row.requester_id}`}>Approve</button>
+          onClick={() => admission.submit(team.hackathon_id, team.id, workspace(), row.id, 'approve')} aria-label={`Approve applicant ${row.requester_id}`}>Approve</button>
         <button className="button secondary" disabled={pending || settled || seconds > 0}
-          onClick={() => admission.submit(team.hackathon_id, team.id, row.id, 'reject')} aria-label={`Reject applicant ${row.requester_id}`}>Reject</button>
+          onClick={() => admission.submit(team.hackathon_id, team.id, workspace(), row.id, 'reject')} aria-label={`Reject applicant ${row.requester_id}`}>Reject</button>
       </>}
     </div>
     {seconds > 0 && <p role="status">Try again in {seconds} seconds.</p>}
   </li>;
 }
 
-function LeaderRequests({ team, admission, onExpired, restore }: Props) {
+function LeaderRequests({ team, admission, onExpired, restore, workspace }: Props) {
   const [history, setHistory] = useState<(string | null)[]>([null]);
   const cursor = history[history.length - 1], h = team.hackathon_id, t = team.id;
   const load = useCallback((signal: AbortSignal) => api.pendingRequests(h, t, cursor, signal), [h, t, cursor]);
@@ -108,7 +110,7 @@ function LeaderRequests({ team, admission, onExpired, restore }: Props) {
     {list.state.status === 'success' && <>
       {!rows.length && <p role="status">No pending requests on this page.</p>}
       <ul className="request-list">{rows.map(row => <DecisionActions key={row.id} row={row} team={team} admission={admission}
-        command={admission.operation(h, t, row.id)} restore={restore} />)}</ul>
+        command={admission.operation(h, t, row.id)} restore={restore} workspace={workspace} />)}</ul>
       <nav className="pagination" aria-label="Request pages">
         <button className="button secondary" disabled={history.length === 1} onClick={() => setHistory(old => old.slice(0, -1))}>Previous requests</button>
         <button className="button secondary" disabled={!list.state.data.next_cursor} onClick={() => {
@@ -118,7 +120,7 @@ function LeaderRequests({ team, admission, onExpired, restore }: Props) {
     </>}
     {list.state.status === 'success' && recovery.length > 0 && <><h4>Commands awaiting confirmation</h4><ul className="request-list">{recovery.map(command =>
       <DecisionActions key={command.requestId} row={{ id: command.requestId!, requester_id: '' }} command={command}
-        team={team} admission={admission} restore={restore} />)}</ul></>}
+        team={team} admission={admission} restore={restore} workspace={workspace} />)}</ul></>}
     {list.state.status === 'success' && commands.filter(c => c.status === 'rejected' && !c.uncertain && !rows.some(row => row.id === c.requestId)).map(command =>
       <div key={command.requestId}><CommandFeedback command={command} restore={restore} /></div>)}
     {commands.some(c => c.status === 'success') && <p className="notice success" role="status">Decision confirmed. The pending list and team details are fetched again from the server.</p>}

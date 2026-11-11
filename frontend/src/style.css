@@ -124,6 +124,13 @@ dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
 .request-list { list-style: none; padding: 0; margin: 1rem 0; }
 .request-card { border: 1px solid var(--line); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
 .request-card h4 { overflow-wrap: anywhere; margin: 0 0 .8rem; font-size: .85rem; }
+.invitation-card h3, .invitation-card p, .uuid { overflow-wrap: anywhere; }
+.invitation-card h3 { font-size: 1rem; }
+.invitation-issuer small { display: block; margin: .6rem 0 1rem; }
+.invitation-issuer input[readonly] { background: #f2f5ef; }
+.invitation-inbox { min-width: 0; }
+.invitation-inbox > .section-top { flex-wrap: wrap; }
+.view-nav { flex-wrap: wrap; column-gap: 1.5rem; row-gap: 0; }
 .site-footer { max-width: 1280px; margin: auto; padding: 1.5rem 2.5rem; border-top: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; color: var(--muted); font-size: .75rem; }
 summary { cursor: pointer; padding: .3rem; }
 .health { padding-top: .8rem; } .health p { margin-bottom: 0; }

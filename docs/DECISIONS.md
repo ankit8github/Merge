@@ -509,3 +509,41 @@ at three repetitions, exit 0 and completed suite/fixture checks. The audit in
 G1_ACCEPTANCE.md closes original Phase 1 G1 within local PostgreSQL scope; it does
 not change the contract or authorize another migration/live run. Earlier readiness
 statements above retain their dated scope. CI/production/browser/load remain open.
+
+### M-014C-R1 - mutation display ownership after navigation, 2026-11-11
+
+The invitation journal's account/session guard cannot identify selected-workspace
+ownership: navigation leaves that session generation unchanged. Two preserved
+issue/redeem regressions and three additional creation/request/decision cases
+reproduced global expiry from an old hackathon's 401 before the repair.
+
+Use a narrow committed-workspace token, independent of HTTP transport and session
+authority. A layout effect creates it; navigation cleanup invalidates it. Capture
+it when submitting and require it for global expiry/automatic refresh. Continue
+settling the original account/scoped command journal, preserving exact scope,
+payload and key. Returning creates a fresh display token for explicit retry with
+current CSRF. Canonical read refreshes/pagination do not rotate display ownership.
+Creation owns the hackathon lifetime; team admission and invitations own view/team.
+
+This avoids cancelling work on navigation (which cannot establish rollback),
+clearing recoverable commands, globally ignoring 401s or changing authentication.
+No new render-time mutable workspace assignment. Current-workspace 401 handling
+and session/account cancellation remain intact. The reproduced related hooks use
+the same correction; no backend/API/dependency/persistence change. Tests include
+StrictMode, stale success/conflict, away/back recovery and reauthentication.
+Full offline evidence: PROGRESS.md; real browser/HTTPS acceptance remains open.
+
+### M-014C - invitation frontend within the existing contract, 2026-11-11
+
+The owner authorizes leader UUID issuance, recipient inbox/redemption and offline
+tests, without changing backend contracts. No account-lookup endpoint exists:
+label UUID-only entry and let recipients share their own session-derived account
+UUID from the inbox. Team UUIDs open existing canonical detail reads; fabricate
+neither names nor user search. Reuse same-origin session/CSRF/key protections and
+the existing App-lifetime account-scoped journal pattern for an independent
+invitation journal. Uncertain commands freeze exact scope/payload/key and remain
+reachable when refreshed inbox rows disappear; only validated acknowledgement
+resolves uncertainty. Session abort cancels/isolates transports, and same-account
+reauthentication retries with current CSRF. Recovery stays memory-only with
+documented reload/crash loss, no new storage/dependency/authorization rule or
+browser write permission. Exact behavior and limits: FRONTEND.md.

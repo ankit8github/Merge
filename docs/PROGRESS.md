@@ -7,9 +7,13 @@
 
 ## Current verified context
 
-The M-014B final review entry below is current. Earlier milestone/open/not-applied statements
-retain the scope and evidence available at those checkpoints.
+The M-014C final review/local checkpoint entry below is current and supersedes the
+final-review blocker and R1 owner-review pause.
+Earlier milestone/open/not-applied statements retain their checkpoint scope.
 
+- [x] M-014C final review complete; one local checkpoint authorized: all 20 paths reviewed, committed-workspace ownership and exact-command recovery retained. Final standalone frontend 261 passed; backend database-free 1312 passed / 32 deselected, one existing warning; typecheck/build/dependency/compile/targeted static/security/whitespace checks passed. Initial concurrent frontend run had 258 passes and three initial-loading timeouts, preserved below; unchanged standalone rerun passed. Prior fetch-count concern remains. No backend/schema/dependency or live/browser change. G1 remains closed only within prior local PostgreSQL acceptance. Checkpoint subject: `feat: add React invitation workflows and workspace isolation (M-014C)`; obtain its hash from local Git history. No remote or push.
+- [x] M-014C-R1 repaired/offline verified at its owner-review checkpoint: both original old-hackathon invitation 401 regressions pass unchanged; the same defect was reproduced and fixed for creation/request/decision hooks. Committed-workspace tokens gate global expiry/automatic refresh without cancelling or erasing original scoped commands. Frontend 261 passed; focused journeys 137 passed; typecheck/build passed; backend database-free 1312 passed / 32 deselected (one existing warning); dependency/compile/targeted static/security/whitespace checks passed. Its baseline HEAD was `2639c1fadffed6fb791496a023d63ddcdedff768`, with 20 pending paths and no staging/commit. No backend/schema/dependency change, PostgreSQL access, browser/server action or new G1 evidence. Historical blocker/red evidence and commands/inventory below.
+- [x] M-014C invitation UI implemented/offline verified for owner review, uncommitted: leader UUID-only issuance, private paginated recipient inbox, redemption and independent memory-only uncertain-command recovery. Frontend 242 passed (79 new invitation cases), typecheck/build passed; backend database-free 1312 passed / 32 deselected; dependency/compile/targeted security/static/whitespace passed. No backend/schema/dependency/browser-host changes, PostgreSQL access, browser launch or new live evidence. M-014B committed as `2639c1fadffed6fb791496a023d63ddcdedff768`; 0005 already applied. G1 remains CLOSED only within its prior local owner-run scope. Exact component/file inventory and recovery/browser limits: FRONTEND.md and the M-014C entry below. Stop for owner review; no staging/commit/remote/push.
 - [x] M-014B final review and local commit checkpoint: all 35 approved invitation/G1 paths reviewed; full backend database-free 1312 passed / 32 deselected, focused 457 passed, frontend 163 passed; typecheck/build, Python/frontend dependency checks, compile and targeted security/artifact/whitespace checks passed. Original Phase 1 G1 remains CLOSED only within the audited owner-run local PostgreSQL scope; the report has no successful-node roster or source hash. 0005 is already applied: no database action or live rerun. Owner authorizes exactly one local commit, `feat: add secure invitations and G1 race acceptance (M-014B)`, after final index review; no remote or push. Detailed commands/results and limits are in the final review entry below.
 - [x] M-014B-R2 successful-run audit: owner reports 0005_invitations already applied to merge_test. Existing ignored report run-b7498102ceca4576b17a780aa7296157.json records invitations / 0005 / repetitions 3, passed / exit 0, 39 collected and completed teardowns, no skips/failures, suite_and_fixture_checks_completed. This is 13 cases x 3 = 39 total, including three distinct-authenticated-50-caller G1 races. Original Phase 1 G1 CLOSED within local owner-run guarded PostgreSQL acceptance; CI/production HTTPS/browser/load remain open. Report provenance and source-derived counts: G1_ACCEPTANCE.md. R2 offline: focused 457 passed; full backend 1312 passed / 32 deselected; dependency/compile/static/security/whitespace passed. No Codex database action, source/test change, staging or commit; stop for owner review.
 - [x] M-014B-R1 readiness review, uncommitted: repaired observer-root proof and active PID cleanup, strengthened grant/outcome/audit/outbox linkage, specified exact expired redeemed replay and current-leader restoration policy. Focused offline 457 passed; full backend 1312 passed / 32 deselected; invitations 39 collected only; original admission 105 collected unchanged. Migration/production authorization unchanged; no PostgreSQL action, G1 OPEN. Detailed findings and owner steps: INVITATIONS.md.
@@ -6039,6 +6043,417 @@ Owner explanation: the invitation grants this recipient permission to contend
 for capacity; it does not reserve a seat. Exercise: corrupt a losing grant's
 redeemed_at in the offline oracle fixture and explain why the assertion must
 fail even when the final membership count still equals two.
+
+## M-014C - React invitation issuance, inbox and redemption, 2026-11-11
+
+**Implemented and offline verified; stop for owner review. No commit authorized.**
+Started clean at `2639c1fadffed6fb791496a023d63ddcdedff768`; final work remains
+unstaged. Read the required repository, requirements, invitation/admission,
+frontend/auth/API/read/idempotency/architecture/decision/progress sections and
+inspected existing React transport/session/read/create/admission flows and tests.
+The bounded component reuses the existing API, session and journal patterns;
+no backend contract, schema, permission, dependency or session model change.
+
+Implemented behavior and decisions:
+
+- Canonical current leaders get a labelled recipient account UUID form on team
+  detail. Existing accounts only; no user search/lookup endpoint or invented
+  selector. Recipients can share their session-derived public account UUID from
+  the Invitations view. Invalid/incomplete/surrounding-space input focuses the
+  error field; uppercase UUIDs are canonicalized once before command creation.
+  Issuance sends only recipient_id. Confirmation requires the exact validated
+  201 acknowledgement; no seat reservation is claimed. Explicit Start another
+  invitation creates a new key after a confirmed command.
+- A selected-hackathon Invitations view reads the canonical recipient-only mine
+  endpoint with limit 20, UUID cursor history and restart. Rows must belong to
+  this authenticated recipient/hackathon before display. It shows actual pending/
+  redeemed state, availability and expiry/redeemed timestamps in local time.
+  Team UUID is labelled because the DTO has no name; View invited team opens
+  the existing canonical detail endpoint. No fabricated context or unbounded
+  background lookup. Availability is server state, not a browser-clock decision.
+- Redemption sends only {} with the current CSRF. A successful stored 200 is an
+  acknowledgement; only refreshed GETs supply inbox/membership/team state.
+  Confirmation invalidates active canonical reads and My Team; inactive discovery
+  and detail views fetch fresh on their next activation. Expired/stale/full/
+  assigned/used/missing/permission/rate-limit failures never optimistically mark
+  an invitation redeemed or add membership. New redemption waits for canonical
+  unassigned membership and a pending/available row; backend authorization and
+  capacity remain authoritative.
+- useInvitations is an App-lifetime, account/hackathon/team/operation journal,
+  parallel to unchanged creation/admission hooks. Native cryptographic 32-byte
+  keys are generated once per distinct command. Synchronous guards prevent
+  duplicate submits. Unknown/network/timeout/abort/malformed outcomes freeze
+  the original recipient or invitation, scope and key; later rejection cannot
+  erase prior uncertainty. Only a matching validated acknowledgement resolves
+  it. Definitively rejected issuance can correct its recipient with a new key.
+- Redemption recovery cards retain original command IDs independently of inbox
+  row disappearance, pagination and read failures, including if membership or
+  availability has changed. Retries keep original scope/key/body and use current
+  session CSRF. Expired/stale same-key replay may still fail despite an earlier
+  committed redemption; canonical reads do not reconstruct that exact response.
+- Session invalidation aborts transports and retains pending work as uncertain.
+  Different accounts cannot see/use those commands; same-account reauthentication
+  restores the exact retry with fresh CSRF. Late successes/401s from older sessions
+  and old view reads cannot overwrite a newer workspace. Navigation never changes
+  the original mutation's scope or displays its success for another team/hackathon.
+- Journal records store no Session/CSRF/bearer/inbox DTOs; no browser persistence,
+  actor selector, manual Cookie/Authorization header, unrestricted joining or
+  automatic mutation retry. Pending/uncertain work has a best-effort beforeunload
+  warning. Reload/crash/tab closure loses keys: retain the tab and obtain separately
+  approved owner recovery if exact commands are lost; no silent new-key fallback.
+- API validation checks exact path/scope/status/schema, UUID/recipient/issuer,
+  grant state/timestamps, duplicate rows and cursor shape; drops unknown fields.
+  Microsecond comparison preserves PostgreSQL/Python expiry semantics instead of
+  rejecting a valid redemption within the same millisecond as expiry.
+- Responsive navigation/actions wrap, long UUIDs break within cards, and controls
+  use native form/button semantics with labels/help/errors, focus and status/alert
+  feedback. Team-detail initial focus now runs before paint, preventing a passive
+  loading effect from taking focus after invitation form validation.
+
+Component map:
+
+```text
+App -> useSession + existing creation/admission + useInvitations
+  Discovery / SelectedWorkspace -> scoped canonical refresh and navigation
+    TeamDetail -> existing TeamAdmission + InvitationIssuer
+    InvitationInbox -> private pages, own account UUID, independent recovery
+      RedemptionCard + CommandFeedback -> exact explicit retry and fixed errors
+api.ts -> unchanged existing endpoints + exact three invitation operations
+```
+
+Actual commands/results, Windows PowerShell / existing virtualenv and installed
+frontend toolchain; all final commands exit 0:
+
+- Initial integration `npm.cmd run typecheck` passed; unchanged existing
+  `npm.cmd test` baseline journeys: **163 passed, six files, 21.08s**.
+- First new-file `npm.cmd test -- src/InvitationApi.test.ts
+  src/Invitations.test.tsx`: **66 passed, 2 failed, 10.76s**. Queries assumed the
+  pre-submit button label and an in-page success card after canonical removal;
+  corrected the selectors while retaining exact request/key/count and success
+  assertions. Initial test typecheck also exposed an overly wide readiness string
+  in the old Team fixture; added its explicit Team return type. No production
+  contract or assertion was weakened. Corrected initial suite: **68 passed, 12.22s**.
+- Expanded first full run: **240 passed, 2 failed, 65.77s**. A deferred detail
+  heading focus effect could steal invalid-UUID input focus; repaired its timing
+  with useLayoutEffect, retaining the focus assertion. The conflict check also
+  inspected state during the canonical refetch; it now waits for the canonical
+  pending row, preserving the pending/no-success/one-POST assertions.
+- Final focused `npm.cmd test -- src/InvitationApi.test.ts
+  src/Invitations.test.tsx`: **79 passed in 22.64s** (35 transport, 44 UI cases).
+  Coverage includes issue/inbox/redeem, duplicate and distinct command keys,
+  lost/malformed responses, expired/stale/full/assigned conflicts, sticky retries
+  after later errors, missing inbox rows, current CSRF after reauthentication,
+  cross-account/session/hackathon/team delayed responses, recipient isolation,
+  pagination, permission loss, secure-random failure, native focus and forms.
+- Final `npm.cmd test`: **242 passed, eight files, 43.80s**. All prior 163
+  creation/admission/session/discovery journeys remain present and passed.
+  The prior intermittent fetch-count concern remains documented, not erased.
+- `npm.cmd run typecheck`: passed; final `npm.cmd run build` includes another
+  final typecheck and passed: Vite 42 modules in 5.43s, JS 249.58 kB / CSS 11.26 kB.
+  Earlier pre-focus-repair build also passed; final build is the reviewed state.
+- From backend, `.\.venv\Scripts\python.exe -m pytest -q -m 'not database'
+  --tb=short`: **1312 passed, 32 deselected in 125.12s**, exit 0; one existing
+  Starlette/HTTPX deprecation warning. No backend source changed afterward.
+- Backend `.\.venv\Scripts\python.exe -m pip check`: no broken requirements.
+  Frontend `npm.cmd ls --depth=0`: all direct dependencies resolved; no download
+  or new package. Manifests and lockfiles unchanged.
+- Backend `.\.venv\Scripts\python.exe -m compileall -q app test_support tests
+  invitation_tests admission_tests alembic/versions`: passed; compile only.
+- Inline TypeScript AST/Git/targeted security review: eight TS/TSX ASTs; every
+  existing api.ts function and API operation is unchanged. Backend/schema and
+  existing session/read/create/admission core untouched. Targeted credential-
+  URL/private-key/token, persistent-storage, runtime logging/XSS, artifact, NUL
+  and whitespace checks passed. Build/cache outputs remain ignored; empty index
+  and unchanged HEAD. Root `git -c safe.directory=I:/Merge
+  -c core.safecrlf=false diff --check` passed. Scans are not exhaustive; no
+  standalone configured linter or online dependency vulnerability audit was run.
+
+Exact pending inventory (15 files; 11 modified and four new):
+
+- frontend/src/App.tsx
+- frontend/src/api.ts
+- frontend/src/components/Discovery.tsx
+- frontend/src/components/Invitations.tsx (new)
+- frontend/src/hooks/useInvitations.ts (new)
+- frontend/src/style.css
+- frontend/src/test/fixtures.ts
+- frontend/src/InvitationApi.test.ts (new)
+- frontend/src/Invitations.test.tsx (new)
+- docs/ADMISSION.md
+- docs/ARCHITECTURE.md
+- docs/DECISIONS.md
+- docs/FRONTEND.md
+- docs/INVITATIONS.md
+- docs/PROGRESS.md
+
+Usability/release limits: UUID entry and manual identifier sharing are deliberate
+because no account lookup exists. Inbox cards have team UUID until opening real
+details; no invite-delivery channel, revocation, leadership transfer or removal
+is added. Keys/recovery cannot survive reload/crash/tab closure. Real browser
+keyboard activation, mobile/touch, screen reader, viewport/zoom/layout, HTTPS/
+cookies/Origin and deployment remain unverified; jsdom is not browser acceptance.
+The existing browser harness is still exact-0003 and excludes domain mutations;
+it cannot target the existing 0005 merge_test. Live UI acceptance needs a separate
+guarded exact-0005 host/write review. No unguarded launcher is a workaround.
+
+0005 remains already applied. G1 stays CLOSED only within the prior audited owner
+local PostgreSQL scope, preserving its missing successful-node-roster/source-hash
+limitation; this task adds no live/G1/performance evidence. CI, seed/load/p95,
+deployment and broader release flows remain open. No PostgreSQL/merge_dev access,
+live fixture/test/migration/cleanup/reset, browser/backend launch, credential
+prompt, staging, commit, remote or push occurred.
+
+Owner explanation: an inbox read says which grants currently address this account;
+the backend still authorizes every redemption. Exercise: return outcome_uncertain,
+remove that grant from the next inbox page, then retry and verify that the URL,
+body and key are unchanged while a reauthenticated session supplies fresh CSRF.
+Stop for owner review before any commit or live action.
+
+## M-014C - final-review blocker, 2026-11-11
+
+**Stop without committing: verification item 10 is not satisfied.** The owner
+authorized one local commit only if final review found no blocker. Review found
+and reproduced a missing selected-workspace guard. No production behavior was
+changed to hide or work around it; two failing regression cases are retained.
+Earlier 242-pass/typecheck/build/backend evidence remains historical, predating
+these added cases. This is a frontend workspace/session-state defect, not evidence
+of a backend authorization bypass or PostgreSQL invariant failure.
+
+Reproduction, using only mocked HTTP:
+
+1. Start an invitation issuance or redemption in the first selected hackathon;
+   hold its HTTP response open.
+2. Select the second hackathon and successfully load its authenticated workspace.
+3. Release the old mutation response as 401 invalid_session.
+4. The current username and second-hackathon workspace disappear. The assertion
+   that the newer authenticated workspace remains present fails for both kinds.
+
+Root cause: frontend/src/hooks/useInvitations.ts `isCurrent` checks only account,
+epoch and session AbortSignal. Navigation changes none of these. The catch path
+therefore treats the old command as current and invokes onExpired for every 401;
+App supplies auth.expired, which clears the current workspace. The old command's
+hackathon/team scope protects its journal/result placement but does not scope
+this global side effect. Existing delayed-read and cross-account/session tests
+do not cover an old mutation's 401 within the same authenticated generation.
+
+Added regression in frontend/src/Invitations.test.tsx:
+`does not let an old-hackathon %s 401 clear a newer selected workspace`,
+parametrized issue/redeem. Actual command from frontend:
+`npm.cmd test -- src/Invitations.test.tsx -t old-hackathon`.
+Result: **2 failed, 44 skipped by the name filter, 8.26s, exit 1**. Both fail at
+the username-presence assertion after releasing the delayed 401. These are new
+negative regression evidence, not a passing final suite. No assertion was removed
+or weakened. No full frontend/backend/typecheck/build/dependency sweep was rerun
+after this blocker; the commit workflow stopped as requested.
+
+Required next step: review and implement narrowly scoped frontend handling for
+unauthorized responses from old workspaces, keeping the exact original command/
+key and its outcome metadata. A stale mutation response must not blindly expire
+the newer workspace; current-session failures must still be handled correctly
+(for example by guarded current-session verification). Preserve backend authority,
+same-account fresh-CSRF recovery, duplicate guards and canonical refresh behavior.
+Then make both regressions pass and rerun all requested checks before commit.
+No backend/session-policy redesign or blanket ignoring of current 401s is proposed.
+
+This final review only adds the two regression cases and updates FRONTEND.md and
+this evidence/status record within the existing 15-file inventory. No source fix,
+staging, commit, remote, push, PostgreSQL access, migration, fixture operation or
+browser/backend startup. G1's prior local PostgreSQL scope and all previously
+documented browser/HTTPS/mobile/accessibility/load/deployment/recovery limitations
+are unchanged, including the intermittent frontend fetch-count concern.
+
+Owner exercise: trace why isCurrent remains true after hackathon navigation and
+why an account/session-generation guard alone cannot protect the newer selection.
+
+## M-014C-R1 - old-workspace mutation response repair, 2026-11-11
+
+**Implemented/offline verified; stop for owner review, no commit.** Supersedes the
+blocker above. HEAD remains `2639c1fadffed6fb791496a023d63ddcdedff768`.
+
+Root cause and bounded correction:
+
+- `useInvitations.isCurrent` compares account, session signal and epoch; hackathon
+  navigation changes none. Its unguarded 401 callback globally expired the newer
+  selection. Command scope alone protected journal placement, not this side effect.
+- Before repair, the same schedule reproduced the defect in team creation,
+  join-request creation and leader approval. These three additional red cases
+  justify applying the same correction to their hooks; no speculative service
+  refactor or authentication-policy change.
+- `useWorkspaceSignal` creates display tokens in a layout effect, invalidating
+  them on committed navigation/unmount. The getter verifies its committed key;
+  no render-time workspace ref assignment. Creation owns hackathon lifetime;
+  admission/invitations own view/team lifetime. Tokens sit above read-revision
+  remounts and survive canonical refresh/pagination. StrictMode is covered.
+- Each submit captures a valid token. Session guards still isolate accounts and
+  cancel on session changes. Commands continue settling only their original
+  journal; only a live display token permits global expiry/automatic refresh.
+  Current-workspace 401s retain the existing expiry behavior. Old-team successes
+  and conflicts cannot remount a new team's draft or refresh its reads.
+- Navigation does not erase/cancel unresolved commands. Returning allows the
+  exact original URL/body/key/scope to retry with a fresh display token and current
+  session CSRF, including after reauthentication. Leaving/returning never revives
+  the old token. Disappearing inbox rows do not remove independent recovery cards.
+
+Regression evidence, Windows PowerShell / installed Node 22.15.0 / jsdom mocked
+HTTP / existing backend Python virtual environment; no server or database:
+
+| Working directory | Actual command | Result |
+|---|---|---|
+| frontend | `npm.cmd test -- src/Invitations.test.tsx -t old-hackathon` before repair | 5 failed, 44 filtered, 13.32s, exit 1: original issue/redeem plus reproduced create/request/approve |
+| frontend | Same targeted command after repair | 5 passed, 44 filtered, 15.42s, exit 0 |
+| frontend | `npm.cmd test -- src/Invitations.test.tsx src/Admission.test.tsx src/CreateTeam.test.tsx` after expanded regressions | 137 passed, 3 files, 50.75s, exit 0 |
+| frontend | `npm.cmd test` | 261 passed, 8 files, 57.04s, exit 0 |
+| frontend | `npm.cmd run typecheck` | Passed, exit 0 |
+| frontend | `npm.cmd run build` | TypeScript and Vite production build passed, 43 modules, exit 0 |
+| backend | `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short` | 1312 passed, 32 deselected, 67.99s, exit 0; one existing Starlette/HTTPX warning |
+| backend | `.\.venv\Scripts\python.exe -m pip check` | No broken requirements, exit 0 |
+| backend | `.\.venv\Scripts\python.exe -m compileall -q app test_support tests invitation_tests admission_tests alembic/versions` | Compile only passed, exit 0; no migration execution |
+| frontend | `npm.cmd ls --depth=0` | Installed direct dependency tree valid, exit 0; manifests/lockfiles unchanged |
+
+The original issue/redeem test block is unchanged, including every assertion:
+SHA256 `e91c2ca2d79bca54b56a79cb1e0fe36afae670005de10af72c19a202bb70b61c`.
+There are 19 more tests than the old 242 baseline: those original two plus 17 R1
+cases. New schedules cover current-workspace 401s for all five mutation paths,
+old-team success/401/conflict with draft preservation, old-inbox success/conflict,
+away/back uncertain retries with exact URL/body/key and new-session CSRF, manual
+inbox refresh followed by current 401, and StrictMode. Existing account-switch,
+logout/login, missing-row recovery, duplicate-click and creation/admission journeys
+are included in the full suite. No assertions were weakened.
+
+Static/scope checks actually executed:
+
+- Python read-only check of all 20 pending paths: only docs and frontend/src;
+  empty index; backend/manifests/lockfile/session/read hooks and prior journey test
+  files unchanged. No NUL, trailing whitespace, private-key/token/credential-URL
+  patterns or artifact paths. Changed production UI contains no persistent-browser
+  storage, cookie access, unsafe HTML, eval or console logging. These targeted
+  checks supplement review; they are not exhaustive security certification.
+- Installed TypeScript compiler parsed all 13 changed TS/TSX files; normalized
+  AST comparison confirmed all 22 existing API functions/methods unchanged. The
+  first check had a root-relative path error (no source error); corrected check
+  passed. Typecheck/build supply semantic validation.
+- Existing ignored owner-run G1 report is unchanged (SHA256 still
+  `f75eaae1ad4ec664d388aa9e198def96e73a1f02f91c265c5a3f4cb59e5588bc`). Build,
+  node_modules, virtual environment and report remain ignored. No new live claim.
+- `git -c safe.directory=I:/Merge -c core.safecrlf=false diff --check` passed.
+
+Exact pending inventory (20 paths; 15 modified, 5 new; nothing staged):
+
+- Documentation: docs/ADMISSION.md, docs/ARCHITECTURE.md, docs/DECISIONS.md,
+  docs/FRONTEND.md, docs/INVITATIONS.md, docs/PROGRESS.md.
+- UI integration: frontend/src/App.tsx, frontend/src/api.ts,
+  frontend/src/components/Admission.tsx, frontend/src/components/CreateTeam.tsx,
+  frontend/src/components/Discovery.tsx, frontend/src/style.css,
+  frontend/src/test/fixtures.ts, frontend/src/hooks/useAdmission.ts,
+  frontend/src/hooks/useTeamCreation.ts.
+- New M-014C paths: frontend/src/InvitationApi.test.ts,
+  frontend/src/Invitations.test.tsx, frontend/src/components/Invitations.tsx,
+  frontend/src/hooks/useInvitations.ts.
+- New R1 helper: frontend/src/hooks/useWorkspaceSignal.ts.
+
+R1 changes the helper, the three mutation hooks, their component wiring,
+Invitations.test.tsx and these documentation overlays. The original 15-path
+M-014C inventory above is historical. No new dependency/backend/schema/permission
+or migration changes. No PostgreSQL, live tests, credentials, fixture operations,
+browser/backend launch, staging, commit, remote creation or push.
+
+Remaining limits: recovery remains memory-only and cannot survive reload/crash;
+recipient entry remains UUID-only. Real browser, mobile, assistive-technology,
+HTTPS, deployment and load acceptance remain unverified. The documented
+intermittent frontend fetch-count concern remains historical and unresolved by
+this change. Existing guarded browser harness restrictions remain: its exact-0003
+host excludes domain mutation paths and cannot be used at 0005. 0005 is already
+applied; do not rerun it. G1 remains closed only in the previously audited local
+owner-run PostgreSQL scope; no report provenance limitations are changed.
+
+Owner explanation/exercise: trace the two independent lifetimes (session owns
+transport/account; committed selection owns display side effects). In the mocked
+old-hackathon regression, change the delayed response to a conflict and verify
+the newer workspace persists. Return to the original command and check an
+uncertain retry retains URL/body/key while using fresh session CSRF. Current-
+workspace 401 must still expire the session. Stop for review before final commit.
+
+## M-014C - final review and authorized local checkpoint, 2026-11-11
+
+Reviewed all 20 pending paths against the invitation/authentication/idempotency
+contracts and R1 acceptance. No production or test change was required during
+this review; only FRONTEND.md and this final evidence entry were updated. The
+owner authorizes exactly one local commit with subject:
+`feat: add React invitation workflows and workspace isolation (M-014C)`.
+This entry belongs to that checkpoint; resolve its full hash using local Git
+history rather than embedding the self-referential commit hash in its contents.
+
+Review findings:
+
+- Workspace validity comes from layout-effect committed ownership, with
+  identity-checked cleanup. Speculative renders cannot rotate it; old captured
+  tokens remain invalid after navigation away/back. Creation uses hackathon
+  lifetime; admission/invitations use selected view/team lifetime. Read refreshes
+  do not invalidate current commands. Session generation separately owns account
+  isolation and transport cancellation. StrictMode regression is retained.
+- Old responses can settle their original journal entries but cannot expire or
+  automatically refresh another active workspace. Current-workspace 401s still
+  expire through the existing handler. No duplicate dispatch or automatic POST
+  retry was introduced. The original two failing regressions remain unchanged.
+- Uncertain commands keep exact URL/body, account/hackathon/team/target and key;
+  explicit retry uses current-session CSRF. Inbox disappearance and navigation
+  do not erase recovery. Backend authentication/authorization remains authoritative;
+  recipient_id identifies the invitation subject, never the actor.
+- All 22 prior API functions/methods are AST-identical to baseline; the three
+  invitation methods use exact documented endpoints, payloads and reply checks.
+  No backend/schema/migration/role/permission/session/read-hook/dependency changes,
+  fabricated runtime data, unrestricted join, persistent keys or tracked artifacts.
+
+Actual final-review verification, Windows PowerShell / installed toolchain:
+
+| Working directory | Actual command | Result |
+|---|---|---|
+| frontend | `npm.cmd test` initial run, overlapping backend tests/build | 258 passed, 3 failed, 84.51s, exit 1; failure during initial hackathon loading in the first creation/admission/invitation journey tests, before mutations |
+| frontend | `npm.cmd test` unchanged standalone rerun after other checks completed | 261 passed, 8 files, 59.22s, exit 0 |
+| frontend | `npm.cmd run typecheck` | Passed, exit 0 |
+| frontend | `npm.cmd run build` | TypeScript and Vite passed, 43 modules, Vite 3.76s, exit 0 |
+| backend | `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short` | 1312 passed, 32 deselected, 105.80s, exit 0; one existing Starlette/HTTPX warning |
+| backend | `.\.venv\Scripts\python.exe -m pip check` | No broken requirements, exit 0 |
+| frontend | `npm.cmd ls --depth=0` | Installed dependencies valid, exit 0; no installation or manifest change |
+| backend | `.\.venv\Scripts\python.exe -m compileall -q app test_support tests invitation_tests admission_tests alembic/versions` | Passed, exit 0; compilation only |
+
+The initial failures were test wait expirations while loading hackathons; their
+subsequent unchanged standalone pass is evidence of intermittent test execution,
+not proof of a particular scheduler cause. Resource contention is plausible but
+unproven. No assertion, timeout or test configuration was changed. The earlier
+intermittent frontend fetch-count concern remains separately recorded and is not
+declared fixed. Prior R1 red-five/green-five and focused-137 evidence above is
+historical; the final full run includes those same tests.
+
+Read-only inline Python/Git checks passed: exact 20-path docs/frontend scope,
+empty pre-stage index, protected backend/session/read/prior journey tests and
+manifests unchanged, no credential URL/private-key/token patterns, NUL/trailing
+whitespace/artifact paths or unsafe persistent-storage/cookie/HTML/eval/logging
+APIs in changed production UI. TypeScript parsed all 13 changed TS/TSX files and
+compared all 22 prior API functions/methods unchanged. Original regression block
+and ignored owner-run G1 report hashes remain identical to R1. Build/cache/report
+paths remain ignored. `git -c safe.directory=I:/Merge -c core.safecrlf=false diff
+--check` passed. These are targeted static checks, not exhaustive certification;
+no standalone linter or online vulnerability audit is claimed.
+
+Exact file inventory is the 20-path R1 inventory directly above; no file was
+added or removed during final review. Stage only those reviewed paths, inspect
+the index and create the single authorized local commit. No PostgreSQL, live
+tests/migrations/fixture changes, browser/backend launch, new endpoint/dependency,
+remote creation or push. 0005 remains already applied and must not be rerun.
+
+Remaining release limits are unchanged: UUID-only recipient selection, no invite
+delivery/search, memory-only exact-command recovery lost on reload/crash/closure;
+real browser/HTTPS/mobile/assistive-technology acceptance still pending. Existing
+browser harness remains exact-0003 and excludes domain mutations; live UI requires
+separate reviewed exact-0005 host/write scope. No new G1 proof: G1 stays closed
+only in its audited local owner-run PostgreSQL scope, preserving missing successful-
+node-roster/source-hash provenance limits. CI/load/p95/deployment remain open.
+
+Owner explanation/exercise: explain why session generation alone cannot detect
+hackathon navigation, then trace the layout-effect token cleanup in the preserved
+old-hackathon 401 test. Verify the current-workspace 401 test still expires while
+the stale response does not, without changing the original command/key.
 
 ## Daily work log template
 ```

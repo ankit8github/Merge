@@ -14,6 +14,11 @@ export type JoinRequest = {
   id: string; hackathon_id: string; team_id: string; requester_id: string;
   status: 'pending' | 'approved' | 'rejected'; created_at: string; resolved_at: string | null;
 };
+export type Invitation = {
+  id: string; hackathon_id: string; team_id: string; recipient_id: string; issued_by: string;
+  status: 'pending' | 'redeemed'; created_at: string; expires_at: string; redeemed_at: string | null;
+};
+export type InboxInvitation = Invitation & { available: boolean };
 export type CreatedTeam = { schema_version: 1; data: {
   team_id: string; hackathon_id: string; user_id: string; member_count: 1; team_version: 1;
 } };
@@ -85,6 +90,28 @@ function mutationHeaders(key: string, csrf: string) {
   if (!/^[ -~]{1,128}$/.test(key) || !/^[A-Za-z0-9_-]{43}$/.test(csrf)) throw new ApiError(422, 'invalid_request');
 }
 const requestsPath = (h: string, t: string) => scope(h) + '/teams/' + uuid(t) + '/join-requests';
+const invitationsPath = (h: string, t: string) => scope(h) + '/teams/' + uuid(t) + '/invitations';
+
+function invitationTime(value: string): bigint {
+  // Python/PostgreSQL retain microseconds; Date.parse alone can collapse a
+  // valid redemption just before expiry into the same millisecond as expiry.
+  const match = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.(\d{1,6}))?(?:Z|[+-]\d{2}:\d{2})$/.exec(value);
+  const ms = Date.parse(value);
+  if (!match || !Number.isFinite(ms)) throw new ApiError(0, 'invalid_response');
+  return BigInt(ms) * 1000n + BigInt((match[1] ?? '').padEnd(6, '0').slice(3));
+}
+
+function invitation(value: unknown, h: string, t?: string): Invitation {
+  const v = object(value), created = string(v.created_at, 64), expiry = string(v.expires_at, 64);
+  const redeemed = v.redeemed_at === null ? null : string(v.redeemed_at, 64);
+  const at = invitationTime(created), until = invitationTime(expiry), used = redeemed === null ? null : invitationTime(redeemed);
+  if (v.hackathon_id !== h || (t !== undefined && v.team_id !== t) ||
+      !['pending', 'redeemed'].includes(String(v.status)) || until <= at || until - at > 86400000000n ||
+      (v.status === 'pending') !== (redeemed === null) || (used !== null && (used < at || used >= until))) throw new ApiError(0, 'invalid_response');
+  return { id: uuid(v.id), hackathon_id: uuid(v.hackathon_id), team_id: uuid(v.team_id),
+    recipient_id: uuid(v.recipient_id), issued_by: uuid(v.issued_by), status: v.status as Invitation['status'],
+    created_at: created, expires_at: expiry, redeemed_at: redeemed };
+}
 
 async function request<T>(path: string, parse: (value: unknown) => T,
                           signal?: AbortSignal, body?: unknown, csrf?: string, expectedStatus: number | readonly number[] = 200,
@@ -129,6 +156,32 @@ async function request<T>(path: string, parse: (value: unknown) => T,
 const query = (cursor: string | null) => `?limit=20${cursor ? `&cursor=${encodeURIComponent(uuid(cursor))}` : ''}`;
 const scope = (id: string) => `/api/hackathons/${uuid(id)}`;
 export const api = {
+  invitations: (h: string, cursor: string | null, signal?: AbortSignal) => request(scope(h) + '/invitations/mine' + query(cursor), value => {
+    const result = page<InboxInvitation>(value, item => {
+      const v = object(item), row = invitation(v, h);
+      if (typeof v.available !== 'boolean' || (row.status === 'redeemed' && v.available)) throw new ApiError(0, 'invalid_response');
+      return { ...row, available: v.available };
+    });
+    if (new Set(result.items.map(row => row.id)).size !== result.items.length ||
+        (result.next_cursor !== null && result.next_cursor !== result.items.at(-1)?.id)) throw new ApiError(0, 'invalid_response');
+    return result;
+  }, signal),
+  issueInvitation: async (h: string, t: string, recipient: string, key: string, csrf: string, signal?: AbortSignal) => {
+    mutationHeaders(key, csrf); uuid(recipient);
+    return request(invitationsPath(h, t), value => {
+      const v = object(value), row = invitation(v.data, h, t);
+      if (v.schema_version !== 1 || row.status !== 'pending' || row.recipient_id !== recipient) throw new ApiError(0, 'invalid_response');
+      return row;
+    }, signal, { recipient_id: recipient }, csrf, 201, key);
+  },
+  redeemInvitation: async (h: string, t: string, id: string, key: string, csrf: string, signal?: AbortSignal) => {
+    mutationHeaders(key, csrf);
+    return request(invitationsPath(h, t) + '/' + uuid(id) + '/redeem', value => {
+      const v = object(value), row = invitation(v.data, h, t);
+      if (v.schema_version !== 1 || row.id !== id || row.status !== 'redeemed') throw new ApiError(0, 'invalid_response');
+      return row;
+    }, signal, {}, csrf, 200, key);
+  },
   ownRequest: (h: string, t: string, signal?: AbortSignal) => request(requestsPath(h, t) + '/mine', value => {
     const v = object(value);
     return v.request === null ? null : joinRequest(v.request, h, t);

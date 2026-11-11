@@ -1,5 +1,23 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
+M-014C-R1 adds committed-workspace display tokens to mutation response handling.
+Session generation still owns transport/account isolation; a separate token owns
+global expiry and automatic canonical refresh. Navigation invalidates that token
+without erasing the exact command journal. Creation scopes it to the hackathon;
+admission/invitations scope it to the selected view/team. Read refreshes do not
+rotate it. Five reproduced old-hackathon 401 defects are repaired, with 261
+frontend tests passing. Backend authorization/session architecture is unchanged.
+See FRONTEND.md and PROGRESS.md for scope, evidence and memory-only limitations.
+
+M-014C adds React recipient-UUID issuance, private paginated inbox and redemption
+against the existing invitation API. A separate App-lifetime account-scoped
+command journal retains exact payload/key under uncertainty and uses current
+session CSRF on explicit retries. Canonical reads supply inbox/team/membership;
+the existing backend authority and transaction protocol are unchanged. No
+dependency, persistence, backend/schema or browser-host change. UI map, recovery
+and unverified browser/HTTPS limits: [FRONTEND.md](FRONTEND.md). Older no-invitation-
+UI statements below retain M-014B checkpoint scope; local G1 scope is unchanged.
+
 M-014B adds owner-authorized recipient-bound, expiring invitations with current-
 leader issuance and intended-recipient redemption. The unchanged transaction
 owner and user-before-team-before-invitation lock order protect grant consumption,

@@ -56,9 +56,9 @@ export function useTeamCreation(scope: Scope | null, onExpired: () => void) {
   function operation(hackathon: string): Creation | null {
     return scope ? commands.current.get(`${scope.session.identity.user_id}:${hackathon}`) ?? null : null;
   }
-  function submit(hackathon: string, name: string) {
+  function submit(hackathon: string, name: string, workspace: AbortSignal | undefined) {
     const owner = current.current;
-    if (!owner || owner.signal.aborted || !validTeamName(name)) return;
+    if (!owner || owner.signal.aborted || !workspace || workspace.aborted || !validTeamName(name)) return;
     const id = `${owner.session.identity.user_id}:${hackathon}`, previous = commands.current.get(id);
     if (previous && ['pending', 'success', 'assigned'].includes(previous.status)) return;
     if (previous?.error && previous.error.retryAt > Date.now()) return;
@@ -100,7 +100,7 @@ export function useTeamCreation(scope: Scope | null, onExpired: () => void) {
         (failure.status === 429 && failure.code === 'rate_limited');
       const uncertain = !assigned && (command.uncertain || !definite);
       publish(id, { ...command, status: assigned ? 'assigned' : uncertain ? 'unresolved' : 'rejected', uncertain, error: failure });
-      if (failure.status === 401) onExpired();
+      if (failure.status === 401 && !workspace.aborted) onExpired();
     });
   }
   return { operation, submit };

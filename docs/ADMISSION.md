@@ -1,5 +1,18 @@
 # Leader-approved admission - M-013A
 
+M-014C-R1 reproduces and repairs old-hackathon 401 session invalidation in request
+and leader-decision UI hooks as well as invitation and creation hooks. A committed
+view/team token gates global expiry and automatic refresh; original journal
+commands survive navigation, and current-workspace 401 handling remains intact.
+The request API, backend authority, transaction and key/payload rules are unchanged.
+Offline evidence and display/session ownership: FRONTEND.md and PROGRESS.md.
+
+M-014C adds the separate invitation UI alongside these existing request/decision
+controls; the request API, journal format and authorization remain unchanged. The
+shared selected workspace refetches canonical membership/detail after confirmed
+invitation commands. [FRONTEND.md](FRONTEND.md) records recipient UUID and
+memory-only recovery limits; no backend, migration or live/browser action.
+
 M-014B adds a separate recipient-bound invitation workflow and exact-0005 guarded
 race harness: [INVITATIONS.md](INVITATIONS.md). It uses the same
 already-locked admission helper and transaction owner. The request API, original

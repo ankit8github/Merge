@@ -43,9 +43,9 @@ export function useAdmission(scope: Scope | null, onExpired: () => void) {
   function operation(h: string, t: string, requestId?: string) {
     return scope ? journal.current.get(prefix(scope, h, t) + ':' + (requestId ?? 'mine')) ?? null : null;
   }
-  function submit(h: string, t: string, requestId?: string, decision?: Decision) {
+  function submit(h: string, t: string, workspace: AbortSignal | undefined, requestId?: string, decision?: Decision) {
     const owner = current.current;
-    if (!owner || owner.signal.aborted || (!!requestId !== !!decision)) return;
+    if (!owner || owner.signal.aborted || !workspace || workspace.aborted || (!!requestId !== !!decision)) return;
     const id = prefix(owner, h, t) + ':' + (requestId ?? 'mine'), previous = journal.current.get(id);
     if (previous?.status === 'pending' || previous?.status === 'success' || (previous?.error?.retryAt ?? 0) > Date.now()) return;
     if (previous?.uncertain && previous.decision !== decision) return;
@@ -77,7 +77,7 @@ export function useAdmission(scope: Scope | null, onExpired: () => void) {
       if (!requestId && row.requester_id !== owner.session.identity.user_id) throw new ApiError(0, 'invalid_response');
       finished = true; detach();
       publish(id, { ...command, status: 'success', uncertain: false });
-      invalidate(owner, h); // Canonical reads, never synthesize membership/status.
+      if (!workspace.aborted) invalidate(owner, h); // Canonical reads for the current workspace only.
     }).catch((error: unknown) => {
       if (finished || !alive.current || !isCurrent(owner)) return;
       finished = true; detach();
@@ -90,8 +90,10 @@ export function useAdmission(scope: Scope | null, onExpired: () => void) {
         (failure.status === 429 && failure.code === 'rate_limited');
       const uncertain = command.uncertain || !definite;
       publish(id, { ...command, status: uncertain ? 'unresolved' : 'rejected', uncertain, error: failure });
-      if (failure.status === 401) onExpired();
-      else if ([403, 404, 409].includes(failure.status)) invalidate(owner, h);
+      if (!workspace.aborted) {
+        if (failure.status === 401) onExpired();
+        else if ([403, 404, 409].includes(failure.status)) invalidate(owner, h);
+      }
     });
   }
   return {

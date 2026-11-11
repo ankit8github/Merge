@@ -1,4 +1,156 @@
-# Merge authentication, discovery, creation and admission UI
+# Merge authentication, discovery, creation, admission and invitation UI
+
+## M-014C - React invitation issuance, inbox and redemption
+
+**M-014C-R1 repaired/offline verified, 2026-11-11:** the two final-review
+old-hackathon issue/redeem 401 regressions pass unchanged. The same defect was
+reproduced and repaired in creation, join-request and leader-decision mutations.
+Full frontend: 261 passed; backend database-free: 1312 passed / 32 deselected;
+typecheck/build passed. The earlier 242-pass result predates these schedules.
+The R1 checkpoint created no commit. The subsequent final review reran all
+checks and authorizes one local checkpoint; exact evidence is in PROGRESS.md.
+
+Implemented for offline owner review, 2026-11-11, using the unchanged
+[INVITATIONS.md](INVITATIONS.md) contract. No backend/schema/migration, dependency,
+session model, persistent storage or browser-host permission change. M-014B is
+committed as `2639c1fadffed6fb791496a023d63ddcdedff768`; 0005 is already applied.
+Do not rerun migration or live tests. Earlier no-invitation-UI, 0004-current and
+G1-open descriptions below retain their historical checkpoint scope. G1 remains
+closed only within the audited owner-run local PostgreSQL acceptance scope.
+
+### User workflow
+
+The current leader of a selected canonical team gets **Invite a participant**.
+The labelled recipient field accepts only an existing account UUID. There is no
+username lookup/search endpoint or invented user list. A recipient can open the
+selected hackathon's **Invitations** view and share their own session-derived
+account UUID with the leader. This public identifier is not account authority.
+Uppercase UUID input is canonicalized once before creating the command; surrounding
+spaces and incomplete/username values are rejected with focused field feedback.
+Issuance sends exactly `{recipient_id}` with current CSRF and a secure key.
+Only a validated 201 acknowledges issuance; it never promises availability.
+After confirmation, **Start another invitation** explicitly starts a distinct
+command with a new key, including if the leader deliberately repeats a recipient.
+Double submits cannot create concurrent duplicate commands.
+
+The inbox reads only `/invitations/mine?limit=20&cursor=...` for the selected
+hackathon, with Previous/Next and invalid-cursor restart. Every row must match the
+current authenticated recipient before any row is rendered. Canonical status,
+server availability, expiry and redeemed time come from the actual DTO. Dates are
+displayed in the browser's local time; browser time never authorizes redemption.
+The DTO has team UUID, not team name: each card labels the UUID and **View invited
+team** opens the existing canonical public detail endpoint. No names or live data
+are fabricated, and no unbounded background team lookup is introduced.
+
+**Redeem invitation** sends exactly `{}` with that recipient's current session
+CSRF and a separate secure key per invitation command. New redemption waits for
+canonical My Team = null and a pending/available grant. These presentation checks
+grant no authority; the backend rechecks recipient, current issuer, expiry,
+membership and capacity. Availability reserves no seat. Already-redeemed or
+unavailable rows stay visible without offering a new command. Expired/stale/full/
+assigned/used/missing/denied/rate-limited errors give fixed actionable feedback;
+unsuccessful commands never optimistically consume grants or add memberships.
+
+Confirmed issue/redemption invalidates scoped canonical reads: active detail or
+inbox and My Team refetch; discovery and inactive views fetch fresh on their next
+activation. The inbox/roster comes only from GETs, never a mutation DTO. A failed
+refresh cannot erase a confirmed command or cause another POST. A stored redeemed
+reply is a historical acknowledgement, not proof of current membership.
+
+### Recovery, security and response isolation
+
+`useInvitations` lives in App above the session-keyed workspace, parallel to the
+existing creation/admission journals. Records contain account/hackathon/team/
+operation/recipient-or-invitation IDs, exact key, status and sanitized error
+metadata, not session/CSRF/bearer or inbox DTOs. Native crypto.getRandomValues
+generates 32 bytes as 64 hex characters, with no weak fallback. Keys and commands
+are memory-only. Current transports use the latest valid session CSRF; no actor
+field, cookie override, persistent key storage, automatic mutation retry or secret
+logging is added.
+
+Network/timeout/abort/malformed/unknown responses and outcome_uncertain freeze the
+original command. Uncertainty stays sticky through later 401/403/409/422 replies;
+only a matching validated success resolves it. Issuance cannot change recipient
+while pending/unresolved. Redemption recovery uses the original hackathon/team/
+invitation/key, even if a refresh removes the row, changes availability or finds
+membership. Recovery cards contain command IDs only and belong to this account;
+they are independent of inbox pagination and read failures. A new same-key call
+after expiry may be denied while an earlier redemption remains committed; check
+canonical membership and retain the original command for owner recovery rather
+than silently replacing its key. A changed recipient after a definite issuance
+rejection is a distinct command/new key; unchanged explicit retries reuse the key.
+
+Session logout/restore/expiry synchronously aborts transports and marks in-flight
+commands unresolved. Late successes and 401s from an older account/session cannot
+update or end a newer workspace. Same-account sign-in restores original retries
+with the new CSRF; other accounts cannot see/use that journal. Hackathon/team
+navigation keeps each mutation in its original scope; completion never selects
+another team or puts its success in another scope. Reads abort/ignore delayed
+responses on navigation and pagination. Backend authorization remains authoritative.
+If a leader loses authority, issuance controls hide until canonical leadership
+permits them again; unresolved issuance is retained in memory, not bypassed.
+
+R1 separates session ownership from display ownership. `useWorkspaceSignal`
+creates a token in a layout effect after navigation commits; cleanup invalidates
+it. Creation owns the selected hackathon lifetime because its form remains
+visible across inner views. Admission and invitations own the selected view/team
+lifetime. Tokens live above revision-keyed read children: canonical refresh and
+inbox pagination do not revoke an otherwise current command. There is no new
+render-time ref assignment for workspace ownership or change to session transport.
+
+A response may settle its original account/scoped journal after navigation,
+but only its still-current display token can expire the session or automatically
+refresh canonical reads. Old successes/conflicts cannot remount another team's
+draft. Current-workspace 401s still invoke the existing authentication failure
+handling. Navigation does not erase or cancel the original command; returning
+permits exact-command retry with a fresh display token and current-session CSRF.
+Leaving and returning never revives an old token. Session changes retain their
+existing transport-abort, unresolved-command and old-result isolation rules.
+
+Pending/uncertain work installs a best-effort beforeunload warning. Keep the tab
+open: reload, crash or closure loses keys and exact recovery commands. Canonical
+membership/inbox reads cannot reconstruct an exact lost idempotent result. No
+durable recovery or automatic new-key fallback is claimed; unresolved work after
+that loss needs separately approved owner recovery. Session tokens and CSRF are
+never persisted.
+
+### Component map and offline limits
+
+```text
+App: useSession + useTeamCreation + useAdmission + useInvitations
+  Discovery / SelectedWorkspace: account/session/hackathon-scoped invalidation
+    TeamDetail: canonical team + existing TeamAdmission + InvitationIssuer
+    InvitationInbox: bounded private pages + own account UUID + recovery commands
+      RedemptionCard / CommandFeedback: exact retries and fixed status/errors
+api.ts: exact three invitation endpoints, DTO/scope/state/time/reply validation
+```
+
+Timestamp validation preserves PostgreSQL/Python microseconds, so a valid
+redemption immediately before expiry is not rejected by millisecond rounding.
+The client validates recipient/issuer associations, schema/status, UUIDs, finite
+ordered lifetime/consumption times, duplicate rows and next-cursor shape. Unknown
+response fields are dropped. Tests use synthetic HTTP fixtures only, separate
+from production views; exact evidence and file inventory are in PROGRESS.md.
+
+Native forms/buttons, linked labels/help/errors, focused validation, status/alert
+regions, wrapping navigation/actions and UUID overflow rules support keyboard and
+responsive layouts. Initial team-detail heading focus now runs before paint, so
+a deferred loading effect cannot steal focus after UUID validation. jsdom verifies
+DOM focus and form submission, not browser
+keyboard activation, screen-reader output, pixels, touch, viewport or zoom.
+Real 320px/375px/desktop, keyboard/mobile/assistive-technology and HTTPS/cookie/
+Origin acceptance remain unverified. No browser/server was launched. The existing
+guarded browser host is still 0003-only, excludes invitation/admission/create
+mutations and cannot target existing 0005. A separately reviewed exact-0005 host
+and write scope is needed before live UI acceptance. No deployment, remote or
+push; the prior intermittent frontend fetch-count concern remains documented.
+Final review offline evidence: 261 frontend tests passed, typecheck/build passed,
+backend database-free 1312 passed / 32 deselected. The initial concurrent review
+run had three initial-loading timeouts (258 passed); the unchanged standalone
+run passed all 261. Resource contention is a plausible explanation, not proven.
+No assertion or timeout was changed; this does not resolve the earlier fetch-count
+concern. The original M-014C 242-pass result predates the R1 cases. Exact commands,
+failures, final review and 20-path inventory: PROGRESS.md.
 
 ## M-013B - React join requests and leader decisions
 

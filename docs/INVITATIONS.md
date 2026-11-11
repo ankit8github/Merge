@@ -10,6 +10,21 @@ count/provenance limits: [G1_ACCEPTANCE.md](G1_ACCEPTANCE.md).
 **Do not rerun migrations or live tests.** R2 is local evidence/offline review only.
 R1's no-live/open statements below describe that earlier readiness checkpoint.
 
+M-014C adds React leader UUID issuance, authenticated recipient inbox and
+redemption using this unchanged contract. Current-session CSRF, secure memory-only
+keys, exact uncertain retries and canonical refreshes follow the existing UI
+patterns. UUID entry is explicitly labelled; no user lookup, actor override,
+public join, backend or migration change. Component/recovery/browser limits:
+[FRONTEND.md](FRONTEND.md). Earlier no-invitation-UI wording below describes M-014B.
+This frontend task performs no PostgreSQL access or new live G1/browser acceptance.
+
+M-014C-R1 repairs delayed old-workspace mutation responses: a committed display
+token gates global session expiry and automatic refresh independently of the
+session/account guard. Original scoped commands and keys survive navigation;
+returning/re-authenticating retries with current CSRF. The two original failing
+401 regressions pass unchanged; full frontend 261 passed. Contract, database and
+G1 evidence are unchanged. See FRONTEND.md and PROGRESS.md for exact scope/limits.
+
 ## Contract
 
 All routes use the established authenticated cookie/browser/Origin/HTTPS/no-store

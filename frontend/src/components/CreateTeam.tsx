@@ -2,10 +2,12 @@ import { useId, useRef, useState, type FormEvent } from 'react';
 import { type Hackathon, type Team } from '../api';
 import { type TeamCreation, validTeamName } from '../hooks/useTeamCreation';
 import type { useRead } from '../hooks/useRead';
+import type { WorkspaceSignal } from '../hooks/useWorkspaceSignal';
 import { useCooldown } from './Feedback';
 
-export default function CreateTeam({ hackathon, creation, membership, restore }: {
+export default function CreateTeam({ hackathon, creation, membership, restore, workspace }: {
   hackathon: Hackathon; creation: TeamCreation; membership: ReturnType<typeof useRead<Team | null>>; restore: () => void;
+  workspace: WorkspaceSignal;
 }) {
   const operation = creation.operation(hackathon.id);
   const [name, setName] = useState(operation?.name ?? '');
@@ -23,7 +25,7 @@ export default function CreateTeam({ hackathon, creation, membership, restore }:
     event.preventDefault();
     if (pending || settled || seconds || (!unresolved && !eligible)) return;
     if (!validTeamName(value)) { setInvalid(true); input.current?.focus(); return; }
-    setInvalid(false); creation.submit(hackathon.id, value);
+    setInvalid(false); creation.submit(hackathon.id, value, workspace());
   }
   const failure = operation?.error;
   let message = '';
