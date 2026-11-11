@@ -1,5 +1,14 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
+M-013B adds React join-request/status and leader approve/reject controls using the
+existing admission HTTP contract. A separate App-lifetime admission journal uses
+the existing account/session-generation model, scopes commands to hackathon/team/
+request, freezes exact commands/keys under uncertainty and uses current CSRF on
+explicit retries. Canonical reads supply status/membership; backend authority and
+lock protocol are unchanged. No persistence/dependency/backend/browser-host scope
+change. Offline implementation and pending browser acceptance: FRONTEND.md and
+PROGRESS.md. G1 remains open for the distinct authenticated caller race.
+
 M-013A adds the owner-scoped leader-approved request workflow described in
 [ADMISSION.md](ADMISSION.md). Additive 0004_admission and one shared
 already-locked membership helper keep authorization, resolution, membership,

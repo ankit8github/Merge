@@ -6,6 +6,7 @@
 **Status policy:** Mark DONE only with recorded evidence. 'Planned', 'in progress', 'implemented', 'tested' and 'verified' are not interchangeable.
 
 ## Current verified context
+- [x] M-013B implemented for owner review, uncommitted: React member requests/canonical status and current-leader pending list/decisions, immutable in-memory uncertain retries and scoped canonical refreshes. Frontend 163 passed; typecheck/build/dependencies passed; backend database-free 1180 passed / 32 deselected. No backend/schema/dependency/browser-host changes or live UI/database run. See FRONTEND.md and the M-013B entry below. G1 remains open.
 - [x] M-013A final review, 2026-11-11: owner verified applied 0004_admission and two successful admission runs, 35 + 70 executions across one + two repetitions, each exit 0 with completed fixture checks. Final Codex database-free backend: 1180 passed / 32 deselected; focused: 214 passed; frontend final run: 102 passed, typecheck/build passed. An earlier unchanged frontend fetch-count timing failure is retained in the final evidence entry. Exactly one local M-013A commit is owner-authorized after final staged review. G1 remains open for the distinct authenticated caller race; no frontend admission UI or new live action.
 - [x] M-011A implemented for owner review, uncommitted: 52 frontend component/transport tests passed in 11.83s; TypeScript/production build and controlled HTTP/Vite proxy/Origin/outage checks passed; 806 backend offline regressions passed in 20.51s (one existing warning). No new PostgreSQL or authenticated browser run; safe guarded HTTP browser environment remains a prerequisite. See FRONTEND.md. G1 remains open.
 - [x] User confirmed registration in Hack4Hack (screenshot in prior conversation; not stored in this repository).
@@ -5126,6 +5127,239 @@ permission operation, fixture reset/cleanup or production action occurred in
 this review. Owner exercise: fill capacity in the offline fixture and trace why
 approval leaves the request pending with no partial chain; then replace the
 leader and explain why the old stored decision cannot bypass authorization.
+
+## M-013B - React join requests and leader decisions, 2026-11-11
+
+**Implemented and offline verified; stop for owner review before committing.**
+Baseline and current HEAD: `39408f382d33f01b325c23857c2356e4f23dd2cf`. Started
+with a clean working tree. No staging, commit, remote or push. No PostgreSQL
+connection, credential inspection/prompt, migration, schema/permission operation,
+fixture creation/reset/cleanup, backend/server/browser launch or new dependency.
+0004_admission is already applied to merge_test; no migration rerun is needed.
+The preceding 105 owner admission executions remain backend evidence only.
+
+One bounded component: complete React admission through the existing four exact
+endpoints. App retains a separate useAdmission journal above the authenticated
+workspace. Member controls in TeamDetail read canonical membership and own status
+before allowing a new request, POST exactly {}, and render only the canonical
+mine response's pending/approved/rejected status. Known/unknown membership and
+existing requests prevent misleading new commands. An approved request points to
+canonical My Team instead of fabricating a membership or roster. There is no
+unrestricted join, actor selector, cancellation/expiry/re-request or transfer UI.
+
+Team detail's canonical leader gets the bounded pending list and native labelled
+Approve/Reject actions. My Team links to the same detail/controls. Other users
+never issue pending-list reads; server 403/404 hides applicants and requires a
+fresh team/permission check. A validated authorized list supplies applicant UUIDs,
+not invented names. Next/Previous requests use server cursors; invalid cursors can
+restart at page one. Returning from details/refreshed decisions restarts discovery
+pages. Flex-wrapped controls, UUID wrapping, named regions/list items, status/
+alert messages, keyboard-focusable buttons and focus after canonical detail load
+extend the existing responsive/reduced-motion design.
+
+Each command is keyed by authenticated account/hackathon/team/mine-or-request
+UUID. It retains exact random key, decision/request UUID and fixed error metadata,
+never applicant DTOs, Session, bearer or CSRF. Native 32-byte cryptographic keys
+have no weak fallback. Active transports use current session CSRF. A synchronous
+ref guard rejects duplicate/opposite in-flight clicks. Unknown/network/timeout/
+malformed/ambiguous outcomes and abort keep the original command unresolved;
+later rejection cannot erase that uncertainty. Only an exact validated stored
+success resolves it. Different decisions can get new keys only after definite
+rejection, not while uncertain. Known membership or a missing pending row does
+not silently discard an ambiguous original command.
+
+If a request has left the pending page, its original approval/rejection retry
+remains available after a successful authorized pending-list read. No cached
+applicant data is recovered from memory to bypass permission. Logout/restore/
+expiry aborts active operations, records uncertainty and ignores delayed success
+or 401 callbacks by signal/account/generation. Same-account sign-in can retry with
+the original key and fresh CSRF; other accounts get independent commands. Team/
+hackathon navigation never moves the original result into another scope. Success
+or relevant conflict invalidates canonical reads for only that account/hackathon;
+the visible detail/pending list/My Team refetch, while discovery refetches at page
+one on activation. Fixed conflict/permission messages never echo backend text.
+
+Transport validates UUID/scope, state/timestamps, schema version, exact decision
+ID/status and own requester identity. Pending pages reject terminal/duplicate
+rows and inconsistent cursors. Request creation accepts only documented 200/201;
+decisions/reads remain exact 200. Unknown fields are dropped. Same-origin cookie,
+no-store, strict JSON/current CSRF/idempotency headers remain; no actor identity
+is submitted. All existing endpoint function ASTs match HEAD; only the shared
+transport's expected-success check adds an explicit status-list option for the
+new request endpoint. Existing reads/create/login/logout statuses remain exact.
+
+Files and component map:
+
+- frontend/src/api.ts: four admission functions, typed/projection-validated DTOs.
+- frontend/src/hooks/useAdmission.ts (new): explicit scoped command journal,
+  uncertainty, invalidation and auth-generation checks.
+- frontend/src/components/Admission.tsx (new): MemberRequest, LeaderRequests,
+  DecisionActions and CommandFeedback; canonical reads and permission states.
+- frontend/src/App.tsx: App-lifetime journal and aborted-generation guard for
+  workspace read-driven session expiry.
+- frontend/src/components/Discovery.tsx: admission composition in canonical team
+  detail, My Team link, scoped refresh and post-load focus.
+- frontend/src/style.css: wrapping action rows/cards and UUID text.
+- frontend/src/AdmissionApi.test.ts (new): 23 exact transport/DTO/security tests.
+- frontend/src/Admission.test.tsx (new): 38 mocked-HTTP user-flow/privacy/recovery
+  tests, including duplicate/opposite clicks, conflicts, permission loss,
+  original-command recovery after row disappearance, account/team/hackathon/
+  logout switching, late 401/success, fresh CSRF, bounded pages, native focus,
+  rate cooldown, canonical status and unavailable cryptography.
+- frontend/src/Journeys.test.tsx: replace the obsolete disabled-join expectation
+  with leader controls while retaining read-only browsing/no POST assertions.
+- frontend/src/CreateTeam.test.tsx: retain StrictMode single-creation/no
+  unrestricted-join assertions while allowing the new guarded pending GET;
+  wait for the second hackathon's two expected canonical refreshes before checking
+  that an older response causes no extra reads (fixes the recorded baseline
+  fetch-count synchronization race without weakening the isolation assertion).
+- docs/FRONTEND.md: workflow, component map, wire contract and recovery/browser
+  limitations; older no-request UI text is explicitly historical.
+- docs/ADMISSION.md: link new offline frontend scope, preserving backend contract.
+- docs/ARCHITECTURE.md: frontend overlay, same backend authority/lock protocol.
+- docs/DECISIONS.md: owner-authorized narrow in-memory admission composition.
+- docs/PROGRESS.md: this actual evidence/status record.
+
+Exact inventory: **15 files**, all frontend source/tests/styles or documentation,
+nothing staged. No backend, earlier migration, dependency/config manifest,
+existing useSession/useRead/useTeamCreation hook or CreateTeam runtime change.
+
+Actual verification on existing Windows PowerShell / Python 3.11.9 / Node
+22.15.0 / npm 10.9.2 toolchain (no servers/PostgreSQL):
+
+- From frontend, `npm test -- src/Admission.test.tsx src/AdmissionApi.test.ts`:
+  initial **51 passed in 19.71s** before additional coverage. Initial typecheck
+  found two new test-fixture readiness strings typed too broadly; corrected the
+  fixtures without weakening production types.
+- Expanded `npm test -- src/Admission.test.tsx src/AdmissionApi.test.ts
+  src/Journeys.test.tsx src/CreateTeam.test.tsx`: **121 passed, 2 failed in 36.96s**
+  during integration. One old test still demanded disabled future join; another
+  exposed competing parent/detail focus effects. Updated the obsolete feature
+  expectation while preserving mutation/security assertions, and focus detail
+  only after its canonical read succeeds. No test removed, skipped or disabled.
+- Final full `npm test`: **163 passed / six files in 47.79s**, exit 0. Includes
+  all 61 new admission tests and all 102 existing cases with the scoped expectation/
+  synchronization updates above.
+- `npm run typecheck`: passed, exit 0.
+- `npm run build`: passed, exit 0; its additional typecheck passed. Vite 6.4.5,
+  40 modules in 3.98s; JS 232.71 kB (gzip 71.62), CSS 10.91 kB (gzip 3.24).
+- `npm ls --depth=0`: passed; no dependency installation or manifest/lock changes.
+- From backend, `.\.venv\Scripts\python.exe -m pytest -q -m 'not database'
+  --tb=short`: **1180 passed, 32 deselected in 40.96s**, exit 0; one existing
+  Starlette/HTTPX deprecation warning. No live suite/fixture execution.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements, exit 0.
+- `.\.venv\Scripts\python.exe -m compileall -q app test_support tests
+  admission_tests alembic/versions`: passed, exit 0; compile only, no migration.
+- Inline Node/installed-TypeScript AST review passed for all nine changed/new
+  TS/TSX files. Existing API endpoint ASTs match HEAD, exactly four new functions.
+  Git boundary checks confirm all backend/session/read/creation hooks and runtime,
+  dependency/config files unchanged. Targeted credential-URL/private-key/token,
+  source-only artifact and whitespace checks passed; no runtime persistence,
+  document.cookie, console, HTML injection or weak randomness pattern. Root
+  `git -c safe.directory=I:/Merge -c core.safecrlf=false diff --check` passed.
+  Scans supplement review, not exhaustive secret or online vulnerability audits.
+  There is no separately configured frontend/backend lint script.
+
+Remaining limitations: journal/key recovery ends on reload/tab close/crash;
+beforeunload is best-effort. Do not infer rollback or silently start a new key
+after losing an ambiguous command. No live cookie/Origin/HTTPS, real mobile/zoom/
+keyboard/screen-reader or browser layout acceptance. Native semantics/focus and
+mocked HTTP are offline evidence only. No real browser screenshots or deployed
+URL are claimed. The auth-only browser host still excludes create/admission,
+requires 0003 and refuses current 0004 merge_test; do not bypass it via ordinary
+app.serve or weaken guards. Live UI acceptance needs a separately reviewed guarded
+0004 host/write scope and retained fixture/invariant checks. No backend locks,
+schema, legacy revision limitations or deployment topology changed.
+
+G1 stays open for the official distinct authenticated caller race. Existing
+M-013A single-leader approval races do not close it. Realtime, invites, departure/
+removal/leadership-transfer, durable recovery, CI/load and deployed acceptance
+remain outside this component. Owner exercise: make the first decision response
+outcome_uncertain and remove its pending row in the mocked server; explain why
+the original retry is still available, and why a later team_full cannot enable
+the opposite decision until the original outcome is established. Stop for owner
+review; no commit or live action is authorized by this implementation handoff.
+
+## M-013B - final review and authorized local commit, 2026-11-11
+
+Reviewed against baseline `39408f382d33f01b325c23857c2356e4f23dd2cf`.
+The owner's final-review request authorizes exactly one local commit with subject
+`feat: add React team admission workflows (M-013B)` if no blocker is found.
+This supersedes the implementation handoff's stop-before-commit instruction;
+it grants no live database, backend-host, remote or push authorization.
+
+Read AGENTS.md, REQUIREMENTS.md, FRONTEND.md, ADMISSION.md, TEAM_API.md,
+HTTP_AUTH.md, READ_API.md, IDEMPOTENCY.md, ARCHITECTURE.md, DECISIONS.md and
+PROGRESS.md; reviewed all 15 files listed in the implementation inventory above,
+including the four new files. No blocking issue found and no runtime code change
+was required in final review. Only this evidence entry was added.
+
+Contract/safety review: member POST is exactly {}, accepts documented 200/201,
+and displayed status comes only from the canonical mine read. Pending pages are
+bounded and fetched only in the canonical current-leader view; backend checks
+remain the authorization boundary. Decisions send only approve/reject with
+current-session CSRF. Secure 32-byte keys and synchronous guards prevent weak
+keys and concurrent duplicate/opposite commands. Frozen uncertain commands retain
+their original account/hackathon/team/request/decision/key. Pending-list refresh
+cannot remove an original recovery command, including after its row disappears;
+recovery requires a fresh successful authorized list read and stores no applicant
+DTO. Session invalidation aborts and ignores delayed successes/401s; scoped
+navigation cannot populate another team's status. Validated success invalidates
+canonical detail/request/My Team reads and discovery on activation. No optimistic
+membership, client actor selector, unrestricted join or fabricated live data.
+
+Actual final-review checks on the existing Windows PowerShell / Node 22.15.0 /
+npm 10.9.2 / Python 3.11.9 environment:
+
+- From frontend, `npm test`: **163 passed, six files, 41.54s**, exit 0. All 61
+  admission cases and existing creation/discovery/session regressions included.
+- `npm run typecheck`: passed, exit 0.
+- `npm run build`: passed, exit 0, including its additional typecheck. Vite
+  6.4.5 built 40 modules in 7.03s; JS 232.71 kB (gzip 71.62), CSS 10.91 kB
+  (gzip 3.24).
+- `npm ls --depth=0`: passed, exit 0; no install or dependency/lockfile change.
+- From backend, `.\.venv\Scripts\python.exe -m pytest -q -m 'not database'
+  --tb=short`: **1180 passed, 32 deselected, 69.88s**, exit 0; one existing
+  Starlette/HTTPX deprecation warning. No database-marked test executed.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements, exit 0.
+- `.\.venv\Scripts\python.exe -m compileall -q app test_support tests
+  admission_tests alembic/versions`: passed, exit 0; compile only, no migration.
+- Inline Node/installed-TypeScript static checks passed: all nine changed/new
+  TS/TSX ASTs parse; every existing API endpoint AST matches HEAD and exactly four
+  admission functions are added. Exact 15-path scope and initially empty index
+  verified. Backend, schema, dependency/config manifests, existing session/read/
+  creation hooks and CreateTeam runtime are unchanged. Targeted credential-URL,
+  private-key/token, NUL, trailing-whitespace, artifact and runtime security checks
+  passed; no new persistence, cookie access, console logging, HTML injection or
+  weak randomness pattern. Generated dist/cache paths remain ignored.
+- `git -c safe.directory=I:/Merge -c core.safecrlf=false diff --check`: passed.
+  No custom active local commit hook found. Before committing, match the exact
+  staged paths/blobs against the reviewed files and repeat staged checks.
+
+No configured standalone linter or online vulnerability audit was run; targeted
+static checks supplement review. No test failed in this final-review run. The
+previous intermittent CreateTeam fetch-count failure remains recorded in M-013A's
+final checkpoint. M-013B synchronizes the second hackathon's expected canonical
+read effects before measuring the older response, preserving the original
+no-extra-reads isolation assertion. One successful full run is not proof that
+every frontend timing issue is eliminated.
+
+Limitations remain: recovery is memory-only and loses keys on reload/tab close/
+crash; beforeunload is best-effort. Canonical status cannot recover an exact lost
+ambiguous command; do not silently issue a new key. No real browser, HTTPS,
+mobile/zoom, keyboard-only or assistive-technology acceptance. The browser host
+still requires 0003 and excludes creation/admission writes, refusing current
+0004 merge_test; a separately reviewed guarded host/write scope is required.
+No PostgreSQL access, backend startup, migration, permissions, fixture operation,
+new business rule or persistent idempotency storage occurred. **G1 stays open**
+for the distinct authenticated caller race; prior 105 admission executions are
+backend owner evidence, not browser evidence. No remote or push.
+
+Owner explanation/exercise: the journal retains commands, while fresh server
+reads supply status and authorization. In Admission.test.tsx, make a decision
+return outcome_uncertain and disappear from the pending page; trace the original
+retry, then return a later team_full and explain why an opposite decision stays
+unavailable. The final response records the actual commit hash and Git status.
 
 ## Daily work log template
 ```

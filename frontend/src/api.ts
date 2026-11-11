@@ -9,6 +9,11 @@ export type Team = Hackathon & {
 export type Page<T> = { items: T[]; next_cursor: string | null };
 export type Credentials = { username: string; password: string };
 export type CreateTeamBody = { name: string };
+export type Decision = 'approve' | 'reject';
+export type JoinRequest = {
+  id: string; hackathon_id: string; team_id: string; requester_id: string;
+  status: 'pending' | 'approved' | 'rejected'; created_at: string; resolved_at: string | null;
+};
 export type CreatedTeam = { schema_version: 1; data: {
   team_id: string; hackathon_id: string; user_id: string; member_count: 1; team_version: 1;
 } };
@@ -64,8 +69,25 @@ function page<T>(value: unknown, parse: (item: unknown) => T): Page<T> {
   return { items: v.items.map(parse), next_cursor: v.next_cursor === null ? null : uuid(v.next_cursor) };
 }
 
+function joinRequest(value: unknown, hackathonId: string, teamId: string): JoinRequest {
+  const v = object(value), created = string(v.created_at, 64);
+  const resolved = v.resolved_at === null ? null : string(v.resolved_at, 64);
+  if (v.hackathon_id !== hackathonId || v.team_id !== teamId ||
+      !['pending', 'approved', 'rejected'].includes(String(v.status)) ||
+      !Number.isFinite(Date.parse(created)) || (v.status === 'pending') !== (resolved === null) ||
+      (resolved !== null && (!Number.isFinite(Date.parse(resolved)) || Date.parse(resolved) < Date.parse(created)))) {
+    throw new ApiError(0, 'invalid_response');
+  }
+  return { id: uuid(v.id), hackathon_id: uuid(v.hackathon_id), team_id: uuid(v.team_id),
+    requester_id: uuid(v.requester_id), status: v.status as JoinRequest['status'], created_at: created, resolved_at: resolved };
+}
+function mutationHeaders(key: string, csrf: string) {
+  if (!/^[ -~]{1,128}$/.test(key) || !/^[A-Za-z0-9_-]{43}$/.test(csrf)) throw new ApiError(422, 'invalid_request');
+}
+const requestsPath = (h: string, t: string) => scope(h) + '/teams/' + uuid(t) + '/join-requests';
+
 async function request<T>(path: string, parse: (value: unknown) => T,
-                          signal?: AbortSignal, body?: unknown, csrf?: string, expectedStatus = 200,
+                          signal?: AbortSignal, body?: unknown, csrf?: string, expectedStatus: number | readonly number[] = 200,
                           idempotencyKey?: string): Promise<T> {
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -93,7 +115,7 @@ async function request<T>(path: string, parse: (value: unknown) => T,
       const wait = seconds && /^\d{1,6}$/.test(seconds) ? Math.min(3600, Math.max(1, Number(seconds))) : 30;
       throw new ApiError(response.status, code, retryable, response.status === 429 ? Date.now() + wait * 1000 : 0);
     }
-    if (response.status !== expectedStatus) throw new ApiError(0, 'invalid_response');
+    if (!(Array.isArray(expectedStatus) ? expectedStatus.includes(response.status) : response.status === expectedStatus)) throw new ApiError(0, 'invalid_response');
     return parse(response.status === 204 ? null : await response.json());
   } catch (error) {
     if (error instanceof ApiError) throw error;
@@ -107,6 +129,33 @@ async function request<T>(path: string, parse: (value: unknown) => T,
 const query = (cursor: string | null) => `?limit=20${cursor ? `&cursor=${encodeURIComponent(uuid(cursor))}` : ''}`;
 const scope = (id: string) => `/api/hackathons/${uuid(id)}`;
 export const api = {
+  ownRequest: (h: string, t: string, signal?: AbortSignal) => request(requestsPath(h, t) + '/mine', value => {
+    const v = object(value);
+    return v.request === null ? null : joinRequest(v.request, h, t);
+  }, signal),
+  pendingRequests: (h: string, t: string, cursor: string | null, signal?: AbortSignal) => request(requestsPath(h, t) + query(cursor), value => {
+    const result = page(value, item => joinRequest(item, h, t));
+    if (result.items.some(item => item.status !== 'pending') || new Set(result.items.map(item => item.id)).size !== result.items.length ||
+        (result.next_cursor !== null && result.next_cursor !== result.items.at(-1)?.id)) throw new ApiError(0, 'invalid_response');
+    return result;
+  }, signal),
+  createRequest: async (h: string, t: string, key: string, csrf: string, signal?: AbortSignal) => {
+    mutationHeaders(key, csrf);
+    return request(requestsPath(h, t), value => {
+      const v = object(value);
+      if (v.schema_version !== 1) throw new ApiError(0, 'invalid_response');
+      return joinRequest(v.data, h, t);
+    }, signal, {}, csrf, [200, 201], key);
+  },
+  decideRequest: async (h: string, t: string, id: string, decision: Decision, key: string, csrf: string, signal?: AbortSignal) => {
+    mutationHeaders(key, csrf);
+    if (decision !== 'approve' && decision !== 'reject') throw new ApiError(422, 'invalid_request');
+    return request(requestsPath(h, t) + '/' + uuid(id) + '/decision', value => {
+      const v = object(value), row = joinRequest(v.data, h, t);
+      if (v.schema_version !== 1 || row.id !== id || row.status !== (decision === 'approve' ? 'approved' : 'rejected')) throw new ApiError(0, 'invalid_response');
+      return row;
+    }, signal, { decision }, csrf, 200, key);
+  },
   session: (signal?: AbortSignal) => request('/auth/session', session, signal),
   login: (body: Credentials, signal?: AbortSignal) => request('/auth/login', session, signal, body),
   register: (body: Credentials & { display_name?: string }, signal?: AbortSignal) => request('/auth/register', identity, signal, body, undefined, 201),

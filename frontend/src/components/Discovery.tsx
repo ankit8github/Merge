@@ -3,6 +3,8 @@ import { api, type Hackathon, type Team } from '../api';
 import { useRead } from '../hooks/useRead';
 import { type TeamCreation } from '../hooks/useTeamCreation';
 import CreateTeam from './CreateTeam';
+import TeamAdmission from './Admission';
+import type { Admission } from '../hooks/useAdmission';
 import { ErrorNotice, Loading } from './Feedback';
 
 function Pager({ cursor, next, previous, advance }: { cursor: string | null; next: string | null; previous: () => void; advance: () => void }) {
@@ -63,51 +65,56 @@ function TeamList({ hackathon, open, onExpired }: { hackathon: Hackathon; open: 
       </article>)}</div>
       <Pager cursor={page.cursor} next={state.data.next_cursor} previous={page.previous} advance={() => page.advance(state.data.next_cursor)} />
     </>}
-    <p className="fine-print">Counts reflect the latest fetched snapshot. Joining is not available yet.</p>
+    <p className="fine-print">Counts reflect the latest fetched snapshot. Open a team to request membership or review requests.</p>
   </>;
 }
-function TeamDetail({ hackathon, id, back, onExpired }: { hackathon: Hackathon; id: string; back: () => void; onExpired: () => void }) {
+function TeamDetail({ hackathon, id, back, onExpired, admission, membership, restore }: {
+  hackathon: Hackathon; id: string; back: () => void; onExpired: () => void; admission: Admission;
+  membership: ReturnType<typeof useRead<Team | null>>; restore: () => void;
+}) {
   const load = useCallback((signal: AbortSignal) => api.team(hackathon.id, id, signal), [hackathon.id, id]);
   const { state, retry } = useRead(load, onExpired);
-  return <><button className="text-button back" onClick={back}>← Back to teams</button><h2>Team details</h2>
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (state.status === 'success') heading.current?.focus(); }, [state.status]);
+  return <><button className="text-button back" onClick={back}>← Back to teams</button><h2 tabIndex={-1} ref={heading}>Team details</h2>
     {state.status === 'loading' && <Loading>Loading team details…</Loading>}
     {state.status === 'error' && <ErrorNotice error={state.error} retry={retry} />}
     {state.status === 'success' && <article className="panel detail-card"><TeamSummary team={state.data} />
       <dl><dt>Hackathon</dt><dd>{hackathon.name}</dd><dt>Created</dt><dd>{new Date(state.data.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}</dd></dl>
-      <button className="button primary full" disabled aria-describedby="join-help">Join team · Coming later</button>
-      <p className="fine-print" id="join-help">Joining and invitations are not available yet.</p>
+      <TeamAdmission team={state.data} admission={admission} membership={membership} restore={restore} onExpired={onExpired} />
     </article>}
   </>;
 }
-function MyTeam({ hackathon, membership }: { hackathon: Hackathon; membership: ReturnType<typeof useRead<Team | null>> }) {
+function MyTeam({ hackathon, membership, open }: { hackathon: Hackathon; membership: ReturnType<typeof useRead<Team | null>>; open: (id: string) => void }) {
   const { state, retry } = membership;
   return <><div className="section-top"><div><span className="eyebrow">YOUR CORNER OF THE COMMUNITY</span><h2>My team</h2></div><button className="button secondary" onClick={retry}>Refresh membership</button></div>
     <p className="muted">Your current membership in {hackathon.name}.</p>
     {state.status === 'loading' && <Loading>Loading your team…</Loading>}
     {state.status === 'error' && <ErrorNotice error={state.error} retry={retry} />}
-    {state.status === 'success' && (state.data === null ? <div className="panel empty"><span className="empty-symbol" aria-hidden="true">↗</span><h3>Your next chapter is open.</h3><p>You haven’t joined a team in this hackathon.</p><p className="muted">Create your own team or browse the community.</p></div> : <article className="panel detail-card"><TeamSummary team={state.data} /></article>)}
+    {state.status === 'success' && (state.data === null ? <div className="panel empty"><span className="empty-symbol" aria-hidden="true">↗</span><h3>Your next chapter is open.</h3><p>You haven’t joined a team in this hackathon.</p><p className="muted">Create your own team or browse the community.</p></div> : <article className="panel detail-card"><TeamSummary team={state.data} /><button className="button secondary" onClick={() => { if (state.status === 'success' && state.data) open(state.data.id); }}>Open team and requests</button></article>)}
   </>;
 }
 
-function SelectedWorkspace({ hackathon, view, detail, creation, restore, onExpired, open, back }: {
+function SelectedWorkspace({ hackathon, view, detail, creation, admission, restore, onExpired, open, back }: {
   hackathon: Hackathon; view: 'discover' | 'mine'; detail: string | null; creation: TeamCreation;
+  admission: Admission;
   restore: () => void; onExpired: () => void; open: (id: string) => void; back: () => void;
 }) {
   const operation = creation.operation(hackathon.id);
-  const revision = operation?.status === 'success' || operation?.status === 'assigned' ? operation.key : '';
+  const revision = `${operation?.status === 'success' || operation?.status === 'assigned' ? operation.key : ''}:${admission.revision(hackathon.id)}`;
   const load = useCallback((signal: AbortSignal) => api.myTeam(hackathon.id, signal), [hackathon.id, revision]);
   const membership = useRead(load, onExpired);
   return <>
     <CreateTeam hackathon={hackathon} creation={creation} membership={membership} restore={restore} />
     <div key={`${view}:${detail ?? ''}:${revision}`}>
-      {view === 'mine' ? <MyTeam hackathon={hackathon} membership={membership} />
-        : detail ? <TeamDetail hackathon={hackathon} id={detail} onExpired={onExpired} back={back} />
+      {view === 'mine' ? <MyTeam hackathon={hackathon} membership={membership} open={open} />
+        : detail ? <TeamDetail hackathon={hackathon} id={detail} onExpired={onExpired} back={back} admission={admission} membership={membership} restore={restore} />
         : <TeamList hackathon={hackathon} onExpired={onExpired} open={open} />}
     </div>
   </>;
 }
 
-export default function Discovery({ onExpired, creation, restore }: { onExpired: () => void; creation: TeamCreation; restore: () => void }) {
+export default function Discovery({ onExpired, creation, admission, restore }: { onExpired: () => void; creation: TeamCreation; admission: Admission; restore: () => void }) {
   const [selected, setSelected] = useState<Hackathon | null>(null);
   const [view, setView] = useState<'discover' | 'mine'>('discover');
   const [detail, setDetail] = useState<string | null>(null);
@@ -121,8 +128,8 @@ export default function Discovery({ onExpired, creation, restore }: { onExpired:
     <div className="workspace"><Hackathons selected={selected} onExpired={onExpired} choose={item => { setSelected(item); navigate('discover'); }} />
       <section className="discovery-content" aria-label="Team workspace" key={selected?.id}>
         {!selected ? <div className="panel empty"><span className="empty-symbol" aria-hidden="true">✳</span><h2>Choose a hackathon.</h2><p>Every great collaboration starts with a shared challenge.<br />Pick one to explore its teams.</p></div>
-          : <SelectedWorkspace hackathon={selected} view={view} detail={detail} creation={creation} restore={restore} onExpired={onExpired}
-              back={() => { setDetail(null); setNavigation(old => old + 1); }} open={id => { setDetail(id); setNavigation(old => old + 1); }} />}
+          : <SelectedWorkspace hackathon={selected} view={view} detail={detail} creation={creation} admission={admission} restore={restore} onExpired={onExpired}
+              back={() => { setDetail(null); setNavigation(old => old + 1); }} open={id => { setView('discover'); setDetail(id); setNavigation(old => old + 1); }} />}
       </section>
     </div>
   </>;

@@ -15,6 +15,7 @@ function server(handler: Handler = () => undefined, authenticated = true) {
     if (url.endsWith('/teams?limit=20')) return Promise.resolve(json({ items: [team()], next_cursor: null }));
     if (url.endsWith('/me/team')) return Promise.resolve(json({ team: null }));
     if (url.endsWith('/teams/' + T1)) return Promise.resolve(json(team()));
+    if (url.endsWith('/join-requests?limit=20')) return Promise.resolve(json({ items: [], next_cursor: null }));
     throw new Error('Unexpected test request: ' + url);
   });
   vi.stubGlobal('fetch', fetch); return fetch;
@@ -82,7 +83,7 @@ it('does not silently resubmit an ambiguous login network failure', async () => 
   expect(fetch.mock.calls.filter(([url]) => url === '/auth/login')).toHaveLength(1);
   expect(document.body.textContent).not.toContain('private network error');
 });
-it('paginates by returned cursor, navigates details and never calls a join endpoint', async () => {
+it('paginates by returned cursor, opens authorized request controls and sends no mutation during browsing', async () => {
   const fetch = server(url => {
     if (url.endsWith('/teams?limit=20')) return json({ items: [team()], next_cursor: T1 });
     if (url.endsWith('/teams?limit=20&cursor=' + T1)) return json({ items: [team(T2)], next_cursor: null });
@@ -96,8 +97,9 @@ it('paginates by returned cursor, navigates details and never calls a join endpo
   await screen.findByRole('heading', { name: 'Test Team Alpha' });
   fireEvent.click(screen.getByRole('button', { name: /View Test Team Alpha/ }));
   await screen.findByRole('heading', { name: 'Team details' }); await screen.findByText('Test Leader');
-  expect((screen.getByRole('button', { name: /Join team/ }) as HTMLButtonElement).disabled).toBe(true);
-  expect(screen.getByRole('heading', { level: 1 })).toBe(document.activeElement);
+  await screen.findByText('No pending requests on this page.');
+  expect(screen.queryByRole('button', { name: /Join team/ })).toBe(null);
+  expect(screen.getByRole('heading', { name: 'Team details' })).toBe(document.activeElement);
   fireEvent.click(screen.getByRole('button', { name: /Back to teams/ }));
   await screen.findByRole('heading', { name: 'Find your team' });
   expect(fetch.mock.calls.filter(([url]) => url.startsWith('/api/')).every(([, options]) => options.method === 'GET')).toBe(true);

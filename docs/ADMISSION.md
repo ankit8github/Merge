@@ -1,5 +1,13 @@
 # Leader-approved admission - M-013A
 
+M-013B now implements the React request/status and current-leader decision flow
+for offline owner review. It calls only the documented endpoints below, preserves
+original keys/decisions under uncertainty and refetches canonical state. Backend
+contracts, transactions, schema and browser-host restrictions are unchanged.
+[FRONTEND.md](FRONTEND.md) records the component map and reload/browser recovery
+limits; PROGRESS.md records actual tests. The M-013A checkpoint's no-UI wording
+below describes that earlier backend-only snapshot, not the current frontend.
+
 ## Final checkpoint - owner live acceptance, 2026-11-11
 
 The owner verified merge_test at **0004_admission** and completed two successful

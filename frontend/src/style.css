@@ -116,6 +116,14 @@ dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
 .create-team form > .muted { display: inline-block; font-size: .8rem; }
 .unresolved { background: #fff7e6; border: 1px solid #e3c987; color: #695022; }
 .field-error { color: #802c22; font-size: .85rem; margin-top: .5rem; }
+.admission { border-top: 1px solid var(--line); margin-top: 1.5rem; padding-top: 1.5rem; min-width: 0; }
+.admission h3 { margin: 0 0 .8rem; }
+.admission .section-top { flex-wrap: wrap; align-items: flex-start; }
+.admission-actions { display: flex; gap: .65rem; flex-wrap: wrap; }
+.admission-actions .button { flex: 1 1 9rem; }
+.request-list { list-style: none; padding: 0; margin: 1rem 0; }
+.request-card { border: 1px solid var(--line); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+.request-card h4 { overflow-wrap: anywhere; margin: 0 0 .8rem; font-size: .85rem; }
 .site-footer { max-width: 1280px; margin: auto; padding: 1.5rem 2.5rem; border-top: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; color: var(--muted); font-size: .75rem; }
 summary { cursor: pointer; padding: .3rem; }
 .health { padding-top: .8rem; } .health p { margin-bottom: 0; }

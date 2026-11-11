@@ -464,3 +464,28 @@ existing approved protocol, not a new transaction/auth/locking decision. No
 manual migration rerun is authorized. The 50-candidate test uses one leader's
 decision session, so distinct-caller G1 remains open. No frontend admission UI,
 legacy-suite compatibility port or browser-host scope expansion is approved.
+
+### M-013B - owner-scoped React admission, 2026-11-11
+
+Use the exact committed admission endpoints and the existing React/TypeScript/
+plain-CSS/session-generation design. Keep a separate narrow in-memory admission
+journal in App, keyed by authenticated account/hackathon/team/request; preserve
+original key and decision under uncertain delivery. Explicit retries use the
+current restored session's CSRF, never a stored session/CSRF. Navigation does not
+move a command into another scope; auth generation changes abort and ignore old
+callbacks. No generic state/query framework or persistent credential storage.
+
+Canonical detail/own-request/My Team reads govern presentation; successful POSTs
+invalidate reads rather than synthesize status, membership, leader or counts.
+Pending applicants are fetched only from the current-leader view, and errors
+hide them. Recovery commands contain request UUID/decision rather than applicant
+DTOs and require a successful authorized pending-list read before display.
+Known membership blocks new requests but never authorizes discarding an uncertain
+original retry. Sticky uncertainty prevents an opposite decision/new-key escape.
+Backend authorization and transaction invariants remain the actual boundary.
+
+Memory-only recovery deliberately cannot survive reload/tab close/crash. A
+beforeunload warning is best-effort; no durable recovery claim or silent new-key
+fallback. No additional admission rules, backend/schema changes, new dependency,
+browser-host permission expansion or G1 closure. Real-browser/HTTPS/mobile/
+keyboard acceptance needs a separately reviewed guarded 0004 host/write scope.

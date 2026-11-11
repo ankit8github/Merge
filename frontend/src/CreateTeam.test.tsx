@@ -229,6 +229,9 @@ it('keeps a pending result scoped when switching hackathons', async () => {
   });
   render(<App />); await choose(); await submit('First challenge command'); await choose(true);
   expect(field().value).toBe(''); await submit('Second challenge command'); await screen.findByText(/Team creation confirmed/);
+  // The success message can render before its own canonical read effects run.
+  // Drain those two expected reads before measuring the older response's scope.
+  await waitFor(() => expect(fetch.mock.calls.filter(([url]) => url.startsWith('/api/hackathons/'+H2))).toHaveLength(5));
   const secondReads = fetch.mock.calls.filter(([url]) => url.startsWith('/api/hackathons/'+H2)).length;
   await act(async () => finish(json(created(),201)));
   expect(screen.getByRole('heading', {level:1}).textContent).toBe('Second Challenge');
@@ -347,15 +350,18 @@ it('fails closed without secure randomness, with no weak-key fallback', async ()
   expect(document.body.textContent).not.toContain('private platform detail');
 });
 
-it('submits once under StrictMode and keeps join disabled after creation', async () => {
+it('submits creation once under StrictMode and exposes only guarded leader request reads', async () => {
   const fetch = server((url,options) => {
     if (url === path() && options.method === 'POST') return json(created(),201);
     if (url.endsWith('/teams?limit=20')) return json({items:[team()],next_cursor:null});
     if (url.endsWith('/teams/'+T1)) return json(team());
+    if (url.endsWith('/join-requests?limit=20')) return json({items:[],next_cursor:null});
   });
   render(<StrictMode><App /></StrictMode>); await choose(); await submit(); await screen.findByText(/Team creation confirmed/);
   fireEvent.click(await screen.findByRole('button', {name:/View Test Team Alpha/}));
-  expect((await screen.findByRole('button', {name:/Join team/}) as HTMLButtonElement).disabled).toBe(true);
+  await screen.findByText('No pending requests on this page.');
+  expect(screen.queryByRole('button', {name:'Request membership'})).toBe(null);
   expect(fetch.mock.calls.filter(([,options]) => options.method === 'POST')).toHaveLength(1);
-  expect(fetch.mock.calls.some(([url]) => url.includes('/join'))).toBe(false);
+  expect(fetch.mock.calls.some(([url]) => /\/join(?:$|[/?])/.test(url))).toBe(false);
+  expect(fetch.mock.calls.filter(([url]) => url.includes('/join-requests')).every(([,options]) => options.method === 'GET')).toBe(true);
 });

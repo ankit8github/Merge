@@ -1,4 +1,121 @@
-# Merge authentication, discovery and team creation UI
+# Merge authentication, discovery, creation and admission UI
+
+## M-013B - React join requests and leader decisions
+
+Implemented for offline owner review, 2026-11-11. Uses the existing M-013A
+[ADMISSION.md](ADMISSION.md) contract and unchanged session/read/create workflows.
+No backend, migration, privilege, dependency, persistent storage or browser-host
+scope change. The M-012B/M-011A descriptions below retain their checkpoint scope;
+their disabled-join/no-request UI statements are superseded by this section.
+
+### Member and leader journeys
+
+Open a team from discovery to see its canonical public detail. Nonleaders get
+their own scoped /join-requests/mine read. Request membership is enabled only
+after My Team is successfully null and their own request is successfully null.
+Present/unknown membership or an existing pending/approved/rejected request blocks
+a new command. Pending requests reserve no seats; capacity is not treated as a
+client admission rule. POST {} uses a secure key and current-session CSRF. A
+successful acknowledgement triggers fresh reads; only the canonical mine endpoint
+supplies the displayed request status. An approved request says check My Team;
+it does not synthesize membership. Terminal rejection has no re-request button.
+
+The canonical team leader gets Pending join requests instead. Other users never
+fetch this list. The server still authorizes every list/decision, and 403/404
+responses hide applicants and offer a fresh team/permission check. The exact
+bounded list requests limit=20, opaque UUID cursors, Previous/Next requests and
+an explicit restart after a rejected cursor. Applicant UUIDs are displayed because
+the documented DTO supplies no applicant names/profiles; none are fabricated.
+Approve/Reject are labelled native buttons with per-request in-flight guards.
+My Team links to the same team detail and guarded request controls.
+
+Only {decision:"approve"|"reject"} is sent for decisions. A confirmed stored 200
+acknowledges that command, then refetches the pending page, detail and My Team.
+The discovery list is invalidated/remounted at page one on its next activation.
+Read-refresh failure cannot erase a confirmed mutation and never automatically
+POSTs again. Manual Refresh request and membership / Refresh requests and team
+refetch canonical data; counts/status/leadership never come from optimistic rows.
+No live event subscription or automatic polling is claimed in this milestone.
+
+Full team, already-assigned, resolved-request, changed-leader, missing-resource,
+validation, rate-limit and unknown-outcome errors have fixed actionable text.
+Definite team-full rejection can be retried or changed to reject with a new key;
+idempotency mismatch/unknown/malformed responses keep the original command
+unresolved. Current leader/request authorization is always enforced by the backend.
+Presentation gating cannot grant rights, and no unrestricted join is exposed.
+
+### Journal, isolation and recovery
+
+useAdmission lives in App above the session-generation workspace. Its journal
+keys include validated account, hackathon, team and either mine or request UUID.
+Records contain command key/decision/request UUID, status, uncertainty and fixed
+error metadata, never Session/CSRF/bearer or cached applicant DTOs. Native
+crypto.getRandomValues supplies 32 bytes encoded as 64 hex characters, with no
+weak fallback. Exact same-command retries reuse the key; a changed decision gets
+a new key only after a definite rejected attempt. Synchronous ref guards prevent
+duplicate and opposite decisions before React rerenders.
+
+Network/timeout/malformed/unknown responses, outcome_uncertain and session abort
+retain the original command. Uncertainty is sticky across later 401/403/409/422
+responses; only a validated matching stored success resolves it. Buttons offer
+only the original approval/rejection while uncertain. If its request disappears
+from a pending page, an original-command recovery row remains reachable after a
+successful authorized pending-list read. It contains the request UUID/decision,
+not cached applicant data. If leadership is lost, restore current permission
+before recovery; never display an old applicant list to work around a denial.
+
+Logout/restore/expiry synchronously abort transports, mark pending commands
+unresolved and ignore late success/401 callbacks using the existing signal,
+account and generation. Same-account sign-in can retry the original command with
+the newly restored CSRF. Other accounts cannot read/use its journal. Navigation
+allows the original operation to finish under its original scope; it never changes
+selection or populates another team's status. A confirmed result invalidates
+canonical reads only for that account/hackathon. View-owned reads still abort and
+ignore stale results on team/page/account changes. App also guards read-driven
+session expiry against an already-aborted authenticated generation.
+
+Commands survive only this App instance. A best-effort beforeunload warning and
+visible keep-this-tab-open instructions cover pending/unresolved work. Reload,
+crash or tab closure loses keys; canonical status alone cannot prove an exact
+ambiguous decision's stored reply. Do not infer rollback or silently issue a new
+key if the journal is lost; obtain separately approved owner recovery. Browser
+storage, raw cookie/Authorization headers and credential logging are not used.
+
+### Components and acceptance limits
+
+```text
+App: useSession + existing useTeamCreation + new useAdmission journal
+  Discovery / SelectedWorkspace: scoped canonical invalidation and navigation
+    TeamDetail: canonical team + TeamAdmission, focus after detail load
+      MemberRequest: canonical own status, membership eligibility, original retry
+      LeaderRequests: authorized bounded pending pages + recovery commands
+        DecisionActions / CommandFeedback: native labelled actions and fixed text
+    MyTeam: canonical membership and Open team and requests
+api.ts: validated request DTOs, exact four admission endpoints and stored replies
+```
+
+Scoped paths, UUIDs, statuses, finite ordered timestamps, exact decision response
+ID/status and schema version are checked. Pending pages reject terminal/duplicate
+rows and invalid next cursors. Unknown response fields are dropped. Own response
+requester must match the authenticated account before display. Mutations use
+same-origin cookies, no-store, strict JSON, current CSRF and one printable key;
+the browser supplies Origin. No client actor identity is submitted.
+
+Existing responsive/focus/reduced-motion CSS is retained; admission actions wrap,
+applicant UUIDs break within cards, controls have native keyboard semantics,
+request sections/list items have accessible names and progress/errors use live
+status/alert regions. No CSS-hidden privileged content or fake live fallback.
+jsdom tests cover native focus, DOM access, errors and response isolation, not
+real-browser keyboard activation, pixel layouts or screen-reader announcements.
+Manual 320px/375px/desktop/zoom/focus/screen-reader/HTTPS validation remains pending.
+
+The browser host still excludes creation/admission routes, grants no team/request
+writes, and requires 0003_auth; it refuses the already-upgraded 0004 merge_test.
+No ordinary app.serve, PostgreSQL access, migration, credential prompt or browser
+startup was performed. A separately reviewed guarded 0004 host/write scope is
+required before live UI acceptance. Existing backend 105 admission executions
+remain owner backend evidence, not frontend browser evidence. G1 stays open.
+Actual offline checks and exact inventory are in PROGRESS.md.
 
 M-012B adds the selected-hackathon Create Team form using the committed M-012A
 contract in [TEAM_API.md](TEAM_API.md). **Offline verified only; real-browser
