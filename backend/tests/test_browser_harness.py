@@ -628,12 +628,14 @@ def test_r3_no_domain_mutation_route(api, path):
     api.sessions.revoke.assert_not_called()
 
 
-@pytest.mark.parametrize('kind',['create','admission'])
+@pytest.mark.parametrize('kind',['create','admission','invitations'])
 def test_domain_mutation_routers_are_excluded_and_reintroduction_latches_closed(api,kind):
     from app import team_api
     from app import admission_api
+    from app import invitation_api
     path = '/api/hackathons/' + str(uuid4()) + '/teams'
     if kind=='admission': path+='/'+str(uuid4())+'/join-requests'
+    if kind=='invitations': path+='/'+str(uuid4())+'/invitations'
     api.client.cookies.set('merge_session_dev', auth.encode_token(b't'*32))
     result = api.client.post(path, headers={**HEADERS, 'X-CSRF-Token': auth.encode_token(b'c'*32),
                              'Idempotency-Key': 'unapproved-create'}, json={'name': 'Forbidden'})
@@ -641,7 +643,7 @@ def test_domain_mutation_routers_are_excluded_and_reintroduction_latches_closed(
     api.sessions.verify_csrf.assert_not_called()
     # Even trusted code accidentally reinstalling the new router must be rejected
     # before its unoverridden database dependency can resolve ordinary Settings.
-    api.app.include_router(team_api.router if kind=='create' else admission_api.router)
+    api.app.include_router(team_api.router if kind=='create' else admission_api.router if kind=='admission' else invitation_api.router)
     try:
         assert api.client.post(path, headers=HEADERS, json={'name': 'Forbidden'}).status_code == 503
         assert api.client.get('/health').status_code == 503

@@ -1,5 +1,47 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+## Current M-014B-R2 checkpoint - 2026-11-11
+
+The owner reports **0005_invitations already applied to merge_test** and a
+screenshot verifying merge_test / merge_app / 0005_invitations. R2 inspected the
+existing sanitized `run-b7498102ceca4576b17a780aa7296157.json`: invitations,
+0005, repetitions 3, passed/exit 0, 39 collected and completed teardowns, zero
+skips/failures, suite_and_fixture_checks_completed. This is **13 cases x 3 = 39
+total**, including three distinct-caller G1 races, not 117 cases. Exact provenance,
+source-derived counts, oracle and gate scope: [G1_ACCEPTANCE.md](G1_ACCEPTANCE.md).
+Original Phase 1 G1 is closed for that owner-run local PostgreSQL scope; CI,
+production HTTPS/browser and load remain open. No Codex database action occurred.
+
+**Do not rerun 0005, provisioning, migrations, cleanup, reset or live tests.** All
+earlier proposed/0004-current/no-live/G1-open statements and preparation commands
+below are dated history. The invitation suite still requires exact 0005 on every
+new/pooled/observer connection; admission still requires 0004, legacy auth/browser
+0003, and schema/services reject 0005. No legacy compatibility certification or
+independent full schema/retained-data drift inspection is inferred from this run.
+
+## Historical M-014B - proposed 0005 invitation target, offline only
+
+[INVITATIONS.md](INVITATIONS.md) records the additive migration, fixed
+`--suite invitations --revision 0005_invitations`, complete compatibility matrix
+and separate owner migration/live prerequisites. Existing merge_test is still
+owner-reported 0004; no upgrade has occurred here. Eleven old tables, including
+join_requests, are fingerprinted/locked inside the owned migration transaction.
+New worker/observer connections require exact 0005; old admission remains exact
+0004, legacy auth/browser exact 0003, schema/services explicitly reject 0005.
+Diagnostics remain metadata-only; fixtures retained. Collection is not execution
+or a G1 pass. The historical M-014A blocker below is superseded only by the new
+offline prerequisite, not live acceptance or broader legacy compatibility.
+
+## M-014A - distinct-caller acceptance design blocked
+
+[G1_ACCEPTANCE.md](G1_ACCEPTANCE.md) records why the existing 0004 admission API
+cannot supply 50 distinct authorized capacity-changing callers for one team.
+There is no new G1 suite/command. The existing admission suite remains a
+single-leader approval regression; neither its rerun nor credential-free
+collection closes G1. No runner, revision gate, diagnostics, fixture or permission
+change is made. A secure admission-capability prerequisite needs owner review;
+no live run, migration or cleanup is authorized by the analysis.
+
 ## Current M-013A checkpoint - 2026-11-11
 
 Owner verified merge_test at 0004_admission and completed guarded admission runs

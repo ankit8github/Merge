@@ -1,5 +1,14 @@
 # Internal team services — M-007A
 
+M-014B InvitationService reuses _execute, _run_composed and only the already-locked
+membership helper after durable recipient/issuer/expiry authorization. No legacy
+create/join or admission service method is changed. Recipient-bound HTTP is not a
+route to trusted unrestricted join. [INVITATIONS.md](INVITATIONS.md) records the
+lock trace and exact-0005 compatibility. The owner reports 0005 already applied;
+R2's successful-run audit closes original Phase 1 G1 within local guarded
+PostgreSQL scope. Evidence/limits: [G1_ACCEPTANCE.md](G1_ACCEPTANCE.md). No migration
+or live rerun is authorized; earlier open statements retain historical scope.
+
 M-013A extracts _admit_locked_in_tx from the existing join body. Legacy and
 composed create/join public signatures and transaction ownership remain intact;
 AdmissionService inherits the same owner and invokes only the already-locked

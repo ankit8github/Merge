@@ -172,10 +172,13 @@ def test_read_openapi_types_preserved_alongside_create(discovery):
         base+'/{hackathon_id}/teams/{team_id}':{'get'},base+'/{hackathon_id}/me/team':{'get'},
         base+'/{hackathon_id}/teams/{team_id}/join-requests':{'get','post'},
         base+'/{hackathon_id}/teams/{team_id}/join-requests/mine':{'get'},
-        base+'/{hackathon_id}/teams/{team_id}/join-requests/{request_id}/decision':{'post'}}
+        base+'/{hackathon_id}/teams/{team_id}/join-requests/{request_id}/decision':{'post'},
+        base+'/{hackathon_id}/invitations/mine':{'get'},
+        base+'/{hackathon_id}/teams/{team_id}/invitations':{'post'},
+        base+'/{hackathon_id}/teams/{team_id}/invitations/{invitation_id}/redeem':{'post'}}
     assert {path:set(operations) for path,operations in paths.items()} == expected
     for path,operations in paths.items():
-        if 'join-requests' in path: continue
+        if 'get' not in operations: continue
         assert {'401','403','404','422','503'} <= set(operations['get']['responses'])
 
 

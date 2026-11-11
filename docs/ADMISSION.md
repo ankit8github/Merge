@@ -1,5 +1,22 @@
 # Leader-approved admission - M-013A
 
+M-014B adds a separate recipient-bound invitation workflow and exact-0005 guarded
+race harness: [INVITATIONS.md](INVITATIONS.md). It uses the same
+already-locked admission helper and transaction owner. The request API, original
+0004 suite and its revision guards remain unchanged. The owner now reports 0005
+already applied; the R2 audit of the successful three-repetition invitation run
+closes original Phase 1 G1 within local PostgreSQL scope. Exact evidence and
+limitations: [G1_ACCEPTANCE.md](G1_ACCEPTANCE.md). No legacy 0004-suite compatibility
+at 0005 or new Codex database action; do not rerun migration or live tests.
+
+At M-014A, source review confirmed a blocker for literal distinct-caller G1: request
+creation reserves no seat, while only one current leader can make capacity-changing
+decisions for a team. Fifty requesters and fifty approvals by that leader are
+different concurrency scenarios. [G1_ACCEPTANCE.md](G1_ACCEPTANCE.md) records the
+proof and acceptance rationale. That checkpoint added no race suite or authority
+bypass; M-014B implements the separately authorized prerequisite. The historical
+G1-open statements below precede the R2 evidence audit.
+
 M-013B now implements the React request/status and current-leader decision flow
 for offline owner review. It calls only the documented endpoints below, preserves
 original keys/decisions under uncertainty and refetches canonical state. Backend

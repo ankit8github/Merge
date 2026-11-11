@@ -1,5 +1,13 @@
 # Authenticated team creation HTTP API - M-012A
 
+M-014B adds separate recipient-bound invitation routes, documented in
+[INVITATIONS.md](INVITATIONS.md). Cookie/CSRF/Origin/key policy is reused; no
+unrestricted join or actor selector. The existing create contract/service is
+unchanged. The owner reports 0005 already applied; R2 audited the successful
+39-case/three-repetition invitation run. Original Phase 1 G1 is closed within
+local guarded PostgreSQL scope; [G1_ACCEPTANCE.md](G1_ACCEPTANCE.md) records limits.
+Do not rerun migrations/live tests; browser/production HTTPS and CI remain open.
+
 M-013A adds only scoped join-request creation, own status, leader pending list
 and leader decision routes; [ADMISSION.md](ADMISSION.md) is their exact contract.
 No unrestricted join is exposed. Existing creation/read contracts and the

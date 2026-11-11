@@ -17,7 +17,7 @@ from pydantic import SecretBytes, ValidationError
 from sqlalchemy import event, text
 import uvicorn
 
-from app import auth, read_api, team_api, admission_api
+from app import auth, read_api, team_api, admission_api, invitation_api
 from app.main import create_app
 from app.security.auth_policy import AuthSettings
 from app.services.credentials import CredentialService
@@ -219,7 +219,7 @@ def browser_app(engine, guard, scope, policy, *, allow_writes=False, host=HOST):
     # No new routes, including framework docs/schema endpoints, in this harness.
     app.routes[:] = [r for r in app.routes if getattr(r, 'path', None) not in
                      ('/openapi.json', '/docs', '/docs/oauth2-redirect', '/redoc')
-                     and getattr(r, 'original_router', None) not in (team_api.router, admission_api.router)]
+                     and getattr(r, 'original_router', None) not in (team_api.router, admission_api.router, invitation_api.router)]
     app.openapi_url = app.docs_url = app.redoc_url = None
     budget = Budget(scope)
     throttle = ThrottleService(engine, secret=SecretBytes(bytes.fromhex(policy.throttle_secret.get_secret_value())),

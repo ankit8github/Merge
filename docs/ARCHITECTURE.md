@@ -1,5 +1,17 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
+M-014B adds owner-authorized recipient-bound, expiring invitations with current-
+leader issuance and intended-recipient redemption. The unchanged transaction
+owner and user-before-team-before-invitation lock order protect grant consumption,
+membership, version, audit/outbox and stored reply atomically. The owner reports
+0005 already applied and completed the guarded invitation run: 39 total cases
+across three repetitions. R2's report/source audit closes original Phase 1 G1
+within local owner-run PostgreSQL acceptance; no production HTTPS, browser, CI,
+load or frontend invitation UI claim. [G1_ACCEPTANCE.md](G1_ACCEPTANCE.md) records
+precise proof and provenance limits. Do not rerun migration/live tests. Earlier
+G1-open/no-live statements below retain their historical checkpoint scope.
+Contract, lock trace, rate limits and compatibility: [INVITATIONS.md](INVITATIONS.md).
+
 M-013B adds React join-request/status and leader approve/reject controls using the
 existing admission HTTP contract. A separate App-lifetime admission journal uses
 the existing account/session-generation model, scopes commands to hackathon/team/

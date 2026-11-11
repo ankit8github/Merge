@@ -1,5 +1,15 @@
 # Private idempotency primitives — M-008C
 
+M-014B adds invitation.issue.v1 and invitation.redeem.v1 to the private operation
+allowlist. Fingerprints bind authenticated actor/hackathon/team and respectively
+recipient or invitation UUID. Existing operation bytes and primitives are
+unchanged. Current locked issuer/recipient/expiry authorization precedes replay
+proof; only matching authorized redemption replay bypasses the pending rule.
+Unknown COMMIT preserves exact-key recovery. [INVITATIONS.md](INVITATIONS.md)
+documents expiry/leadership replay limits and exact-0005 validation. The R2
+owner-run report/source audit and its provenance limits are in G1_ACCEPTANCE.md;
+0005 is already applied to merge_test and must not be rerun for this review.
+
 M-013A extends the private operation allowlist with request.create.v1 and
 request.decide.v1. Existing team.create.v1/team.join.v1 fingerprints are unchanged.
 Request commands bind team plus hackathon/actor; decisions additionally bind

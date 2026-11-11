@@ -57,6 +57,18 @@ _CONSUME = '''WITH stamp AS MATERIALIZED (SELECT clock_timestamp() AS at),
 
 
 class ThrottleService:
+    def check_invitation(self, *, actor_id, operation):
+        from uuid import UUID
+        if not isinstance(actor_id, UUID) or operation not in ('issue', 'redeem'):
+            raise CredentialError(CredentialCode.TRANSACTION_CONFIGURATION)
+        def admit(c):
+            _query(c, "SET LOCAL lock_timeout='1s'")
+            _query(c, "SET LOCAL statement_timeout='2s'")
+            return self._consume(c, 'invitation_'+operation, str(actor_id), 60)
+        decision = self._owner._execute(admit)
+        if not decision.allowed:
+            raise ThrottleExceeded(decision.retry_after)
+
     def __init__(self, engine: Engine, *, secret: SecretBytes, policy: ThrottlePolicy):
         if not isinstance(secret, SecretBytes) or len(secret.get_secret_value()) != 32:
             raise CredentialError(CredentialCode.TRANSACTION_CONFIGURATION)

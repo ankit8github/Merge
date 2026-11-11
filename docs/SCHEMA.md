@@ -1,5 +1,15 @@
 # PostgreSQL domain schema — M-006A
 
+M-014B adds 0005_invitations, owner-reported already applied to merge_test, with retained recipient-
+bound grants, immutable team/hackathon/recipient/issuer/expiry, checked finite
+state/timestamps and deferred redeemed-membership validation. No old DDL, data
+or privileges are replaced. The guarded migration preserves all eleven earlier
+tables, including join_requests, within its owned migration transaction. Frozen
+DDL and historical preparation: [INVITATIONS.md](INVITATIONS.md). R2 reviewed the
+successful owner-run invitation report at exact 0005; [G1_ACCEPTANCE.md](G1_ACCEPTANCE.md)
+records evidence and limits. Do not rerun migration or cleanup. No independent
+schema-drift or migration row-preservation output was inspected in R2.
+
 M-013A adds 0004_admission, already applied to owner-verified merge_test:
 retained join_requests,
 composite team/hackathon FK, requester/decider FKs, unique team/requester, checked

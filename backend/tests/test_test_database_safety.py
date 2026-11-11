@@ -54,7 +54,8 @@ def test_dedicated_migration_graph_uses_original_versions():
     config.set_main_option('script_location', str(root / 'test_alembic'))
     config.set_main_option('version_locations', str(root / 'alembic' / 'versions'))
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_current_head() == '0004_admission'
+    assert scripts.get_current_head() == '0005_invitations'
     assert scripts.get_revision('0002_domain').down_revision == '0001_baseline'
     assert scripts.get_revision('0003_auth').down_revision == '0002_domain'
     assert scripts.get_revision('0004_admission').down_revision == '0003_auth'
+    assert scripts.get_revision('0005_invitations').down_revision == '0004_admission'

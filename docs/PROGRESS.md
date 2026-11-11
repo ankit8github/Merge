@@ -6,7 +6,16 @@
 **Status policy:** Mark DONE only with recorded evidence. 'Planned', 'in progress', 'implemented', 'tested' and 'verified' are not interchangeable.
 
 ## Current verified context
-- [x] M-013B implemented for owner review, uncommitted: React member requests/canonical status and current-leader pending list/decisions, immutable in-memory uncertain retries and scoped canonical refreshes. Frontend 163 passed; typecheck/build/dependencies passed; backend database-free 1180 passed / 32 deselected. No backend/schema/dependency/browser-host changes or live UI/database run. See FRONTEND.md and the M-013B entry below. G1 remains open.
+
+The M-014B final review entry below is current. Earlier milestone/open/not-applied statements
+retain the scope and evidence available at those checkpoints.
+
+- [x] M-014B final review and local commit checkpoint: all 35 approved invitation/G1 paths reviewed; full backend database-free 1312 passed / 32 deselected, focused 457 passed, frontend 163 passed; typecheck/build, Python/frontend dependency checks, compile and targeted security/artifact/whitespace checks passed. Original Phase 1 G1 remains CLOSED only within the audited owner-run local PostgreSQL scope; the report has no successful-node roster or source hash. 0005 is already applied: no database action or live rerun. Owner authorizes exactly one local commit, `feat: add secure invitations and G1 race acceptance (M-014B)`, after final index review; no remote or push. Detailed commands/results and limits are in the final review entry below.
+- [x] M-014B-R2 successful-run audit: owner reports 0005_invitations already applied to merge_test. Existing ignored report run-b7498102ceca4576b17a780aa7296157.json records invitations / 0005 / repetitions 3, passed / exit 0, 39 collected and completed teardowns, no skips/failures, suite_and_fixture_checks_completed. This is 13 cases x 3 = 39 total, including three distinct-authenticated-50-caller G1 races. Original Phase 1 G1 CLOSED within local owner-run guarded PostgreSQL acceptance; CI/production HTTPS/browser/load remain open. Report provenance and source-derived counts: G1_ACCEPTANCE.md. R2 offline: focused 457 passed; full backend 1312 passed / 32 deselected; dependency/compile/static/security/whitespace passed. No Codex database action, source/test change, staging or commit; stop for owner review.
+- [x] M-014B-R1 readiness review, uncommitted: repaired observer-root proof and active PID cleanup, strengthened grant/outcome/audit/outbox linkage, specified exact expired redeemed replay and current-leader restoration policy. Focused offline 457 passed; full backend 1312 passed / 32 deselected; invitations 39 collected only; original admission 105 collected unchanged. Migration/production authorization unchanged; no PostgreSQL action, G1 OPEN. Detailed findings and owner steps: INVITATIONS.md.
+- [x] M-014B implemented for owner review, uncommitted: recipient-bound 24-hour invitations, leader issuance/private inbox/recipient redemption and guarded distinct-caller harness. Backend database-free 1295 passed / 32 deselected; frontend 163 passed, typecheck/build passed. New invitation suite 36 cases collected only; existing admission 105 collected unchanged. Proposed 0005 NOT applied, no live run; G1 stays OPEN. Exact design, compatibility and owner prerequisites: INVITATIONS.md.
+- [ ] M-014A literal distinct-caller G1 harness blocked by the current admission contract: requester POSTs reserve no seats; one leader alone authorizes capacity-changing decisions. Source analysis and proposed secure prerequisite are in G1_ACCEPTANCE.md. No race suite or production change; G1 remains open pending owner review.
+- [x] M-013B committed locally as `fa7cc6f00c690de08fa4d5e79b169a6f4506fb92`: React member requests/canonical status and current-leader pending list/decisions, immutable in-memory uncertain retries and scoped canonical refreshes. Frontend 163 passed; typecheck/build/dependencies passed; backend database-free 1180 passed / 32 deselected. No backend/schema/dependency/browser-host changes or live UI/database run. See FRONTEND.md and the M-013B entry below. G1 remains open.
 - [x] M-013A final review, 2026-11-11: owner verified applied 0004_admission and two successful admission runs, 35 + 70 executions across one + two repetitions, each exit 0 with completed fixture checks. Final Codex database-free backend: 1180 passed / 32 deselected; focused: 214 passed; frontend final run: 102 passed, typecheck/build passed. An earlier unchanged frontend fetch-count timing failure is retained in the final evidence entry. Exactly one local M-013A commit is owner-authorized after final staged review. G1 remains open for the distinct authenticated caller race; no frontend admission UI or new live action.
 - [x] M-011A implemented for owner review, uncommitted: 52 frontend component/transport tests passed in 11.83s; TypeScript/production build and controlled HTTP/Vite proxy/Origin/outage checks passed; 806 backend offline regressions passed in 20.51s (one existing warning). No new PostgreSQL or authenticated browser run; safe guarded HTTP browser environment remains a prerequisite. See FRONTEND.md. G1 remains open.
 - [x] User confirmed registration in Hack4Hack (screenshot in prior conversation; not stored in this repository).
@@ -29,7 +38,7 @@
 | Gate | Scope | Required objective evidence | Status |
 |---|---|---|---|
 | G0 | Repository and local integration | Commit hash, README, backend health, React build, PostgreSQL connectivity, migration, smoke test | DONE — local checks recorded in M-003; initial commit `66d28b51728f466b3d0124de03f457dd190c22f1`; closed 2026-11-07 |
-| G1 | Transactional team core | Real PostgreSQL 50-way last-seat race, cross-team race, idempotency; repeatable tests | PARTIAL — schema, M-007A internal services and M-008B extraction verified within their scope; idempotency and 50-way authenticated API acceptance pending |
+| G1 | Transactional team core | Real PostgreSQL 50-way last-seat race, cross-team race, idempotency; repeatable tests | DONE within local owner-run acceptance — M-014B-R2 audited successful exact-0005 report: 39 cases / 3 repetitions, including distinct-caller last-seat races, cross-team races and exact replay; G1_ACCEPTANCE.md records provenance and proof limits. CI/production/load remain separate gates |
 | G2 | Business flows and security | Team lifecycle, invites, requests, leader succession, audit, authorization negative tests | PARTIAL — durable auth throttle and updated API/session suites owner-verified (165 passes); browser/deployed HTTPS and domain flows remain open |
 | G3 | Frontend and realtime | Complete React flows, SSE between two clients, mobile/keyboard browser tests, scoring | NOT STARTED |
 | G4 | Acceptance performance and CI | >=20 API tests in passing GitHub Actions, 10k/2k seed, k6 100 VUs, measured board p95 <200ms | NOT STARTED |
@@ -5360,6 +5369,676 @@ reads supply status and authorization. In Admission.test.tsx, make a decision
 return outcome_uncertain and disappear from the pending page; trace the original
 retry, then return a later team_full and explain why an opposite decision stays
 unavailable. The final response records the actual commit hash and Git status.
+
+## M-014A - distinct-caller G1 design analysis, 2026-11-11
+
+**Analysis verified; implementation blocked pending owner decision. G1 remains
+open.** Started clean at `fa7cc6f00c690de08fa4d5e79b169a6f4506fb92`.
+Read AGENTS.md, REQUIREMENTS.md, ARCHITECTURE.md, DECISIONS.md, ADMISSION.md,
+TEAM_SERVICES.md, TEAM_MUTATIONS.md, IDEMPOTENCY.md, TEAM_API.md,
+TEST_DATABASE.md and PROGRESS.md, then traced actual route registration, HTTP
+actor/CSRF derivation, request creation, decision authorization, shared admission,
+existing live race setup and guarded fixtures/runner/diagnostics.
+
+The exact gate is R-07's 50 distinct authenticated callers, one free seat, one
+success and 49 safe rejections; ARCHITECTURE.md additionally requires overlapping
+independently authenticated capacity mutations and fresh committed membership/
+audit/outbox proof. The existing API cannot supply this literally: requesters
+may create pending requests without reserving seats, and `_change` allows only
+the team's current single leader to approve membership, including on replay.
+Internal trusted join is neither a public authenticated route nor a grant of
+admission authority. There is no implemented invitation redemption operation.
+Changing principals, adding a test-only join adapter or accepting 49 forbidden
+responses would not meet the approved policy/gate.
+
+The existing 50-candidate live case sequentially authenticates candidates and
+creates requests; all 50 concurrent capacity-changing decisions use the same
+leader session. A client Barrier is not evidence that 50 DB transactions overlap
+at the team lock. It remains valuable approval-race evidence and is unchanged.
+The prior 105 owner admission executions remain accepted within their scope;
+this task performs no new live execution and does not certify distinct callers.
+
+Reviewable proposal in G1_ACCEPTANCE.md: retain the current workflow and implement
+the already-required secure invitation capability in its own approved milestone,
+then race 50 independently authenticated authorized redeemers. Its exact contract,
+secret/rate-limit/replay policy, schema revision and guards must be reviewed first;
+it is not assumed compatible with unchanged 0004. A supplemental 50-requester /
+one-leader pipeline is possible only with explicit evidence separation and cannot
+close literal G1. No requirement, ADR, authorization or transaction redesign is
+silently adopted. No new acceptance harness is implemented against a nonexistent
+operation. No new tests/dependencies/migrations or frontend change.
+
+The proposal specifies per-caller identity/session/CSRF/key proof, bounded
+event-driven overlap evidence with guarded lock observers, server/pool limitations,
+fresh retained fixtures/repetitions, winner/loser and canonical uniqueness checks,
+baseline-relative versions/audit/outbox, exact winner replay, and failure/timeout
+invalidation. For existing approvals, full-team losers remain pending, not
+rejected. Current unauthorized/stale-leader protections and diagnostics are intact.
+No supported G1 owner command exists. The document labels the existing guarded
+`--suite admission --revision 0004_admission --repetitions 3` command as a
+separately approved regression ONLY; it cannot resolve this source-level blocker.
+No live rerun is necessary to establish that missing capability.
+
+Actual checks, Windows PowerShell / existing Python 3.11.9 backend environment:
+
+- From backend, `.\.venv\Scripts\python.exe -m pytest -q
+  tests/test_admission.py tests/test_admission_api.py
+  tests/test_admission_readiness.py tests/test_admission_commit_fault.py
+  tests/test_transaction_retry.py tests/test_team_mutations.py
+  tests/test_idempotency.py tests/test_concurrency_harness.py
+  tests/test_runner_diagnostics.py tests/test_test_database_safety.py --tb=short`:
+  **333 passed in 16.54s**, exit 0. Existing offline oracle corruption/fault,
+  leader/replay, HTTP/session/CSRF, transaction, harness, secret-diagnostic and
+  fixed-test-target guard regressions; these do not prove PostgreSQL concurrency.
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1180 passed, 32 deselected in 37.34s**, exit 0. Both pytest runs have one
+  existing Starlette/HTTPX deprecation warning.
+- `.\.venv\Scripts\python.exe -m pytest admission_tests --collect-only -q`:
+  **105 existing cases collected in 0.22s**, exit 0, one existing warning. No
+  fixture ran, no credential was acquired and no new G1 case is claimed.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements, exit 0.
+- `.\.venv\Scripts\python.exe -m compileall -q app test_support tests
+  admission_tests alembic/versions`: passed, exit 0; compile only, no migration.
+
+File inventory: new docs/G1_ACCEPTANCE.md; modified docs/ADMISSION.md,
+docs/TEST_DATABASE.md and docs/PROGRESS.md. The top M-013B context now records its
+already-completed commit; historical test timing concerns remain unchanged.
+Inline Python AST/Git/targeted security review passed: exact four-document scope,
+empty index, unchanged backend/frontend/requirements/architecture/ADRs, ten
+reviewed Python ASTs and the exact four admission routes. Targeted credential-URL,
+private-key/token, NUL, artifact and trailing-whitespace checks passed; generated
+build/cache paths remain ignored. Root `git -c safe.directory=I:/Merge
+-c core.safecrlf=false diff --check` passed. These scans are not an exhaustive
+secret or online vulnerability audit; no configured standalone linter was run.
+No staging, commit, remote or push.
+
+Remaining prerequisites: owner selection/review of the legitimate admission
+capability and exact revision before literal harness implementation; separate live
+approval and repeated real PostgreSQL evidence afterward. G1 and CI remain open.
+No PostgreSQL, merge_dev, backend server, credential prompt/read, migration,
+permission operation, fixture creation/cleanup/reset or production change occurred.
+Frontend/browser/HTTPS/deployment evidence is unchanged.
+
+Owner exercise: identify the requester session used during sequential setup and
+the leader session used in every concurrent decision; explain why concurrent
+request creation would still not create 50 authorized membership contenders.
+Stop for owner review before implementation of a new admission capability,
+live execution or commit.
+
+## M-014B - secure invitation/G1 prerequisite, 2026-11-11
+
+**Implemented and offline verified; stop for owner review before migration,
+live tests or commit. G1 remains OPEN.** Baseline HEAD remains
+`fa7cc6f00c690de08fa4d5e79b169a6f4506fb92`. Started with the four pending M-014A
+documentation files; their dated analysis is preserved with a superseding
+M-014B link. The owner authorized the recipient-bound capability and harness,
+not a live database action. No staging, commit, remote or push.
+
+Read all requested source documents and traced lock/owner compatibility before
+implementation. INVITATIONS.md recorded the exact design first; DECISIONS.md
+records this owner-scoped extension. Issuance locks hackathon SHARE, sorted
+issuer/recipient users NO KEY UPDATE, then team; nonleader rejection precedes
+missing-recipient disclosure. Redemption reserves idempotency, performs a
+nonlocking immutable grant identity lookup, locks hackathon/recipient/team, then
+the invitation, and rechecks recipient/current issuer/expiry before replay proof.
+It needs no issuer user lock or new lock after the team. Existing creation,
+trusted joining, requests and leader decisions retain the same partial order.
+No conflict required a larger refactor. _execute/_run_composed remain the owners;
+no new committing join facade or in-process production mutex.
+
+Three new HTTP routes: scoped current-leader POST invitations with exactly
+recipient_id; authenticated hackathon invitations/mine GET with private bounded
+cursor pages; scoped intended-recipient POST invitation/{id}/redeem with {}.
+Paths, DTOs, fixed sanitized errors and exact payloads are in INVITATIONS.md.
+Cookie actor/current CSRF/Origin/Fetch Metadata/HTTPS/strict JSON/idempotency and
+no-store policy are reused. UUID4 inbox IDs are references, not transferable
+bearer authority. No client actor selector, public unrestricted join or frontend
+invitation UI. Default 24-hour expiry is database time under locks; the same
+validated sample becomes redeemed_at. Current issuer changes invalidate grants.
+Availability is not seat reservation or a membership promise. No explicit revoke
+endpoint, delivery channel or transferable-code UX is introduced.
+
+Issuance and redemption each version/audit/outbox their actual transition and
+complete the stored reply in the same owned transaction. Redemption also inserts
+membership and consumes the grant atomically. Full/assigned errors keep grants
+pending and roll back all domain effects. Matching authorized replay returns the
+exact stored result; new-key redeemed reuse conflicts. Wrong recipient/scope,
+expired/stale grant and changed-command reuse are denied. Redemption replay
+checks recipient/current issuer/expiry before noting proof; after expiry it cannot
+stand in for a canonical membership read. Issuance replay rechecks current leader
+and may return a historical expired acknowledgement. Unknown COMMIT preserves
+same-key recovery. New per-account durable issue/redeem throttle scopes allow 60
+attempts per existing configured window; denial commits only the separate attempt
+charge. Original throttle methods, auth policy and idempotency functions remain
+AST-identical; only a method and two operation labels are added.
+
+Additive **0005_invitations** follows unchanged 0004. New retained table has
+composite team/hackathon and user FKs, finite expiry/state checks, immutable
+identity/expiry, terminal/delete/truncate guards and deferred redeemed-membership
+validation. No old table, data or privilege is replaced. Guarded migration checks
+exact 0004/already-0005 and compares eleven prior table fingerprints, including
+join_requests, within its externally owned DDL transaction; mismatch rolls back
+DDL. No migration was executed or data preservation measured here. Existing
+merge_test remains owner-reported 0004; do not rerun 0004 or ordinary Alembic.
+
+G1 methodology: each repetition uses fresh retained fixtures with one founder,
+one vacant seat, 50 distinct registered/logged-in accounts, 50 distinct sessions/
+CSRF and 50 legitimate leader-issued grants. Setup is sequential and not counted
+as concurrent participation. Fifty real HTTP recipient redemption handlers must
+all reach a test-only gate after real cookie/CSRF dependencies, without replacing
+auth/domain logic. Only this test host sets/restores sync capacity 64; the normal
+DB pool may queue transactions. An exact-0005 guarded observer holds only the
+team lock, releases the gate and requires two distinct redemption backend waiters
+in its observed blocking graph before releasing the lock. Deadlines fail closed;
+poll backoff is not overlap proof. This establishes 50 overlapping authenticated
+calls plus observed DB contention, not 50 simultaneous DB transactions.
+
+The committed oracle requires exactly one 200 and 49 team_full conflicts, one
+redeemed/49 pending grants, one new membership, valid leader/capacity and scoped
+uniqueness, exact version 52 (founder + 50 issues + redemption), 52 linked complete
+outcomes/audits/outbox events and exactly one successful redemption record. The
+winner's exact HTTP content replays with the original key and an unchanged fresh
+snapshot. Separate cases cover wrong recipient/current issuer/CSRF, stale issuer
+even for replay, a fixture-only past-dated expired grant and cross-team contention
+for one recipient. No real race, timing metric or G1 pass is claimed from mocks
+or collection. Existing admission 50-candidate races remain one leader's actions.
+
+Actual verification, existing Windows PowerShell / Python 3.11.9 / Node 22.15.0 /
+npm 10.9.2 toolchain; no PostgreSQL/backend/browser startup:
+
+- From backend, initial new-file `pytest -q tests/test_invitations.py
+  tests/test_invitation_api.py --tb=short`: 64 passed, 1 failed in 13.41s. The
+  inbox response's strict UUID projection rejected service string UUIDs; corrected
+  response models without relaxing strict mutation inputs. Expanded invitation/
+  admission/browser run: **297 passed in 22.04s**.
+- New readiness/service/API run initially had **95 passed, 4 failed in 6.88s**:
+  the new throttle double lacked mandatory engine parameter-hiding flags. Fixed
+  the fixture, preserving production guards. Subsequent three-file run:
+  **103 passed in 9.92s**; later expanded run **107 passed in 13.16s**, including
+  the actual FastAPI 50-arrival/64-thread gate with synthetic independent sessions.
+  Its stubbed domain responses test framework scheduling, not DB/G1 correctness.
+- Focused command `.\.venv\Scripts\python.exe -m pytest -q
+  tests/test_invitations.py tests/test_invitation_api.py
+  tests/test_invitation_readiness.py tests/test_admission.py
+  tests/test_admission_api.py tests/test_admission_commit_fault.py
+  tests/test_transaction_retry.py tests/test_team_mutations.py
+  tests/test_idempotency.py tests/test_read_api.py tests/test_team_api.py
+  tests/test_auth_schema_support.py tests/test_test_database_safety.py
+  tests/test_runner_diagnostics.py tests/test_browser_harness.py --tb=short`:
+  **731 passed in 60.97s** at that checkpoint. Additional cases added afterward
+  are included in the final full suite below.
+- Initial full backend run: **1285 passed, 3 failed, 32 deselected in 64.40s**.
+  Exact OpenAPI route allowlists and migration-head expectation still described
+  0004. Extended them to exactly three invitation routes/head 0005 while retaining
+  required mutation keys, prior graph links and unrestricted-route rejection.
+- Final `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1295 passed, 32 deselected in 75.76s**, exit 0. Existing Starlette/HTTPX warning
+  remains (also in focused/collection runs). No tests removed, skipped or disabled.
+- `.\.venv\Scripts\python.exe -m pytest invitation_tests --collect-only -q`:
+  final **36 cases collected in 0.46s**, exit 0: 12 cases x 3 repetitions,
+  including one 50-caller race per repetition. Earlier collection before the
+  expiry case was 33 in 0.51s. No fixture or live case executed.
+- `.\.venv\Scripts\python.exe -m pytest admission_tests --collect-only -q`:
+  **105 cases collected in 0.32s**, exit 0; unchanged exact-0004 suite and guards.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements, exit 0.
+- `.\.venv\Scripts\python.exe -m compileall -q app test_support tests
+  invitation_tests admission_tests alembic/versions`: passed, exit 0; compile only.
+- From frontend, `npm test`: **163 passed, six files in 28.89s**, exit 0.
+  `npm run typecheck`, `npm run build`, `npm ls --depth=0`: passed, exit 0.
+  Vite 6.4.5 built 40 modules in 3.32s, JS 232.71 kB / CSS 10.91 kB. No frontend
+  source/config/dependency change; prior intermittent fetch-count concern remains
+  recorded, with no claim that every timing issue is eliminated.
+- Inline Python AST/Git/security review: **35 source/documentation paths, 23
+  Python ASTs**, empty index, unchanged frontend, all original migrations,
+  exact-0004 live suite and auth/transaction/admission core. Existing idempotency
+  functions and throttle methods AST-identical. Targeted credential-URL/private-
+  key/token, runtime-output, artifact, NUL and whitespace checks passed; generated
+  cache/build paths ignored. `git -c safe.directory=I:/Merge
+  -c core.safecrlf=false diff --check`: passed. No new dependency, separately
+  configured linter or online vulnerability audit. Scans are not exhaustive.
+
+Exact pending inventory (35 files, including the four M-014A documentation files):
+
+- backend/alembic/versions/0005_invitations.py (new)
+- backend/app/invitation_api.py (new)
+- backend/app/main.py
+- backend/app/models/__init__.py
+- backend/app/models/invitations.py (new)
+- backend/app/services/errors.py
+- backend/app/services/idempotency.py
+- backend/app/services/invitations.py (new)
+- backend/app/services/throttling.py
+- backend/invitation_tests/conftest.py (new)
+- backend/invitation_tests/test_invitations.py (new)
+- backend/test_support/browser.py
+- backend/test_support/concurrency.py
+- backend/test_support/database.py
+- backend/test_support/invitation_race.py (new)
+- backend/test_support/revisions.py
+- backend/tests/test_browser_harness.py
+- backend/tests/test_invitation_api.py (new)
+- backend/tests/test_invitation_readiness.py (new)
+- backend/tests/test_invitations.py (new)
+- backend/tests/test_read_api.py
+- backend/tests/test_team_api.py
+- backend/tests/test_test_database_safety.py
+- docs/ADMISSION.md
+- docs/ARCHITECTURE.md
+- docs/DECISIONS.md
+- docs/G1_ACCEPTANCE.md (new, from M-014A)
+- docs/IDEMPOTENCY.md
+- docs/INVITATIONS.md (new)
+- docs/PROGRESS.md
+- docs/SCHEMA.md
+- docs/TEAM_API.md
+- docs/TEAM_MUTATIONS.md
+- docs/TEAM_SERVICES.md
+- docs/TEST_DATABASE.md
+
+Compatibility is intentionally narrow: invitations/new observer only exact 0005;
+original admission only 0004; auth-dependent legacy suites/browser only 0003;
+schema/services keep old default/0004 limitations and reject 0005 before private
+credentials. Browser host excludes the new router and latches closed if it is
+reintroduced. Legacy regression ports are not certified. INVITATIONS.md provides
+separate owner-only verify-0004, migrate/verify-0005 and subsequent guarded suite
+steps. Review additive DDL/retention/compatibility before migration approval, then
+review actual preservation/revision evidence before live race approval. No
+downgrade, reset, cleanup, ordinary launcher or privilege bypass is a workaround.
+
+Remaining risks: PostgreSQL DDL/driver/lock-observer behavior and repeated actual
+HTTP contention are unverified until the owner runs the guarded suite; no CI,
+browser, delivery UX, invitation UI or deployed acceptance. Database permissions
+must already support same-role blocker observation, otherwise fail and review
+without adding privileges. Timed-out daemon work is not proven stopped. No
+schema application, fixture creation/cleanup/reset, credential prompt/read,
+production deployment or live database action occurred here. G1 remains OPEN.
+
+Owner exercise: corrupt one losing invitation's redeemed_at in the offline oracle
+fixture and explain why the test must fail even when membership count remains 2;
+then trace why real team_full errors roll back grant consumption and its entire
+idempotency/audit/outbox chain. Stop for owner review; no commit is authorized.
+
+## M-014B-R1 - migration and G1 race readiness, 2026-11-11
+
+**Offline review complete; no remaining offline blocker identified after the
+test-harness corrections below. Stop for owner review before DDL/live tests or
+commit. G1 remains OPEN.** HEAD remains
+`fa7cc6f00c690de08fa4d5e79b169a6f4506fb92`; all 35 pending paths remain unstaged.
+Read the requested instructions/requirements/invitation/G1/schema/transaction/
+idempotency/database/architecture/decision/progress sections and inspected every
+0005 statement, the owned migration path, service locks/replay and actual G1
+fixture/authentication/observer/oracle code. No live revision inspection occurred;
+0004_admission is the last owner-verified state, not a new R1 measurement.
+
+Findings and corrections:
+
+- The original overlap query could count blocking among candidate PIDs without
+  a chain to the observer. An offline unrelated-cycle regression reproduced
+  false acceptance. The test helper now samples only registered same-role/current-
+  database Lock waiters, follows the chain from the actual observer PID and counts
+  distinct authenticated actors. Registration requires the exact hackathon/team
+  bind values on a team-lock statement. Unrelated cycles/external PIDs/duplicate
+  actors cannot establish proof.
+- Test instrumentation previously accessed Connection.info again in finally,
+  potentially masking a failed handle's original error. Cleanup now retains the
+  original mapping/PID and removes active registry entries without reconnecting.
+  A negative invalidated-handle regression verifies the original failure survives.
+- The committed oracle previously checked aggregate chains without all scope/
+  actor/response associations. It now checks every issue's leader, intended
+  recipient, historical pending reply, exact hackathon/team, completed headers,
+  unique record identities, audit linkage and outbox destination. Live setup also
+  verifies each issued grant against its corresponding actual contender and fresh
+  canonical baseline. Corrupt scope/actor/recipient/destination fixtures fail.
+- Replay policy is unchanged but now checked precisely: a new same-key call for a
+  redeemed grant after expiry is invitation_expired, with membership/history and
+  stored success unchanged. Expiry during ambiguous-COMMIT reconciliation cannot
+  grant replay proof; that in-flight call remains outcome_uncertain. Leadership
+  invalidation uses current issuer equality, not permanent revocation: restoring
+  the original issuer before expiry restores pending/replay authority. This is
+  documented and tested, not a new transfer/revocation feature. The collected
+  live expiry test now covers both pending and already-redeemed history.
+
+No production service, authentication, authorization, schema DDL, migration runner,
+transaction/retry owner, dependency or frontend change was needed in R1. Changes
+within the pre-existing pending inventory are backend/test_support/invitation_race.py,
+backend/invitation_tests/test_invitations.py, backend/tests/test_invitations.py,
+backend/tests/test_invitation_readiness.py, docs/INVITATIONS.md,
+docs/G1_ACCEPTANCE.md and this progress entry. All original assertions remain or
+are stricter; new fixture fields model the existing complete stored records.
+
+Migration assessment: seven additive DDL statements create one table (PK, three
+FKs, two checks), one explicit inbox index, two functions and three triggers;
+the PK supplies another unique index. Fixed SECURITY INVOKER/search_path/public
+qualification, immutable recipient/issuer/scope/expiry, terminal state, retained
+DELETE/TRUNCATE rejection and deferred redeemed-membership validation are intact.
+No old DDL/record/grant replacement, destructive downgrade or cleanup. Multiple
+new-key grants to one recipient/team are deliberate; UUID and idempotency scope
+uniqueness serve different purposes. Authorization belongs to the service, not
+to FKs or knowledge of an ID. Object-collision tests refuse before any DDL.
+
+The migration path accepts only exact 0004 or already-0005, locks/fingerprints all
+eleven old tables in the externally owned DDL transaction and rolls back on a
+changed fingerprint or DDL failure. Alembic's version update shares that owner;
+post-command verify separately requires exact 0005. No application rows in the
+old eleven tables are intentionally written. SHARE table locks block writers,
+including credential/session/throttle changes; ordinary reads can continue.
+Referenced FK tables also acquire DDL locks. Require a quiescent owner maintenance
+window. Full-table hash/sort cost is unmeasured; 5s lock / 15s statement limits
+are per-statement, not a measured whole-command deadline. Already-0005 is a no-op
+target, not drift/adoption repair. No actual data-preservation result is claimed.
+
+Transaction assessment: domain issuance/redemption each enter _execute once per
+retry attempt, reserve first, then follow hackathon -> sorted affected users ->
+team -> invitation. Issuance locks issuer/recipient; redemption only its membership
+subject, with issuer authority protected by the team lock. No user lock follows
+a team lock. Approval/create/trusted-join protocols are unchanged. Matching replay
+proof follows current authority. Membership/consumption/version/audit/outbox/
+stored reply share one COMMIT; confirmed aborts unwind before retry and unknown
+COMMIT uses exact-key reconciliation. Authentication/CSRF and durable throttling
+own separate completed transactions before the domain owner, not nested commits.
+Full-team losers roll back all domain effects but retain their intentional
+separate throttle attempt charge. Guarded observer commits only to release a lock.
+
+Expected persistent test writes: fresh scoped hackathons/users/credential/session/
+throttle records and retained domain chains, including past-dated expiry history
+and scoped fixture leader replacement. Per G1 case: one team, two memberships,
+50 grants, 52 completed idempotency/audit/outbox rows, one redeemed and 49 pending
+grants. No fixture deletion/cleanup. Every repetition uses new UUIDs/accounts/
+sessions; pre-created/sequential setup accounts do not count as contenders.
+
+Actual R1 verification, existing Windows PowerShell/Python 3.11.9 environment:
+
+- `.\.venv\Scripts\python.exe -m pytest -q tests/test_invitation_readiness.py
+  -k overlap --tb=short`: expected red reproduction **1 failed, 4 passed,
+  34 deselected in 1.25s**, proving the unrelated-blocker false positive before
+  the helper change. Initial corrected service/readiness run: **89 passed in
+  6.85s**. These are offline control-flow tests, not PostgreSQL evidence.
+- Focused `.\.venv\Scripts\python.exe -m pytest -q tests/test_invitations.py
+  tests/test_invitation_api.py tests/test_invitation_readiness.py
+  tests/test_admission.py tests/test_admission_api.py
+  tests/test_admission_commit_fault.py tests/test_transaction_retry.py
+  tests/test_team_mutations.py tests/test_idempotency.py
+  tests/test_test_database_safety.py tests/test_auth_schema_support.py
+  tests/test_runner_diagnostics.py --tb=short`: **457 passed in 41.79s**, exit 0.
+- Full `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1312 passed, 32 deselected in 76.20s**, exit 0; one existing Starlette/HTTPX
+  warning also remains in focused/collection runs. No test disabled or removed.
+- `.\.venv\Scripts\python.exe -m pytest invitation_tests --collect-only -q`:
+  **39 collected in 0.42s**, exit 0, 13 cases x 3 repetitions. No fixture ran.
+- `.\.venv\Scripts\python.exe -m pytest admission_tests --collect-only -q`:
+  **105 collected in 0.46s**, exit 0; original directory/0004 guard unchanged.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements, exit 0.
+- `.\.venv\Scripts\python.exe -m compileall -q app test_support tests
+  invitation_tests admission_tests alembic/versions`: passed, exit 0; compile only.
+- Inline AST/Git/targeted security check: 35 source/documentation paths, 23 Python
+  ASTs, unchanged protected auth/transaction/admission core, old migration files,
+  exact-0004 suite, dependency manifest and frontend. Targeted credential-URL,
+  private-key/token, runtime-output, artifact, NUL and whitespace checks passed;
+  cache/build outputs ignored. Root `git -c safe.directory=I:/Merge
+  -c core.safecrlf=false diff --check` passed; empty index and unchanged HEAD.
+- Frontend tests/typecheck/build not rerun in R1: no frontend or runtime API change
+  in this review. Prior M-014B 163-pass/typecheck/build evidence remains historical,
+  including its retained intermittent-test concern. No standalone configured
+  linter or online vulnerability audit; targeted scans are not exhaustive.
+
+Compatibility and owner commands are unchanged in INVITATIONS.md: verify exact
+0004, separately approve guarded migrate/verify exact 0005, review actual
+preservation/revision result, then separately approve `--suite invitations
+--revision 0005_invitations --repetitions 3`. Do not invoke ordinary Alembic,
+downgrade, reset or change privileges. Admission stays exact 0004; auth-dependent
+legacy suites/browser stay 0003; schema/services retain old limitations and reject
+0005. New invitation/observer guards require 0005 on every new/pooled connection;
+wrong CLI revisions fail before credentials. Hidden input, fixed merge_test/
+merge_app/127.0.0.1:5432, actual transaction mode, server timeouts, metadata-only
+diagnostics and fresh committed fixture checks remain mandatory.
+
+Precise unverified proof scope: a successful future run must show all 50 distinct
+real authenticated calls overlap at the gate and at least two relevant caller
+backends have an observer-rooted blocking chain; exactly one stored success and
+49 classified capacity conflicts, unchanged full-team grants and correct scoped
+committed invariants. It does not prove 50 simultaneous DB transactions, real
+network/browser/HTTPS, performance, CI, every uncommitted state or independent
+old-data/schema drift. The polling budget is checked between separately bounded
+SQL calls; a worker/observer daemon timeout or broken synchronous driver is not
+proof work stopped. Fail closed, retain fixtures/reports and review, never relax
+the count or rerun blindly. No PostgreSQL connection, live test, migration,
+credential prompt/read, deployment, commit or push occurred. G1 remains OPEN.
+
+Owner exercise: change the offline blocker graph to a two-node cycle with no
+observer edge; explain why 50 authenticated arrivals and two blocked PIDs still
+cannot certify the intended team-lock contention.
+
+## M-014B-R2 - owner invitation run and G1 evidence audit, 2026-11-11
+
+**Evidence audit complete; no blocking source/test/scope issue identified.
+Original Phase 1 G1 is CLOSED within local owner-run guarded PostgreSQL
+acceptance. Stop for owner review before committing.** HEAD remains
+`fa7cc6f00c690de08fa4d5e79b169a6f4506fb92`; all 35 pending files remain unstaged
+(23 modified, 12 untracked). The exact 35-file M-014B inventory above is unchanged.
+R2 changes documentation only; no service, test, harness or migration changed
+after the audited run. No new dependency or frontend invitation implementation.
+
+Read AGENTS.md, INVITATIONS.md, G1_ACCEPTANCE.md, TEST_DATABASE.md and PROGRESS.md;
+reviewed the original requirement/gate and all pending source/test/documentation
+changes, including additive DDL, API/session/CSRF/throttle, transaction/replay,
+guards, observer, oracle and retained-fixture certification. Current authority
+precedes replay, actors derive from authenticated sessions, no public unrestricted
+join or nested domain commit exists, and existing auth/transaction/admission core
+and legacy revision/browser restrictions remain intact. No assertion was weakened.
+
+Owner evidence, separated from Codex actions:
+
+- Owner reports migration **0005_invitations already applied to merge_test**,
+  with a screenshot showing merge_test / merge_app / 0005_invitations. R2 did not
+  receive/inspect that screenshot itself or query PostgreSQL. The existing
+  invitation report's revision and exact connection guards corroborate the
+  reported test target. No independent DDL drift or migration-preservation log
+  audit was performed. **Do not rerun migration, provisioning or cleanup.**
+- Existing ignored report:
+  `backend/test-results/guarded/run-b7498102ceca4576b17a780aa7296157.json`.
+  SHA-256: `f75eaae1ad4ec664d388aa9e198def96e73a1f02f91c265c5a3f4cb59e5588bc`.
+  Recorded fields: schema_version 1; suite invitations; revision 0005_invitations;
+  repetitions 3; status passed; exit_code 0; stage pytest; collected 39;
+  teardowns_completed 39; skipped 0; failures []; active_node null;
+  invariant_verification suite_and_fixture_checks_completed. Values are sanitized
+  metadata only; report remains ignored and is not proposed for Git.
+- Exact supported equivalent invocation, **evidence reference only, not run in R2**:
+  from `I:\Merge\backend`, `.\.venv\Scripts\python.exe -m test_support.concurrency
+  --confirm-merge-test --suite invitations --revision 0005_invitations
+  --repetitions 3`. Literal argv/path/order, credential input method, source hash
+  and a successful-node roster are absent from JSON. It cannot recover the
+  owner's literal terminal text or cryptographically attest the executed tree.
+  The checksum identifies this report only. Attribution relies on the owner's
+  confirmation plus matching report/fixed-runner/source evidence.
+- **39 total cases**, not 39 per repetition or 117: current credential-free
+  collection confirms 13 per repetition (workflow 1, security 5, authority/key 1,
+  stale issuer 2, G1 1, cross-team 1, expiry 2). The runner fixes the whole suite,
+  clears external selection/plugins and fails fast; completed zero-exit/no-skip
+  metadata supports all 39 cases completing under that implementation. It does
+  not provide an independent historical per-node pass transcript.
+- Exact race node: `invitation_tests/test_invitations.py::test_distinct_authenticated_50_caller_last_seat`,
+  parametrized [0], [1], [2]. Three G1 races, 150 primary contender calls, three
+  winners and 147 capacity conflicts are source-derived totals from the complete
+  run, not recorded diagnostic counters. Setup and winner replays are additional
+  calls, not contenders/test cases. No timing, throughput or p95 is available.
+
+Proof review: each race registers/logs in 50 actual different actors and asserts
+different session/CSRF secrets. Actual cookie/CSRF dependencies authenticate each
+explicit recipient call; no auth/principal bypass. Fifty leader-issued grants
+are canonically matched to those recipients and one capacity-2 team with only
+its founder. Sequential account/grant setup is not counted as contention. All
+50 real HTTP redemption handlers reach the gate before release. This uses a
+shared in-process TestClient with independent explicit credentials, not 50 socket
+clients or browser profiles. The test host alone raises/restores AnyIO sync
+capacity to 64; the ordinary DB pool may queue transactions.
+
+The observer registers only active authenticated actors at the exact target
+hackathon/team lock statement, then counts distinct registered same-role/current-
+database Lock waiters whose pg_blocking_pids chain reaches its own held target
+team lock. Unrelated cycles/external PIDs/duplicate actors cannot supply proof.
+Cleanup removes tags/PIDs without reconnecting failed handles. A successful case
+requires at least two such PostgreSQL waiters, all 50 authenticated arrivals and
+all 50 classified outcomes. This proves overlapping caller activity and real
+relevant lock contention, not 50 simultaneously executing DB transactions.
+
+Fresh race assertions require exactly one 200, 49 409 team_full, 49 pending/null
+redeemed_at grants, one redeemed grant, founder plus winner membership, scoped
+hackathon/user uniqueness, valid unchanged leader, capacity 2 and version 52.
+Exactly 52 unique completed idempotency records/audits/outbox rows match operation,
+actor, grant/subject, hackathon/team, contiguous versions and response data.
+The winner's exact-key replay returns identical content with unchanged canonical
+snapshot. Cross-team races require one success/one already_assigned conflict,
+only one membership and unconsumed losing grant. Unauthorized/stale/expired
+grant and replay checks are separate from capacity losses; uncertainty fails G1.
+
+Final fixture certification includes the G1 fixture: the function-scoped database
+tracks its fresh hackathon before seed writes and calls InvitationDatabase.check
+in finally. Its inherited canonical checks inspect membership/capacity/leadership,
+completed outcomes/version/audit/outbox, then invitation checks inspect state,
+redeemed membership and issue/redeem audits for that same scope. Teardown failure
+prevents completed report certification. The body runs the stronger exact race
+oracle and unchanged snapshot assertion too. These checks are scoped to fixtures
+created by the run, not a scan of every previously retained hackathon.
+
+Actual R2 checks, existing Windows PowerShell / Python 3.11 backend environment:
+
+- From backend, `.\.venv\Scripts\python.exe -m pytest -q
+  tests/test_invitations.py tests/test_invitation_api.py
+  tests/test_invitation_readiness.py tests/test_admission.py
+  tests/test_admission_api.py tests/test_admission_commit_fault.py
+  tests/test_transaction_retry.py tests/test_team_mutations.py
+  tests/test_idempotency.py tests/test_test_database_safety.py
+  tests/test_auth_schema_support.py tests/test_runner_diagnostics.py --tb=short`:
+  **457 passed in 49.74s**, exit 0.
+- `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  **1312 passed, 32 deselected in 98.12s**, exit 0. One existing Starlette/HTTPX
+  deprecation warning remains, also in focused and collection runs.
+- `.\.venv\Scripts\python.exe -m pytest invitation_tests --collect-only -q
+  --race-repetitions=3`: **39 collected in 0.49s**, exit 0; no fixture executed.
+- `.\.venv\Scripts\python.exe -m pip check`: no broken requirements, exit 0.
+- `.\.venv\Scripts\python.exe -m compileall -q app test_support tests
+  invitation_tests admission_tests alembic/versions`: passed, exit 0; compile only.
+- Inline AST/Git/security/artifact check: 35 paths / 23 Python ASTs, unchanged
+  HEAD and empty index; frontend, dependency manifests/lockfile, old migrations,
+  original admission live suite and auth/transaction/admission core unchanged.
+  Existing idempotency/throttle functions remain AST-identical. Targeted private-
+  key/token/credential-URL/runtime-output, NUL, trailing-whitespace and artifact
+  checks passed. The report contains only allowlisted fields; report/build/cache
+  paths are ignored. `git -c safe.directory=I:/Merge -c core.safecrlf=false
+  diff --check` passed. No standalone configured linter or online vulnerability
+  audit was run; targeted scans are not exhaustive.
+- Frontend tests/typecheck/build not rerun: no frontend change; historical 163-pass
+  evidence and the previously documented intermittent fetch-count concern remain.
+
+R2 documentation updated: G1_ACCEPTANCE.md and this milestone record carry the
+evidence/closure/count/provenance assessment; INVITATIONS.md, TEST_DATABASE.md,
+SCHEMA.md, ARCHITECTURE.md, ADMISSION.md, TEAM_API.md, TEAM_SERVICES.md,
+IDEMPOTENCY.md and DECISIONS.md align current status and mark old preparation as
+history. The original M-014A, M-014B and R1 records remain dated evidence.
+
+Remaining scope: G1 closure does not certify production TLS/HTTPS, real-network
+transport, browser/mobile/assistive technology, CI/R-14/G4, load/seed/p95, all
+possible schedules/uncommitted intermediate states, independent schema drift,
+all old retained data, invitation UI/delivery/revocation or broader lifecycle
+flows. Database constraints and the committed oracle supply bounded correctness
+evidence, not universal proof. Deadlines fail closed; timed-out daemon/driver work
+is not proven stopped. Original admission remains exact 0004, legacy auth/browser
+0003, schema/services reject 0005; no port or legacy 0005 certification is claimed.
+No PostgreSQL access, live rerun, app host, credential prompt, migration, cleanup,
+reset, staging, commit, remote or push occurred in R2.
+
+Owner exercise: make the offline observer graph a two-node cycle without a path
+to the observer and explain why blocked PIDs alone cannot certify G1. Stop for
+owner review; no commit or additional database action is authorized.
+
+## M-014B - final review and local commit checkpoint, 2026-11-11
+
+Final source, test, migration, documentation and scope review found no blocker.
+The owner authorizes exactly one local commit:
+`feat: add secure invitations and G1 race acceptance (M-014B)`.
+Baseline `fa7cc6f00c690de08fa4d5e79b169a6f4506fb92`; the approved inventory is
+the same 35 files listed in the M-014B entry (23 backend Python files and 12
+documents). The full resulting hash and final Git status are reported after
+commit creation. No new dependency or frontend functionality; final-review
+changes only add this evidence record to PROGRESS.md.
+
+Review conclusions:
+
+- Current leaders alone issue existing-recipient-bound grants; issuance reserves
+  no seat. Cookie/CSRF/Origin/strict JSON/key protections derive the actor from
+  the authenticated session. Private inbox and redemption scope the intended
+  recipient; there is no actor selector or unrestricted public join.
+- The existing sole domain transaction owner and hackathon -> affected users ->
+  team -> invitation lock order are preserved. Current recipient/issuer/expiry
+  checks precede successful replay proof. A new same-key call after redemption
+  expiry returns invitation_expired without undoing prior membership; expiry
+  preventing ambiguous-COMMIT reconciliation leaves outcome_uncertain. Current
+  leadership equality, including restoration, has its documented semantics.
+- Redemption checks assignment/capacity under locks and atomically commits grant,
+  membership, version, audit/outbox and stored reply. Full-team failures leave
+  grants pending with no partial domain chain; separate durable throttle charges
+  remain intentional. Same-key reconciliation does not duplicate effects.
+- 0005 is additive, retained and non-destructive; old tables/migrations/permissions
+  are unchanged. **0005 is already applied to merge_test. Do not rerun it.**
+  No migration, live test, PostgreSQL inspection, fixture creation/reset/cleanup
+  or application host was executed during final review.
+- Compatibility stays exact: invitation suite 0005, admission 0004, legacy
+  auth-dependent suites/browser 0003; schema/services reject 0005 and keep their
+  earlier limitations. Browser harness excludes invitation mutations and fails
+  closed if reintroduced. No legacy-suite port or permission expansion.
+- Owner live evidence remains 39 total cases = 13 x 3, with completed teardowns
+  and invariant checks. Three G1 race outcomes follow from the source-reviewed
+  full-suite run; JSON has no successful-node roster or source hash. Its checksum,
+  evidence provenance, target-bound observer proof and fixture certification scope
+  remain documented in G1_ACCEPTANCE.md. G1 is closed for local PostgreSQL
+  acceptance only. No new live result, duration or production proof is inferred.
+
+Actual final verification in Windows PowerShell, existing backend virtualenv and
+installed frontend toolchain; all commands below exited 0:
+
+- From backend, `.\.venv\Scripts\python.exe -m pytest -q -m 'not database'
+  --tb=short`: **1312 passed, 32 deselected in 78.00s**.
+- `.\.venv\Scripts\python.exe -m pytest -q tests/test_invitations.py
+  tests/test_invitation_api.py tests/test_invitation_readiness.py
+  tests/test_admission.py tests/test_admission_api.py
+  tests/test_admission_commit_fault.py tests/test_transaction_retry.py
+  tests/test_team_mutations.py tests/test_idempotency.py
+  tests/test_test_database_safety.py tests/test_auth_schema_support.py
+  tests/test_runner_diagnostics.py --tb=short`: **457 passed in 34.33s**.
+  Both pytest runs retain one existing Starlette/HTTPX deprecation warning.
+- From frontend, `npm.cmd test`: **163 passed, six files, 45.12s**.
+  `npm.cmd run typecheck`: passed. `npm.cmd run build`: passed, including its
+  own typecheck; Vite built 40 modules in 6.76s. The previously documented
+  intermittent fetch-count concern is retained; this pass does not erase it.
+- Backend `.\.venv\Scripts\python.exe -m pip check`: no broken requirements.
+  Frontend `npm.cmd ls --depth=0`: all direct dependencies resolved.
+- Backend `.\.venv\Scripts\python.exe -m compileall -q app test_support tests
+  invitation_tests admission_tests alembic/versions`: passed, compile only.
+- Inline AST/Git/targeted security review: all 35 inventory paths / 23 Python ASTs;
+  protected frontend, auth/transaction/admission core, original 0001-0004 migrations,
+  original admission suite and dependency manifests/lockfile unchanged. Existing
+  idempotency/throttle function ASTs identical. Targeted credential-URL/private-
+  key/token/runtime-output, artifact, NUL and whitespace checks passed. Report
+  checksum/allowlisted fields unchanged; report/cache/build outputs ignored.
+  No active Git hooks. Root `git -c safe.directory=I:/Merge
+  -c core.safecrlf=false diff --check` passed. Final index review checks exact
+  inventory/content and staged whitespace before the one authorized commit.
+  No separately configured linter or online vulnerability audit; targeted scans
+  are not exhaustive. No tests/assertions were weakened or removed.
+
+Remaining release work: production HTTPS/network/browser/mobile/assistive-
+technology acceptance, GitHub Actions, 10k/2k seeding and 100-client p95 load,
+invitation UI/delivery/revocation and broader lifecycle flows remain open. The
+test proves 50 authenticated overlapping calls with at least two relevant
+PostgreSQL waiters, not 50 simultaneous DB transactions or all schedules and
+intermediate states. Driver/daemon timeout does not prove work stopped. No full
+schema drift/old retained-data audit or broadened legacy 0005 compatibility.
+No PostgreSQL access, migration, live rerun, fixture operation, remote or push.
+
+Owner explanation: the invitation grants this recipient permission to contend
+for capacity; it does not reserve a seat. Exercise: corrupt a losing grant's
+redeemed_at in the offline oracle fixture and explain why the assertion must
+fail even when the final membership count still equals two.
 
 ## Daily work log template
 ```

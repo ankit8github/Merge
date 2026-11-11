@@ -489,3 +489,23 @@ beforeunload warning is best-effort; no durable recovery claim or silent new-key
 fallback. No additional admission rules, backend/schema changes, new dependency,
 browser-host permission expansion or G1 closure. Real-browser/HTTPS/mobile/
 keyboard acceptance needs a separately reviewed guarded 0004 host/write scope.
+
+### M-014B - owner-scoped invitation prerequisite, 2026-11-11
+
+The owner authorizes recipient-bound leader-issued invitations and a distinct-
+caller harness, addressing M-014A's missing legitimate self-admission capability.
+Design before implementation: [INVITATIONS.md](INVITATIONS.md). UUID inbox
+references are not bearer authority; cookie recipient/current issuer/expiry are
+checked under existing locks, including replay. Fixed 24-hour expiry, separate
+durable per-account attempt scopes and retained history keep the component small.
+Reuse the existing transaction/retry owner and already-locked membership helper;
+no current auth/lock protocol refactor or public unrestricted join. Additive 0005
+and its fixed suite need separate owner migration/live review. Existing 0004
+admission and 0003/browser gates remain exact. G1 cannot close offline.
+
+M-014B-R2 evidence update, same date: the owner reports applied 0005 and a
+successful guarded invitation run. The existing report records 39 total cases
+at three repetitions, exit 0 and completed suite/fixture checks. The audit in
+G1_ACCEPTANCE.md closes original Phase 1 G1 within local PostgreSQL scope; it does
+not change the contract or authorize another migration/live run. Earlier readiness
+statements above retain their dated scope. CI/production/browser/load remain open.

@@ -10,7 +10,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import URL, create_engine, text
 from test_support.revisions import (AUTH_REVISION, DOMAIN_REVISION, ADMISSION_REVISION,
-    TARGET_REVISIONS, domain_snapshot, admission_snapshot, validate_migration_start)
+    INVITATION_REVISION, TARGET_REVISIONS, domain_snapshot, admission_snapshot, invitation_snapshot, validate_migration_start)
 
 
 class DiagnosticFailure(ValueError):
@@ -129,7 +129,7 @@ def verify(connection, revision=DOMAIN_REVISION):
         if revisions not in allowed:
             raise DiagnosticFailure('migration-state')
     print('Verified merge_test / merge_app, READ COMMITTED, CONNECT and schema USAGE/CREATE')
-    print('Alembic revision:', (revisions[0] + (' (head)' if revisions[0] == ADMISSION_REVISION else '')) if revisions else 'base (no recorded revision)')
+    print('Alembic revision:', (revisions[0] + (' (head)' if revisions[0] == INVITATION_REVISION else '')) if revisions else 'base (no recorded revision)')
     connection.rollback()
 
 
@@ -156,8 +156,8 @@ def migrate(connection, revision=DOMAIN_REVISION):
     # This transaction owns both DDL and preservation validation. The dedicated
     # Alembic env must never commit/rollback this caller-owned transaction itself.
     with connection.begin():
-        snapshot = admission_snapshot if revision == ADMISSION_REVISION else domain_snapshot
-        before = snapshot(connection) if revision in (AUTH_REVISION, ADMISSION_REVISION) else None
+        snapshot = invitation_snapshot if revision == INVITATION_REVISION else admission_snapshot if revision == ADMISSION_REVISION else domain_snapshot
+        before = snapshot(connection) if revision in (AUTH_REVISION, ADMISSION_REVISION, INVITATION_REVISION) else None
         command.upgrade(config, revision)
         if before is not None and snapshot(connection) != before:
             raise ValueError('Existing rows changed during migration; rolling back DDL')

@@ -1,5 +1,12 @@
 # Atomic composed team mutations — M-008D
 
+M-014B adds separate invitation.issue.v1/invitation.redeem.v1 composition using
+the same owner/retry protocol. Redemption checks current durable authority before
+noting replay proof and calls only _admit_locked_in_tx. Grant consumption and the
+membership/version/audit/outbox/outcome share one commit. No existing mutation
+body, fingerprint or transaction protocol changes. [INVITATIONS.md](INVITATIONS.md)
+records lock compatibility and offline/live limits.
+
 M-013A composes request creation/decisions through the existing retry/reservation/
 completion and _execute owner. Approval uses the shared already-locked admission
 helper with current leader and request locks. Actual request transitions each
