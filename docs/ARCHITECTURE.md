@@ -1,5 +1,15 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
+M-015B adds separate test-only full-stack browser tooling at exact 0005: fixed
+loopback/guarded merge_test engine, all five real service dependency overrides,
+bounded fresh registration/domain command scopes, separate retained-hackathon
+preparation and before/after fingerprint/invariant certification. The legacy
+0003 harness, production services/transactions/authentication and deployment
+topology are unchanged. A manually installed response gate lives outside the
+production frontend bundle. This is offline implementation, not browser/live/
+HTTPS acceptance or an authorization to connect. Operational contract and gates:
+[BROWSER_ACCEPTANCE.md](BROWSER_ACCEPTANCE.md). G1's prior local-only scope remains.
+
 M-014C-R1 adds committed-workspace display tokens to mutation response handling.
 Session generation still owns transport/account isolation; a separate token owns
 global expiry and automatic canonical refresh. Navigation invalidates that token

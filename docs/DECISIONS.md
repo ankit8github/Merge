@@ -510,6 +510,33 @@ G1_ACCEPTANCE.md closes original Phase 1 G1 within local PostgreSQL scope; it do
 not change the contract or authorize another migration/live run. Earlier readiness
 statements above retain their dated scope. CI/production/browser/load remain open.
 
+### M-015B - separate bounded exact-0005 browser host, 2026-11-11
+
+The owner authorizes M-015A's test-only environment implementation, not live use.
+Preserve ordinary Settings and restricted 0003 browser host. Add a separate 0005
+CLI with fixed loopback target, every-checkout guard, exact route/dependency audit
+and all five real service overrides; leave ordinary runtime engines unset. Real
+auth/CSRF/Origin/throttle/authorization and service transaction/lock ownership
+remain authoritative. No application endpoint, privilege, dependency or schema
+change is approved. Shared lifecycle/private-prompt helpers are reused unchanged.
+
+Choose the explicitly planned nine-success/one-full-conflict journey rather than
+an unrestricted test-write facade. Fresh approved usernames bind only server
+registration results. Separate two-hackathon preparation never runs at startup.
+Freeze exact command/key/scopes, bound attempts, retain all effects and compare
+all preexisting row fingerprints plus scoped membership/request/grant/reply/
+audit/outbox/auth state. Require complete journey and positive drain/disposal for
+terminal success. Current-state verify cannot certify a lost/incomplete run.
+
+Browser-only fault installation is separately approved against resolved exact
+URLs/methods. Keep it out of src/builds and /auth, send one real request before
+delaying/losing/replacing delivery, bound memory/time and restore transport.
+Synthetic 401 is labelled UI evidence, never proof of real authentication or
+COMMIT failure. Keys and both journals are memory-only; restarting the host cannot
+adopt a retained run. A more general resume environment needs separate review.
+Supported commands and honest limitations: BROWSER_ACCEPTANCE.md; actual offline
+evidence: PROGRESS.md. No live database, browser/server or commit here.
+
 ### M-014C-R1 - mutation display ownership after navigation, 2026-11-11
 
 The invitation journal's account/session guard cannot identify selected-workspace

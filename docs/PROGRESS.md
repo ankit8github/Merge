@@ -7,11 +7,15 @@
 
 ## Current verified context
 
-The M-014C final review/local checkpoint entry below is current and supersedes the
-final-review blocker and R1 owner-review pause.
+The M-015B final safety audit below is current; no live operation is approved.
+Real-browser execution remains pending. M-014C is committed locally as
+`b8abacd5c0f5796488916da4884d2c672ee4eb6d`, superseding its final-review blocker
+and R1 owner-review pause.
 Earlier milestone/open/not-applied statements retain their checkpoint scope.
 
-- [x] M-014C final review complete; one local checkpoint authorized: all 20 paths reviewed, committed-workspace ownership and exact-command recovery retained. Final standalone frontend 261 passed; backend database-free 1312 passed / 32 deselected, one existing warning; typecheck/build/dependency/compile/targeted static/security/whitespace checks passed. Initial concurrent frontend run had 258 passes and three initial-loading timeouts, preserved below; unchanged standalone rerun passed. Prior fetch-count concern remains. No backend/schema/dependency or live/browser change. G1 remains closed only within prior local PostgreSQL acceptance. Checkpoint subject: `feat: add React invitation workflows and workspace isolation (M-014C)`; obtain its hash from local Git history. No remote or push.
+- [x] M-015B implemented and offline verified for owner review: separate exact-0005 guarded browser host, fresh two-hackathon preparation, four UI-registration bindings, bounded exact-command journal, independent before/after certification and explicitly installed test-only response gate. Final backend database-free 1398 passed / 32 deselected; focused new/legacy browser/config 223 passed; frontend standalone 272 passed (261 prior + 11 gate cases); typecheck/build/dependency/compile/targeted static/security/whitespace checks passed. One existing backend warning. Production services, legacy 0003 harness and dependencies unchanged. No database, server/browser, fixture/credential/migration/live action, staging or commit. Exact supported commands, budgets, complete-journey requirements and approval gates: BROWSER_ACCEPTANCE.md. G1 remains prior local-only evidence; all browser/HTTPS acceptance pending.
+- [x] M-015A offline readiness analysis completed at its checkpoint: startup/Settings hazards source-traced; separate exact-0005 test host, two-hackathon/four-account retained-write plan, gates, browser checklist and failure/shutdown contract proposed in BROWSER_ACCEPTANCE.md. At that checkpoint the new host/certifier/preparer and response gate were unimplemented. Concrete accounts/writes/live actions remain unapproved. Offline browser/config checks 137 passed; unchanged standalone frontend 261 passed; no test/assertion/config changes. Documentation only; no database connection, server/browser, credentials, fixtures, migration, staging, commit, remote or push. No new G1/browser/HTTPS claim.
+- [x] M-014C committed locally as `b8abacd5c0f5796488916da4884d2c672ee4eb6d`: all 20 paths reviewed, committed-workspace ownership and exact-command recovery retained. Final standalone frontend 261 passed; backend database-free 1312 passed / 32 deselected, one existing warning; typecheck/build/dependency/compile/targeted static/security/whitespace checks passed. Initial concurrent frontend run had 258 passes and three initial-loading timeouts, preserved below; unchanged standalone rerun passed. Prior fetch-count concern remains. No backend/schema/dependency or live/browser change. G1 remains closed only within prior local PostgreSQL acceptance. Exactly one local commit, `feat: add React invitation workflows and workspace isolation (M-014C)`; no remote or push.
 - [x] M-014C-R1 repaired/offline verified at its owner-review checkpoint: both original old-hackathon invitation 401 regressions pass unchanged; the same defect was reproduced and fixed for creation/request/decision hooks. Committed-workspace tokens gate global expiry/automatic refresh without cancelling or erasing original scoped commands. Frontend 261 passed; focused journeys 137 passed; typecheck/build passed; backend database-free 1312 passed / 32 deselected (one existing warning); dependency/compile/targeted static/security/whitespace checks passed. Its baseline HEAD was `2639c1fadffed6fb791496a023d63ddcdedff768`, with 20 pending paths and no staging/commit. No backend/schema/dependency change, PostgreSQL access, browser/server action or new G1 evidence. Historical blocker/red evidence and commands/inventory below.
 - [x] M-014C invitation UI implemented/offline verified for owner review, uncommitted: leader UUID-only issuance, private paginated recipient inbox, redemption and independent memory-only uncertain-command recovery. Frontend 242 passed (79 new invitation cases), typecheck/build passed; backend database-free 1312 passed / 32 deselected; dependency/compile/targeted security/static/whitespace passed. No backend/schema/dependency/browser-host changes, PostgreSQL access, browser launch or new live evidence. M-014B committed as `2639c1fadffed6fb791496a023d63ddcdedff768`; 0005 already applied. G1 remains CLOSED only within its prior local owner-run scope. Exact component/file inventory and recovery/browser limits: FRONTEND.md and the M-014C entry below. Stop for owner review; no staging/commit/remote/push.
 - [x] M-014B final review and local commit checkpoint: all 35 approved invitation/G1 paths reviewed; full backend database-free 1312 passed / 32 deselected, focused 457 passed, frontend 163 passed; typecheck/build, Python/frontend dependency checks, compile and targeted security/artifact/whitespace checks passed. Original Phase 1 G1 remains CLOSED only within the audited owner-run local PostgreSQL scope; the report has no successful-node roster or source hash. 0005 is already applied: no database action or live rerun. Owner authorizes exactly one local commit, `feat: add secure invitations and G1 race acceptance (M-014B)`, after final index review; no remote or push. Detailed commands/results and limits are in the final review entry below.
@@ -6454,6 +6458,391 @@ Owner explanation/exercise: explain why session generation alone cannot detect
 hackathon navigation, then trace the layout-effect token cleanup in the preserved
 old-hackathon 401 test. Verify the current-workspace 401 test still expires while
 the stale response does not, without changing the original command/key.
+
+## M-015A - full-stack browser acceptance readiness, 2026-11-11
+
+**Analysis/preparation complete; implementation and live acceptance pending.**
+Started clean at `b8abacd5c0f5796488916da4884d2c672ee4eb6d`. Read the required
+repository/requirements/frontend/browser/database/invitation/admission/G1/
+architecture/decision/progress sections; traced all startup paths and exact service
+dependencies from source. No ordinary/private environment or credential file read.
+The legacy manifest path was checked for existence only and is still absent;
+no current approved test-account mapping was established by repository review.
+
+Findings and proposed next component:
+
+- Ordinary `auth.get_services -> build_engine(Settings())` loads backend/.env
+  and overriding MERGE_DB_* values, defaults to merge_dev, and explicitly rejects
+  merge_test. Health/import can succeed before that lazy DB path. Ordinary
+  app.serve/direct Uvicorn or scripts/check_local_http.py are not a workaround.
+- Existing test_support.browser remains exact-0003, retained-account/auth-write
+  only, registration blocked and all team/admission/invitation routers excluded.
+  Its compare requires domain/credential data unchanged, omits new-table domain
+  certification and cannot authorize full-stack 0005 writes. Preserve its source,
+  revision gates, manifest and intentional restrictions.
+- Propose a separate exact-0005 loopback host, strict public-scope/attempt manifest,
+  two-INSERT retained hackathon preparer and fresh full-state certifier. Override
+  all five real auth/read/team/admission/invitation dependencies; keep ordinary
+  engines unset; per-checkout identity/revision/isolation/timeouts and request-time
+  exact wiring audit. Preserve real auth/CSRF/Origin/strict JSON/idempotency and
+  sole service transaction/locking behavior. No production/backend business rule,
+  schema, privilege, dependency or frontend feature change is needed.
+- Concrete proposed main plan: four newly approved private-credential accounts,
+  two fresh hackathons (min2/max3), UI-created teams A/B in H-A, Q approval/R
+  rejection, R invitation/redemption and X full-team failure then creation of B.
+  Owner approves names/UUID scopes, returned-ID binding, exact attempt budgets,
+  each persistent write class and evidence rules first. Expected nine successful
+  domain chains are design assertions, not measured test results. All fixtures
+  remain retained; no automatic cleanup, reset, seed rerun or data adoption.
+- Separate gates distinguish offline host implementation, live read-only preflight,
+  two-hackathon writes, registration/auth/throttle/domain browser writes, injected
+  response schedules and final observers. No gate is approved by this analysis.
+  The optional existing guarded database verify-0005 command is documented only
+  as a later owner-approved identity/revision read, not a runnable full-stack host.
+  No supported full-stack backend serve command currently exists; future reviewed
+  implementation must supply exact CLI/startup/completion commands before live use.
+- BROWSER_ACCEPTANCE.md contains the operating/shutdown/failure contract and
+  pending case table for register/login/restore/create/request/approve/reject/
+  issue/inbox/redeem/logout, scope changes, late responses, same-command retries,
+  private cookie/security checks and desktop/mobile/keyboard/assistive technology.
+  A bounded browser-only real-response/lost-ack gate needs separate implementation
+  and review; synthetic errors must be labelled UI-only. No DB corruption, clock/
+  expiry/leader mutation or auth bypass to manufacture cases.
+- Local target/fixture scope is not physical DB/role/OS isolation. The current
+  role and trusted local tooling remain trusted. UUID entry, memory-only recovery,
+  inadequate small fixtures for >20-row paging and missing natural expiry/stale-
+  leader schedules are explicit limitations. Local HTTP is not production HTTPS.
+  Mandatory lifecycle/realtime/matching/CI/load/deployment/submission work remains
+  release-blocking; search/delivery polish and optional tooling cannot displace it.
+
+Actual offline checks, executed sequentially (no resource-heavy overlapping suite):
+
+| Working directory | Command | Result |
+|---|---|---|
+| backend | `.\.venv\Scripts\python.exe -m pytest -q tests/test_browser_harness.py tests/test_config.py --tb=short` | 137 passed, 8.63s, exit 0; one existing Starlette/HTTPX warning. Browser tests prohibit live connections/listeners/prompts/ordinary Settings |
+| frontend | `npm.cmd test` | 261 passed, 8 files, standalone 52.23s, exit 0; unchanged source/assertions/timeouts |
+
+No full backend rerun, typecheck/build, dependency installation or live collection
+was needed for this documentation-only task; M-014C's 1312/32 offline and passing
+typecheck/build evidence above remains historical. The new frontend pass does not
+erase the initial concurrent loading failures or prove resource contention. The
+historical fetch-count mismatch received a bounded synchronization wait in M-013B;
+the concern remains recorded, not a claim of general timing certification. R1's
+old-workspace 401 defect instead had red-five/green-five source-repair evidence.
+
+Files changed: docs/BROWSER_ACCEPTANCE.md, docs/FRONTEND.md, docs/TEST_DATABASE.md,
+docs/PROGRESS.md. Proposed module names in the plan are not implemented APIs/CLI.
+No app/test/harness/schema/migration/dependency source change. Read-only Git/static
+scope, secret-pattern/artifact and whitespace checks accompany this documentation
+review; no credentials or tracked run artifact was added. HEAD unchanged, four
+modified documents, nothing staged. No PostgreSQL/merge_dev, server/browser,
+migration/downgrade/reset/cleanup, credential prompt, deployment, commit or push.
+
+Recommended sequence: owner reviews the concrete plan -> bounded offline host/
+preparer/certifier tests and exact CLI review -> separate read/fixture/browser
+write approvals -> local real-browser happy paths -> reviewed delayed/uncertain
+and negative schedules -> positive shutdown/fresh certification -> later separate
+HTTPS/deployment/mandatory release work. Every browser item remains pending.
+0005 is already applied; no rerun. G1's prior local-only scope/provenance limits
+are unchanged. Stop for owner review before any live action or commit.
+
+Owner explanation/exercise: trace why a healthy app.serve still can target
+merge_dev on its first credentialed call. In an offline new-host test, remove
+get_invitation_service's override and require refusal before ordinary Settings
+can run. Explain why changing the legacy REVISION constant alone is insufficient.
+
+## M-015B - guarded full-stack browser acceptance tooling, 2026-11-11
+
+**Implemented/offline verified; stop for owner review before live actions or commit.**
+HEAD remains `b8abacd5c0f5796488916da4884d2c672ee4eb6d`. Preserved the four pending
+M-015A documentation files. Read required docs and traced legacy browser/state,
+database guards, all FastAPI dependencies, original services, fixtures and Vite.
+No core architecture, authentication/session, transaction, schema or dependency
+change. Source inventory is test-only plus documentation.
+
+Implemented behavior and deliberate bounds:
+
+- Separate test_support.browser_full CLI supports inspect/prepare/serve/verify,
+  exact 0005 only. Fixed merge_test/merge_app/loopback, every initial/new/pooled/
+  observer checkout checks actual identity/revision/READ COMMITTED/DBAPI autocommit/
+  transaction state/timeouts. Failure latches closed. Private prompt/lifecycle
+  helpers are reused unchanged from legacy; no Settings/dotenv/password fallback.
+- Auth/read/team/admission/invitation dependencies all use the guarded engine.
+  Exact route/dependency closure is audited before requests and at lifespan
+  boundaries; ordinary engines remain unset. Real session/CSRF/Origin/Fetch
+  Metadata/throttle/actor authorization and original service transactions run.
+- Scope fixes four fresh run-prefixed approved usernames and two UUID4 hackathons,
+  min2/max3. `prepare` is a separately opted-in action: exactly two INSERTs, one
+  owned transaction, preserved old fingerprints/no other new rows before commit,
+  then independent post-commit preservation/freshness checks. No account or team
+  auto-creation at host startup; no migration/upsert/adoption/cleanup/reset.
+- Four accounts register through UI/real services and bind returned IDs. The
+  memory-only ledger freezes each declared operation/actor/hackathon/team/target/
+  name/decision/key and bounds attempts, including failed and repeated calls.
+  Invitation budgets precede real durable throttle charging. Reads remain canonical.
+  X cannot redeem until A is full from confirmed approval Q/redemption R; creating
+  B requires the real full conflict. Main order and optional negative commands
+  are explicit in the manifest/runbook. This test scope is narrower than the app.
+- Fingerprints cover all twelve application tables, with public scoped rows and
+  redacted session/throttle metadata only. Final certification requires complete
+  A=L/Q/R, B=X, two resolved requests, redeemed R/pending X grants, nine exact
+  completed records/replies/fingerprints, versions A8/B1, connected sequential
+  audit/outbox states, bounded auth/throttle effects and unchanged prior rows.
+  Expected full/negative failures add no domain effects. Key hashes are explicitly
+  hex-normalized rather than relying on PostgreSQL bytea display configuration.
+- Forced/incomplete drain, latched guard/ledger, failed observer/certification,
+  engine/listener cleanup or operational SystemExit(0) cannot report successful
+  completion. Final success prints only after cleanup and requires full journey.
+  Current-state verify is read-only and cannot certify a lost before-state/run.
+- Browser response helper stays outside src and production assets. After separate
+  exact URL/method/mode approval it sends one unchanged real request, then holds,
+  loses delivery or supplies a labelled synthetic 401. No /auth interception,
+  credential/header/body output, automatic dispatch, backend fault route, storage
+  or application feature. Public response buffering <=64 KiB; held delivery <=15s
+  with timeout restoration, plus explicit finally/owner restoration controls.
+
+Source inventory (new):
+
+- backend/test_support/browser_full.py
+- backend/test_support/browser_full_scope.py
+- backend/test_support/browser_full_state.py
+- backend/tests/test_browser_full_harness.py
+- frontend/test_support/browserFaults.js
+- frontend/test_support/browserFaults.test.js
+
+Documentation inventory (modified): docs/BROWSER_ACCEPTANCE.md, docs/FRONTEND.md,
+docs/TEST_DATABASE.md, docs/ARCHITECTURE.md, docs/DECISIONS.md, docs/PROGRESS.md.
+Total 12 pending files, six new/six modified, nothing staged. Legacy browser.py/
+browser_state.py/database/concurrency, all production backend/frontend sources,
+schema/migrations, package files/locks and existing tests remain unchanged.
+
+Actual offline verification (Windows PowerShell, installed environment):
+
+| Directory | Actual command | Final observed result |
+|---|---|---|
+| backend | `.\.venv\Scripts\python.exe -m pytest -q tests/test_browser_full_harness.py tests/test_browser_harness.py tests/test_config.py --tb=short` | 223 passed, 9.99s, exit 0 (86 new, 137 prior) |
+| backend | `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short` | 1398 passed, 32 deselected, 53.05s, exit 0 |
+| frontend | `npm.cmd test -- test_support/browserFaults.test.js` | 11 passed, 3.47s, exit 0 |
+| frontend | `npm.cmd test` | 272 passed, 9 files, standalone 34.34s, exit 0 |
+| frontend | `npm.cmd run typecheck` | Passed, exit 0 |
+| frontend | `npm.cmd run build` | TypeScript/Vite passed, 43 production modules, Vite 2.21s, exit 0; helper absent from bundle |
+| backend | `.\.venv\Scripts\python.exe -m pip check` | No broken requirements, exit 0 |
+| frontend | `npm.cmd ls --depth=0` | Installed dependency tree valid, exit 0; no installation/change |
+| backend | `.\.venv\Scripts\python.exe -m compileall -q app test_support tests invitation_tests admission_tests alembic/versions` | Final source compiled, exit 0; no migration executed |
+
+Backend runs retain one existing Starlette/HTTPX deprecation warning. Initial new
+suite had 52 passes and five teardown errors: negative wiring tests deliberately
+removed overrides, then lifespan correctly rejected that altered wiring. Tests
+now restore the map in finally while still asserting that the sticky guard keeps
+refusing traffic. No guard was weakened. An expanded synthetic HTTP journey also
+initially had 82 passes/one failure: its reused fixture cookie plus login cookie
+correctly triggered duplicate-cookie 401. Starting that journey as a guest fixed
+the test setup; production authentication was unchanged. Incremental backend sweeps
+passed before the final post-commit fixture-observer regression; final results
+above include that last correction. Earlier frontend loading/fetch-count concerns
+remain historical; this pass does not prove their scheduler cause or erase them.
+
+Targeted static/security/scope checks passed: all four new Python files parsed;
+exact 12-file inventory and empty index; protected runtime/legacy/schema/dependency
+paths unchanged; no migration/destructive SQL, high-confidence credential URL/key/
+token patterns, NUL/trailing whitespace or tracked artifacts. No test_support
+imports in production app; no browser helper import from src or helper strings in
+dist. Build/cache files remain ignored. Original owner G1 report checksum unchanged.
+`git -c safe.directory=I:/Merge -c core.safecrlf=false diff --check` passed.
+These scans supplement review, not exhaustive security certification. No standalone
+linter/online vulnerability audit/new dependency/browser/HTTP listener was used.
+ASGI TestClient and synthetic data do not prove PostgreSQL or browser outcomes.
+
+Live prerequisites: owner reviews actual manifest names/UUIDs and budgets; approves
+read-only target/global metadata/fingerprint checks; separately approves two retained
+hackathon INSERTs; then four UI registrations, bounded auth/throttle/domain writes,
+clean browser profiles/loopback listeners and final observers. Response gates need
+their own exact resolved-URL approval within existing command budgets. Supported
+candidate-manifest/inspect/prepare/serve/Vite/verify/shutdown instructions are in
+BROWSER_ACCEPTANCE.md, not executed here. No fixture/account/manifest was created,
+password prompted/read, PostgreSQL contacted, migration/permission changed,
+deployment started, staging/commit/remote/push performed. 0005 is already applied.
+
+Limits: exclusive trusted local run, logical fixture isolation rather than OS/role
+sandbox; read-only current verification is not schema drift/historical certification;
+memory-only host ledger and browser keys, no adopting/resuming a retained scope
+after crash/restart; lost registration COMMIT needs separate diagnosis if not bound.
+UUID-only recipient UX and small-fixture/natural-expiry/stale-leader/pagination
+limits remain. Local HTTP/mobile emulation is not deployed HTTPS/physical-device/
+assistive-technology acceptance. Browser checklist is still wholly pending; no
+new G1, CI/load/p95 or release acceptance. G1 stays closed only in its prior local
+owner-run scope with existing provenance limitations. Stop for owner review.
+
+Owner explanation/exercise: remove one service override in an offline test and
+explain why health refuses before Settings can load; then tamper a single old-row
+fingerprint in the preparation observer and require failure even after INSERT
+commit. Explain why same-key browser retry can recover within one host run but
+current-state verify cannot certify a crashed run or restore its lost ledger.
+
+## M-015B - final safety audit and authorized local checkpoint, 2026-11-12
+
+**No blocking M-015B defect found in the complete offline diff review.** Baseline
+HEAD is `b8abacd5c0f5796488916da4884d2c672ee4eb6d`; exactly twelve pending files
+(six documentation, six new test-tooling files), initially nothing staged. The
+owner authorizes exactly one local commit after all checks and index review:
+`test: add guarded full-stack browser acceptance host (M-015B)`. Obtain its final
+hash from Git; this entry cannot contain its own commit hash. Stop for owner
+review before ANY live database or browser acceptance action.
+
+Bounded audit scope: review all twelve paths, trace guards and original HTTP
+security, rerun offline acceptance and record evidence in this document. No
+source correction, new dependency, migration or business-rule change was needed.
+The earlier M-015A/B no-commit statements record their dated checkpoints.
+
+Isolation and safety paths reviewed:
+
+- `browser_full.py::browser_app` overrides exactly `auth.get_services`,
+  `read_api.get_read_service`, `team_api.get_team_service`,
+  `admission_api.get_admission_service`, `invitation_api.get_invitation_service`.
+  Their scoped Credentials/Sessions/Throttle/Reads/Teams/Admission/Invitations
+  facades call the real services on the same guarded engine. `audit_wiring`
+  checks exact route and recursive dependency identities, overrides and unset
+  ordinary runtime engines/services at lifespan boundaries and before every
+  HTTP request, including health. `ClosedHost` latches wiring/guard failures.
+  No ordinary Settings, dotenv or merge_dev fallback is reachable in this host.
+- `guarded_engine` validates TestDatabaseSettings and attaches `ConnectionGuard`
+  to engine_connect before the initial checkout. Every new or pooled logical
+  connection and fresh observer checks actual merge_test / merge_app /
+  127.0.0.1:5432, synchronous psycopg, actual DBAPI autocommit false, no active or
+  nested SQLAlchemy transaction, actual/default READ COMMITTED, lock_timeout 5s,
+  statement_timeout 15s and exactly [0005_invitations]. Guard reads run READ ONLY,
+  roll back before service-owned transactions and invalidate/latch on failure.
+- `browser_full_scope.py::FullScope/read_scope` enforce the public manifest;
+  `Ledger.auth_charge/reserve/resolve/invoke` bound attempts and freeze the exact
+  command, key, actor and scope. Invitation reservation precedes the separately
+  committing durable throttle. Bound IDs come from successful real results;
+  unknown/preexisting registrations cannot be adopted by login.
+- Only explicit `prepare --allow-fixture-writes` inserts two hackathons.
+  `prepare` and its independent post-commit observer require freshness, unchanged
+  prior fingerprints and exactly those additions. `serve` never prepares data.
+  No reset, drop, cleanup, migration, adoption, credential update or destructive
+  SQL path exists in the new CLI/facades. Existing real transactions/locks own
+  domain writes; no test-only public join or transaction bypass was introduced.
+- Original AuthBoundary, authenticated_session/session_cookie, creation_session,
+  invitation mutation_session and real services retain session-bound CSRF,
+  exact Origin/Fetch Metadata, strict bodies, server-side authorization, auth and
+  invitation throttling, no-store and cookie protections. Reused local policy
+  fixes loopback origin, HttpOnly/Lax/Path=/ development cookie, no Domain, no
+  trusted proxies. Uvicorn disables proxy rewriting/access logs; forwarded-header
+  spoofing stays rejected. Hidden input refuses echo fallback; fixed diagnostics
+  and disabled logs expose no request secrets or exception values.
+- `browser_full_state.py::snapshot/preserved/certify` fingerprint all twelve
+  application tables, preserve every preexisting row, account for every addition
+  and require the entire nine-success/full-conflict journey, exact stored command
+  fingerprints/replies and linked sequential audit/outbox states. Credentials,
+  sessions and throttle records are retained; raw credential hashes/bearer/CSRF
+  are not selected/output. Sessions are bounded by charged login/logout budgets.
+- `serve/main` require positive BrowserServer drain, no residual tasks/connections,
+  startup/lifespan shutdown, clear latches, fresh independent final observer and
+  successful engine/socket cleanup before success. Incomplete journeys, forced
+  shutdown, observer/certifier/disposal failures and operational SystemExit(0)
+  cannot return successful certification. `verify` cannot certify a prior run.
+- `frontend/test_support/browserFaults.js` is manually installed only at the fixed
+  local origin with separately approved exact public path/method/mode. It excludes
+  /auth, foreign/query-bearing targets and unmatched requests, dispatches once
+  with original session/CSRF/signal and bounds buffering/held delivery. Synthetic
+  401 is labelled UI evidence. No production import/bundle or backend fault route.
+  Owner must restore the hook and keep each approved schedule within host budgets.
+
+Manifest/live prerequisites, still NOT approved or executed here: a fresh UUID4
+run; exactly four roles l/q/r/x with usernames `m015b_<first 8 run UUID hex>_<role>`;
+two distinct fresh UUID4 hackathons and distinct run-prefixed labels, min2/max3;
+distinct run-prefixed team_a/team_b; all thirteen explicit command budgets 0-3;
+per-account register 0-1 and login/logout 0-4. Strict objects reject extra or
+duplicate keys/roles/commands/IDs and boolean/invalid budgets; maximum 16 KiB.
+No passwords/tokens/fault definitions belong in the manifest. A complete journey
+needs adequate nonzero main/auth budgets. Actual IDs/names/budgets must be owner
+reviewed, with separate gates for global read-only fingerprint checks, the two
+INSERTs, four UI registrations/auth/domain writes, listeners/profiles, final
+observers and each fault schedule. Require exclusive trusted local use and
+private hidden DB-role input/UI account passwords; no manifest was generated.
+
+Exact supported owner commands (conditional on those approvals, NOT RUN), with
+`$browserPlanPath` set to the exact reviewed ignored public manifest:
+
+```powershell
+Set-Location I:\Merge\backend
+.\.venv\Scripts\python.exe -m test_support.browser_full inspect --confirm-merge-test --revision 0005_invitations --manifest $browserPlanPath
+.\.venv\Scripts\python.exe -m test_support.browser_full prepare --confirm-merge-test --revision 0005_invitations --manifest $browserPlanPath --allow-fixture-writes
+.\.venv\Scripts\python.exe -m test_support.browser_full serve --confirm-merge-test --revision 0005_invitations --manifest $browserPlanPath --allow-browser-writes
+```
+
+These are separate gates, not a script to run together. Use the runbook's immediate
+exit-code checks and stop on any failure. After the exact host-ready label, Vite
+in a second owned terminal: `Set-Location I:\Merge\frontend` then
+`npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort`. Optional separately
+approved current-state diagnosis from backend is
+`.\.venv\Scripts\python.exe -m test_support.browser_full verify --confirm-merge-test --revision 0005_invitations --manifest $browserPlanPath`.
+Follow BROWSER_ACCEPTANCE.md's explicit creation/request/approval/rejection/
+invitation/redemption/logout/workspace/retry checklist; every live item remains
+pending. Stop Vite, then Ctrl+C once in backend; require exit 0 AND
+`Full browser host final journey invariants verified; fixtures retained.`
+
+Expected persistent writes after approval only: two prepared hackathons; four new
+users/Argon2 credential rows through registration; bounded durable auth/invitation
+throttle charges, at most sixteen login sessions and sixteen scoped revocations;
+two teams, four memberships (A=L/Q/R, B=X, both in H-A); two requests (Q approved,
+R rejected); two invitations (R redeemed, X pending); nine completed idempotency
+records, nine audit and nine unpublished outbox rows; team versions A8/B1. H-B
+stays empty. Exact-key replays add no domain effects; full/negative denial adds
+no domain effects but invitation throttle attempts persist. No existing row is
+to change, no data is cleaned, and failure retains all committed effects.
+
+Actual final offline results, Windows PowerShell, Python 3.11.9, Node 22.15.0 /
+npm 10.9.2; installed dependencies only, no network/database/browser execution:
+
+| Directory | Exact command | Result |
+|---|---|---|
+| backend | `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short` | 1398 passed, 32 deselected, 79.63s, exit 0 |
+| frontend | `npm.cmd test` | 272 passed, 9 files, 54.70s, exit 0 |
+| backend | `.\.venv\Scripts\python.exe -m pytest -q tests/test_browser_full_harness.py tests/test_browser_harness.py tests/test_config.py --tb=short` | 223 passed, 11.85s, exit 0 |
+| frontend | `npm.cmd run typecheck` | Passed, exit 0 |
+| frontend | `npm.cmd run build` | Passed, exit 0; typecheck plus 43-module Vite build, 2.91s |
+| backend | `.\.venv\Scripts\python.exe -m pip check` | No broken requirements, exit 0 |
+| frontend | `npm.cmd ls --depth=0` | All eleven pinned direct dependencies valid, exit 0 |
+| backend | `.\.venv\Scripts\python.exe -m compileall -q app test_support tests invitation_tests admission_tests alembic/versions` | Passed, exit 0; compile only |
+| root | `git -c safe.directory=I:/Merge -c core.safecrlf=false diff --check` | Passed, exit 0 |
+
+Both pytest runs retain the existing Starlette/HTTPX deprecation warning.
+Standalone frontend tests did not overlap backend tests. No standalone linter is
+configured/run; no online vulnerability audit or dependency installation occurred.
+The sandbox process launcher and fallback Node runtime initially failed before
+execution; approved elevated PowerShell with command-scoped safe.directory was
+used successfully. No global Git setting or approval policy was changed.
+
+Static Python here-string checks scanned all 191 tracked/candidate files for
+high-confidence private keys/provider tokens/credential URLs and secret/artifact
+paths; checked exact twelve-file inventory, empty initial index, Python AST,
+NUL/trailing whitespace, no production tooling imports and the built bundle's
+helper exclusion. The initial broad scan flagged two preexisting synthetic URL
+fixtures in test_auth_http.py/test_runner_diagnostics.py; source inspection and
+an exact-fixture allowlist produced a passing rerun with no other findings.
+No private environment/approval file or password was read. Ignored build/cache/
+venv/node_modules/.env/test-results paths remain untracked. Protected production,
+migrations, dependencies, legacy 0003 harness and G1 documents compare unchanged.
+Original ignored G1 report SHA-256 still
+`f75eaae1ad4ec664d388aa9e198def96e73a1f02f91c265c5a3f4cb59e5588bc`.
+These checks supplement source review, not an exhaustive security certification.
+
+Nonblocking M-015B limits: trusted logical isolation/exclusive access rather than
+an OS/role sandbox; READ COMMITTED fingerprints are not one simultaneous global
+snapshot; memory-only ledger/keys and no crash/restart adoption; current verify
+is not schema-drift/historical certification; local HTTP, UUID-only recipients,
+small-fixture pagination and unavailable natural expiry/stale-leader schedules.
+Actual browser/mobile/keyboard/assistive-technology/HTTPS, CI/load/deployment and
+remaining mandatory lifecycle/realtime/matching/submission work remain separate
+release gates. G1's prior local-only scope/provenance limits are unchanged.
+
+Owner explanation/exercise: the manifest only narrows real authenticated service
+calls; PostgreSQL and the original transaction/lock protocol remain authoritative.
+In an offline test remove invitation_api.get_invitation_service's override and
+explain why health fails before Settings can initialize; restore it and explain
+why the sticky failure still prevents success. No live command is needed.
 
 ## Daily work log template
 ```

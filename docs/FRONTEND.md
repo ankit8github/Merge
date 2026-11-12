@@ -1,5 +1,22 @@
 # Merge authentication, discovery, creation, admission and invitation UI
 
+M-015B implements a separate exact-0005 host with bounded fixture/command scopes
+and fresh final-state certification, plus a manually installed browser-only
+response gate outside src and production bundles. Supported owner commands,
+approval schema, complete journey order and limitations:
+[BROWSER_ACCEPTANCE.md](BROWSER_ACCEPTANCE.md). No live action has been approved
+or performed; real browser/HTTPS/mobile/assistive-technology acceptance remains
+pending. Production frontend/session code and the legacy 0003 host are unchanged.
+Same-process exact-key recovery works; host restart cannot adopt retained scopes.
+
+M-015A readiness analysis proposed the smallest separate exact-0005 browser host,
+retained four-account/two-hackathon write plan, approval gates, operating sequence
+and full UI checklist in [BROWSER_ACCEPTANCE.md](BROWSER_ACCEPTANCE.md). At that
+analysis checkpoint the host was unimplemented. Ordinary startup requires merge_dev and
+the legacy host remains restricted to 0003. M-014C is committed at
+`b8abacd5c0f5796488916da4884d2c672ee4eb6d`; historical no-commit wording below
+describes earlier checkpoints. No new browser/HTTPS or database acceptance claim.
+
 ## M-014C - React invitation issuance, inbox and redemption
 
 **M-014C-R1 repaired/offline verified, 2026-11-11:** the two final-review

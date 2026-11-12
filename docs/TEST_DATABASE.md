@@ -1,5 +1,31 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+## M-015B browser host - implemented offline only, 2026-11-11
+
+The separate `test_support.browser_full` CLI supports inspect/prepare/serve/verify
+at exact 0005 with per-connection identity/isolation/driver/timeout guards, five
+real dependency overrides and bounded scopes. Preparation is a separate explicit
+two-hackathon INSERT action; four fresh approved accounts register through the UI.
+There is no automatic seeding/migration/cleanup or ordinary Settings fallback.
+Complete scope schema, private prompts, supported commands, write effects,
+certification/shutdown rules and approval gates: [BROWSER_ACCEPTANCE.md](BROWSER_ACCEPTANCE.md).
+No command was run live in M-015B; 0005 remains previously owner-applied. All
+legacy runners/0003 browser restrictions are unchanged. No 0005 compatibility is
+inferred for 0003/0004 suites. No full browser/HTTPS/G1 acceptance is claimed.
+
+## Historical M-015A browser readiness - analysis only, 2026-11-11
+
+[BROWSER_ACCEPTANCE.md](BROWSER_ACCEPTANCE.md) records ordinary startup's fixed
+merge_dev Settings hazard and proposes a separate exact-0005 guarded full-stack
+host plus a fresh retained two-hackathon/four-account acceptance plan. No source
+host, new CLI, fixture or approval manifest was implemented here; no database
+connection or live action. Preserve the legacy exact-0003 browser host and all
+suite revision gates. Existing guarded identity/revision verify-0005 is optional
+only after separate live-read approval and does not authorize writes/startup.
+0005 is already applied; do not rerun migration, downgrade, reset or cleanup.
+The new plan explicitly separates fixture, registration, auth/throttle, domain
+mutation, observer and browser-fault approvals; no approval is implied by analysis.
+
 ## Current M-014B-R2 checkpoint - 2026-11-11
 
 The owner reports **0005_invitations already applied to merge_test** and a

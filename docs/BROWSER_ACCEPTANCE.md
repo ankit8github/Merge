@@ -1,4 +1,553 @@
-# M-011A-R4 - test-only guarded browser host
+# Merge browser acceptance readiness
+
+## M-015B - implemented exact-0005 host, offline review only, 2026-11-11
+
+Implemented separately in `backend/test_support/browser_full.py`,
+`browser_full_scope.py`, `browser_full_state.py` and offline harness tests.
+The legacy 0003 browser host and production code remain unchanged. The supported
+commands below are **not executed** and require separate owner live approval.
+0005 is already applied: no migrations/reset/cleanup or merge_dev access.
+The M-015A proposal below is historical and superseded by this bounded contract.
+
+### Implemented safety and fixture contract
+
+- Fixed 127.0.0.1:8000 / origin http://127.0.0.1:5173; single worker, no reload,
+  proxy trust, access/SQL/error detail logs or ambient Settings/credential fallback.
+  Hidden interactive role-password entry refuses echo fallback. Argument errors
+  suppress values; unexpected failures print only fixed diagnostic categories.
+- Every initial/new/pooled/observer engine connection rechecks exact merge_test /
+  merge_app / 127.0.0.1:5432 / 0005, synchronous psycopg, real DBAPI autocommit false,
+  no inherited/nested transaction, actual/default READ COMMITTED and 5s/15s timeouts.
+  Guard SQL is read-only and rolled back; real services retain sole transaction
+  ownership. A failed checkout or wiring audit latches the host closed.
+- All five service dependencies are overridden with real guarded services behind
+  scope facades. Exact route/dependency identities are audited before requests,
+  including health, and at startup/shutdown. Ordinary runtime engines stay unset.
+  Original cookie/CSRF/Origin/Fetch Metadata/throttle/strict JSON/idempotency and
+  current-leader/recipient authorization still execute. There is no public join.
+- `prepare` alone inserts exactly two fresh retained hackathons, min2/max3, in
+  one owned transaction after freshness checks; all prior row fingerprints must
+  remain unchanged and no other new row may appear before commit. An independent
+  fresh observer checks prepared state after commit. Any ambiguous commit/final
+  failure stops, retaining rows; it must not be retried blindly.
+- Four approved fresh usernames use `m015b_<first 8 run UUID hex>_<l|q|r|x>`.
+  Registration happens through the real UI and binds server-returned UUIDs.
+  Known preexisting accounts are not adopted; login before a confirmed registration
+  binding is refused. No account password, token, CSRF or hash enters the manifest.
+  The preparer creates no account, session, team or membership.
+- Domain attempt budgets are separate from registration/login/logout budgets.
+  Every declared command has one frozen key/body/actor/scope in the host ledger;
+  a changed key or command is refused before the real mutation. Retries remain
+  explicit and retain current browser-session CSRF. Invitation attempt budgets
+  are checked before the separately committing real durable invitation throttle.
+- Only H-A (first manifest hackathon) permits domain writes. H-B is for empty-state
+  navigation. Catalog GETs remain canonical and may show other retained public
+  fixtures; other hackathons/teams cannot be selected through scoped service calls.
+  Only teams/requests/invitations bound from real successful results may be used.
+
+The required journey is create A as L -> Q/R request A -> L approves Q and rejects
+R -> L issues R/X invitations -> R redeems -> X gets full conflict -> X creates B.
+Both teams are in H-A. X's redemption is refused by the harness until approval Q
+and redemption R are confirmed, preventing an early accidental admission; B's
+creation requires the observed real team_full conflict first. The backend still
+owns all actual membership/capacity/authority decisions. Main command budgets:
+
+| Command | Actor and exact command |
+|---|---|
+| create_a / create_b | L/X; declared team_a/team_b name, H-A |
+| request_q / request_r | Q/R create own request for A |
+| approve_q / reject_r | L decides the server-bound Q/R request with approve/reject |
+| issue_r / issue_x | L issues for the bound R/X account, team A |
+| redeem_r / redeem_x | R/X redeems its own bound grant, team A |
+| deny_issue_q / deny_decide_q / deny_redeem_x | Optional explicitly budgeted negative calls: Q issues to R, Q approves own request, X redeems R's grant. Real services must deny them |
+
+Budgets count admitted HTTP/service attempts, including failures and replays; no
+refunds or automatic retries. Each command allows 0-3 attempts; registration 0-1,
+login/logout 0-4 per account. Original throttle limits remain unchanged. This small
+plan does not naturally exhaust auth throttles; 429 acceptance needs separately
+reviewed scope. An unexpected successful negative/full-denial command latches
+failure; retain the effects and stop. Never clean or alter them to get a pass.
+
+### Manifest preparation - public data only, owner review before live commands
+
+The following optional PowerShell creates a **new public approval candidate** in
+the ignored test-results directory. It is not database fixture preparation or
+approval. Do not execute it on behalf of the owner in M-015B. Review generated
+UUIDs/names, counters and intended writes before authorizing live commands.
+
+```powershell
+Set-Location I:\Merge
+$browserRun = [guid]::NewGuid().ToString()
+$browserPrefix = 'm015b_' + $browserRun.Replace('-', '').Substring(0,8) + '_'
+$browserPlan = [ordered]@{
+  run_id = $browserRun
+  accounts = @('l','q','r','x') | ForEach-Object {
+    [ordered]@{ role=$_; username=($browserPrefix+$_); register_attempts=1; login_attempts=4; logout_attempts=4 }
+  }
+  hackathons = @('a','b') | ForEach-Object {
+    [ordered]@{ id=[guid]::NewGuid().ToString(); name=($browserPrefix+'challenge_'+$_) }
+  }
+  team_a = $browserPrefix+'team_a'
+  team_b = $browserPrefix+'team_b'
+  commands = @('create_a','create_b','request_q','request_r','approve_q','reject_r','issue_r','issue_x','redeem_r','redeem_x','deny_issue_q','deny_decide_q','deny_redeem_x') | ForEach-Object {
+    [ordered]@{ command=$_; attempts=$(if ($_.StartsWith('deny_')) { 0 } else { 2 }) }
+  }
+}
+$browserPlanPath = 'I:\Merge\frontend\test-results\m015b\' + $browserRun + '\approval.json'
+if (Test-Path -LiteralPath $browserPlanPath) { throw 'Existing plan. Stop.' }
+git -c safe.directory=I:/Merge check-ignore -- $browserPlanPath
+if ($LASTEXITCODE -ne 0) { throw 'Plan path must be ignored. Stop.' }
+New-Item -ItemType Directory -Path (Split-Path -Parent $browserPlanPath) -ErrorAction Stop | Out-Null
+$browserPlanJson = $browserPlan | ConvertTo-Json -Depth 8
+$browserPlanFile = [System.IO.File]::Open($browserPlanPath, [System.IO.FileMode]::CreateNew)
+try {
+  $browserPlanBytes = [System.Text.UTF8Encoding]::new($false).GetBytes($browserPlanJson)
+  $browserPlanFile.Write($browserPlanBytes, 0, $browserPlanBytes.Length)
+} finally { $browserPlanFile.Dispose() }
+```
+
+All objects forbid extra fields, duplicate JSON keys, duplicate roles/commands/IDs,
+bad names/UUID versions, oversized manifests and boolean/negative/excessive budgets.
+No `faults` field: browser fault approval is separate and uses actual public IDs
+only after they exist. Account passwords are chosen privately by the owner and
+typed only in the UI (15-128 characters). The database-role password is separate;
+never pass any credential through arguments, JSON, chat, screenshots or transcripts.
+
+### Supported commands - conditional on separate owner approval, NOT RUN
+
+In the owner's private interactive PowerShell, set `$browserPlanPath` to the exact
+reviewed file above. Gate B approval covers global fingerprint/metadata reads and
+freshness checks. No server or write occurs in inspect:
+
+```powershell
+Set-Location I:\Merge\backend
+.\.venv\Scripts\python.exe -m test_support.browser_full inspect --confirm-merge-test --revision 0005_invitations --manifest $browserPlanPath
+if ($LASTEXITCODE -ne 0) { throw 'Inspection failed. Stop.' }
+```
+
+Only after approving exactly those two retained hackathon INSERTs (gate C):
+
+```powershell
+.\.venv\Scripts\python.exe -m test_support.browser_full prepare --confirm-merge-test --revision 0005_invitations --manifest $browserPlanPath --allow-fixture-writes
+if ($LASTEXITCODE -ne 0) { throw 'Preparation or final check failed. Stop; do not rerun.' }
+```
+
+Only after approving four UI registrations and bounded auth/throttle/domain writes,
+listeners, browser profiles and final read-only observers (gates D/F):
+
+```powershell
+.\.venv\Scripts\python.exe -m test_support.browser_full serve --confirm-merge-test --revision 0005_invitations --manifest $browserPlanPath --allow-browser-writes
+if ($LASTEXITCODE -ne 0) { throw 'Host or final certification failed. Stop.' }
+```
+
+Wait for `Full browser host ready; exact-0005 guarded loopback only.` Then in a
+second owned terminal start Vite, without opening external/LAN bindings:
+
+```powershell
+Set-Location I:\Merge\frontend
+npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort
+```
+
+Open http://127.0.0.1:5173 only. Follow the required order above in separate
+clean profiles or carefully scoped sign-out/sign-in sessions. Do not reuse an
+unrelated account's cookie/profile; do not enable transcripts, APM, raw request/
+state debugger capture or session recording. Generate no third team,
+H-B membership, new-key repeat command or extra applicant. Stop on scope rejection
+and review the expected command, rather than increasing budgets or changing keys.
+The wider application remains unchanged; the harness intentionally narrows it.
+
+Finish or restore response gates; stop new clicks; retain uncertain-command tabs.
+Stop owned Vite with Ctrl+C, then press Ctrl+C once in the backend terminal. Final
+success requires positive drain, empty tasks/connections, lifespan completion,
+fresh independent observer certification and successful engine/listener cleanup.
+Require both exit 0 and `Full browser host final journey invariants verified;
+fixtures retained.` A complete journey is required: stopping halfway is unsuccessful
+even if the partial rows are valid. A forced/second interrupt cannot pass.
+
+Optional separately approved current-state read after a failed/incomplete run:
+
+```powershell
+Set-Location I:\Merge\backend
+.\.venv\Scripts\python.exe -m test_support.browser_full verify --confirm-merge-test --revision 0005_invitations --manifest $browserPlanPath
+if ($LASTEXITCODE -ne 0) { throw 'Current-state verification failed. Stop.' }
+```
+
+Inspect/verify print `Full browser current-state checks verified; no server started;
+no run certification.` Verify checks current scoped shapes/invariants and target,
+not a lost before-state, complete journey or prior shutdown. No command migrates,
+downgrades, cleans, repairs, changes passwords or automatically resumes a run.
+CLI input/approval errors exit 2 before prompts; operational failures exit 1 with
+fixed categories. Preparation completion means retained fixtures checked, not UI
+acceptance. Missing passwords/ports/target/manifest/state never trigger fallback.
+
+### Browser-only response gate (separate approval, not part of the app bundle)
+
+`frontend/test_support/browserFaults.js` is not imported by src or production
+builds. Vite can serve it during this approved local session; install manually
+in private DevTools only after approving each exact resolved public URL/method/
+mode and its already budgeted attempt/retry. No backend fault endpoint exists.
+Modes: hold a real completed response, lose its acknowledgement, or deliver a
+labelled synthetic invalid_session after the real request. The last mode is UI
+isolation evidence only; it may follow a real committed mutation, not a server
+authentication failure. It never authorizes/duplicates the real request.
+
+```javascript
+const { installBrowserFaults } = await import('/test_support/browserFaults.js');
+// Replace path with ONE actually resolved, explicitly approved public URL.
+const browserGate = installBrowserFaults(window, {
+  approved: true, origin: 'http://127.0.0.1:5173',
+  cases: [{ path: '/api/hackathons/ACTUAL_UUID/teams/ACTUAL_TEAM_UUID/invitations', method: 'POST', mode: 'hold' }]
+});
+browserGate.arm(0);
+// Perform the approved UI action. status() reports a phase only.
+browserGate.status();
+// Once held, navigate/change session as approved, then release within 15 seconds:
+browserGate.release();
+browserGate.restore(); // Also run in finally/on failure; do not leave the hook installed.
+```
+
+Placeholder UUIDs are deliberately refused. Copy exact canonical lower-case
+public IDs from the run's UI; never copy cookies, CSRF, key/body/header dumps or
+auth responses. /auth, foreign origins, query-bearing/unknown paths, unapproved
+methods, simultaneous gates and oversized bodies are refused/not intercepted.
+The real fetch gets unchanged session/CSRF/signal; there is one dispatch only.
+Actual response buffering is bounded to 64 KiB; held delivery expires after 15s
+and restores fetch on timeout. Old-aborted delivery is deliberately permitted
+only after a real response was obtained, to test workspace ownership. Restore
+does not undo a committed effect. Reload loses both hook and app recovery journal.
+
+### Certification and honest remaining limits
+
+Snapshots hold only per-row fingerprints, public scoped domain state and private
+session/throttle metadata; no raw credential hash/session token/CSRF is selected
+or output. All twelve preexisting table row fingerprints must remain identical;
+every added row must be accounted for by the scoped journey/auth/throttles. Final
+state requires 4 newly registered actors, A=L/Q/R, B=X, 2 resolved requests, 2 grants
+(R redeemed, X pending), 9 exact completed idempotent replies/fingerprints, A version
+8/B version1 and 9 connected, sequential audit/outbox chains. It checks scopes,
+actors, member counts, grant timing, stored reply identity/status, history state
+and unpublished outbox linkage. Throttle/session additions stay within charged
+budgets; full-team/negative attempts add no domain effects. Observers use a fresh
+guarded engine. No receipt/snapshot is written as a raw artifact.
+
+The host is trusted test tooling, not a malicious-code/role/OS sandbox. Exclusive
+access is mandatory; fingerprints across READ COMMITTED statements are not a
+global simultaneous snapshot. Current-state verify is not a full schema drift
+audit. Source/run/browser/manifest/evidence records still need owner recording;
+there is no new historical per-node roster or durable command recovery store.
+Host ledger and browser command keys are memory-only. A host crash/restart cannot
+resume an existing scope: fresh-start checks refuse retained accounts/domain rows;
+stop for a separately reviewed read-only recovery plan. Same-process logout/login
+and navigation recovery remains supported. A lost registration response is
+recoverable by login only when the server confirmed/bound registration first;
+an ambiguous registration COMMIT requires separate diagnosis, not blind adoption.
+
+UUID-only recipient entry, small-fixture pagination limits, absence of natural
+expired/stale-leader schedules, local HTTP and mobile-emulation limits remain.
+No live browser/HTTPS/accessibility/G1/load proof follows from offline tests or
+the terminal certification alone. Complete the pending checklist below and
+record actual browser outcomes separately. The earlier intermittent loading/
+fetch-count concerns remain documented. All live actions and commit await review.
+
+## Historical M-015A - exact-0005 full-stack readiness, 2026-11-11
+
+**Offline analysis and proposed next setup only. Full-stack browser execution is
+blocked pending implementation/review of a separate guarded 0005 host and owner
+approval of concrete accounts, fixtures and writes.** No server, browser, database
+connection, credential prompt, migration or fixture operation occurred. Baseline:
+`b8abacd5c0f5796488916da4884d2c672ee4eb6d` (M-014C committed).
+0005_invitations is already applied according to prior owner evidence; no new
+revision/drift verification or G1 result is claimed. G1 remains closed only within
+its audited local PostgreSQL scope. The M-011A operational contract below remains
+unchanged and historical; its 0003 commands cannot serve the present database.
+
+### Startup inventory and concrete hazards
+
+| Path | Implemented behavior | Suitability for this acceptance |
+|---|---|---|
+| `backend/app/serve.py` / `python -m app.serve` | Ordinary full application; defaults loopback:8000, one worker, disables Uvicorn proxy-header rewriting/access log; host/workers are configurable | Not a merge_test launcher; no test identity/revision/scope/final-state guard |
+| Direct `uvicorn app.main:app` | Same ordinary application; bypasses controlled launcher options | Unsuitable; can also restore Uvicorn proxy rewriting/log defaults |
+| `backend/app/main.py::create_app` | Auth/read/create/request/invitation routers; lifespan loads AuthSettings and lazily initializes runtime services | Factory alone does not isolate a test database or authorize writes |
+| `backend/test_support/browser.py` | Guarded inspect/serve/verify, exact 0003, 1-3 retained accounts, auth-write budgets | Refuses 0005; removes create/admission/invitation routers and blocks registration. Preserve it |
+| `test_support.concurrency --suite invitations` | Exact-0005 in-process real-service acceptance with retained generated fixtures | Not a browser server; do not rerun it or use its random credentials as browser accounts |
+| `frontend` / `npm.cmd run dev` | Vite loopback:5173, strict port, proxies /auth, /api and /health to 127.0.0.1:8000 | Suitable only after the newly reviewed guarded backend is ready; use exact numeric host |
+| `npm.cmd run build` | Typecheck and static production assets | Build proof only; neither a server nor production routing/HTTPS proof |
+| `scripts/check_local_http.py` | Ordinary local HTTP/proxy smoke launcher, not the new guarded acceptance host | Not an alternative startup path for this task |
+
+The precise Settings chain is `auth.get_services -> build_engine(Settings()) ->
+settings.database_url()`. Settings loads absolute `backend/.env` plus overriding
+MERGE_DB_* environment values. Defaults are 127.0.0.1:5432 / merge_dev / merge_app;
+database_url explicitly refuses any different database, including merge_test.
+An empty password becomes None and may allow driver password-file/environment
+credential resolution. Do not inspect those private stores or rely on defaults.
+The ordinary engine has READ COMMITTED/hide_parameters/connect timeout but no
+actual test identity/exact revision/per-checkout latch or run write budget.
+Health and import need not connect, so a healthy process is not safe-target proof.
+Login/registration and valid-session requests can initialize services and connect.
+Auth/read/team/admission/invitation services then share that ordinary engine.
+
+AuthSettings separately requires an exact origin and 32-byte throttle secret,
+defaults to production/HTTPS, reads MERGE_AUTH_* (not dotenv) and distinguishes
+production __Host-merge_session from local merge_session_dev. Missing config
+fails lifespan; valid auth config does not change the database target. Setting
+MERGE_DB_NAME=merge_test, using ordinary app.serve, monkeypatching Settings or
+overriding only auth is not a supported solution. No .env/configuration was read
+or changed by this review. README's ordinary provisioning/migration/start commands
+remain development history, not instructions for this acceptance run.
+
+### Minimum proposed environment and implementation boundary
+
+Use the existing local PostgreSQL 17 merge_test / merge_app at exact 0005,
+exclusive of other writers, with two fresh retained hackathons. One backend
+process on 127.0.0.1:8000 and existing Vite on 127.0.0.1:5173. Separate browser
+profiles/contexts for leader and participants; ordinary tabs share a cookie and
+cannot stand in for distinct signed-in users. This is logical fixture isolation
+in the shared test database, not a database-role/OS/malicious-code sandbox.
+No new database, role, grant, schema, migration, dependency or production service
+change is needed for this local phase. HTTP development cookies do not establish
+deployed HTTPS security. Physical-phone access over a LAN is outside this origin/
+loopback scope; begin with browser mobile viewport emulation.
+
+Smallest source work still needed (proposed names, **not implemented commands**):
+
+1. Add `backend/test_support/browser_full.py`: separate exact-0005 CLI/host,
+   preserving browser.py's revision/routes/manifest. Reuse reviewed lifecycle,
+   hidden-input and loopback policy helpers where safe, never its 0003 engine
+   guard. Reject missing approval, unknown options, optimized Python, malformed
+   scope or occupied ports before credentials/connections/listeners as applicable.
+   No import-time app/engine or ordinary Settings/dotenv/URL/password fallback.
+   Disable access/SQL/exception/body logs and external telemetry; errors/CLI
+   rejections must use fixed categories without values, URLs or tracebacks.
+   DB credentials enter only at hidden interactive input with echo fallback
+   refused; no password arguments/files/environment inheritance.
+2. Supply all five real dependencies on one guarded engine: auth.get_services,
+   read_api.get_read_service, team_api.get_team_service,
+   admission_api.get_admission_service, invitation_api.get_invitation_service.
+   Leave ordinary runtime engine/services unset. Audit exact endpoint/dependency
+   identity before every request and fail closed if any override/router changes.
+   Keep real Credential/Session/Throttle/Team/Admission/Invitation services and all
+   CSRF/Origin/strict-body/idempotency/backend authorization behavior unchanged.
+3. Guard initial, new/pooled and independent observer connections: fixed target,
+   actual database/role/IP/port, synchronous psycopg, DBAPI autocommit false,
+   no inherited/nested transaction, actual/default READ COMMITTED, 5s lock/15s
+   statement limits, read-only guard transaction and exactly [0005_invitations].
+   Roll back guards before real service transactions; latch every failure. Keep
+   sole service transaction owners, lock order and retry/reconciliation untouched.
+4. Add `browser_full_state.py` with a strict public-ID/run/attempt manifest,
+   bounded per-account/per-operation attempts (including failed/replayed calls)
+   and dynamic public ID bindings from real registration/team/grant results.
+   A manifest narrows test scope; it never supplies actor authority. Fresh
+   approved usernames must be absent at preflight; bind returned server UUIDs
+   before login and reject collisions. Lock budget reservations before dispatch;
+   counters bound test writes, not domain concurrency correctness.
+5. Add a small separately guarded retained-hackathon preparer (for example
+   `browser_full_fixtures.py`): explicit approval, fresh run IDs, exactly two
+   INSERTs in one owned transaction with target/revision/pre/post checks. No
+   account passwords or prejoined memberships; registration and team creation
+   must occur through the real UI. No idempotency guessing, upsert/adoption,
+   expiry mutation, resets or cleanup. There is no public hackathon-create API.
+6. Extend new read-only before/after certification to all 12 tables, including
+   join_requests and invitations. Preserve unrelated rows/credentials and schema;
+   validate only declared new users, sessions/revocations, throttle charges and
+   scoped domain effects. Check capacity, unique membership, valid leadership,
+   request/grant state, complete idempotent replies and version/audit/outbox
+   linkage from fresh observers. Legacy browser_state.compare deliberately
+   requires domain/credential tables unchanged and cannot certify these writes.
+7. Add offline `tests/test_browser_full_harness.py` refusal, scope/budget,
+   registration binding, five-dependency, 0005 checkout, sanitized failure,
+   certification and shutdown tests. Prove legacy browser source/policy and
+   production modules unchanged. No new runner compatibility claims for legacy
+   0003 auth/browser or 0004 admission suites at 0005.
+
+A bounded browser-only response gate is a second, separately reviewed test helper,
+not a production fetch change or backend bypass. Scope it to one exact approved
+read or mutation command. Send once through real HTTP/auth, then hold the actual
+response (up to 15s, below the client's 20s deadline), or deliberately lose one
+acknowledgement after the server responds. Never pause inside a DB transaction,
+capture auth bodies/secret headers or dispatch twice. Allow delivery after abort
+to exercise stale-result guards; restore fetch/clear timers and held data in
+finally. Record only held/released/injected and same-command booleans, not keys,
+CSRF, cookies or response dumps. Offline refusal/restoration/timeout tests are
+required before use. This helper is currently absent. Generic Slow 3G/offline
+toggles alone cannot prove a late completion or exact ambiguous-response schedule.
+
+### Concrete proposed fixtures and writes for owner review
+
+No approved current account mapping was found in the reviewed docs; the legacy
+`frontend/test-results/m011a/approved-run.json` path still does not exist (existence
+check only). No private manifest/password/credential data was read. Existing
+random suite credentials are not recoverable browser prerequisites.
+
+Propose four new test usernames, e.g. `m015a_<8hex>_l`, `_q`, `_r`, `_x` (schema
+illustrations, not actual accounts), approved before creation. Owner chooses and
+keeps unique 15-128-character passwords privately; never place them in manifests,
+CLI arguments, environment, screenshots or chat. The DB-role password is separate
+and entered only through fail-closed hidden interactive input. The host generates
+one process-lifetime test throttle HMAC secret privately; never rotate it/restart
+to evade throttles. Restore/sign-in after browser focus must stay within budgets.
+
+| Proposed scope | Purpose / explicit bound |
+|---|---|
+| H-A and H-B, fresh UUIDs and recognizable run labels, min=2/max=3 | Two retained hackathon INSERTs only; H-B can remain empty for navigation tests |
+| L, Q, R, X | Four fresh username registrations through UI, one attempt each; server generates actor UUIDs. Four fits the existing register IP limit of 5/300s |
+| Per account login <=4, logout <=4 | At most 16 login attempts/sessions and 16 revocations; incorrect-password attempt counts within X's allowance. Original login limits 5/account, 30/IP per 300s remain |
+| Team A by L in H-A; Team B by X in H-A | Two new create commands, at most two HTTP attempts each to allow an exact same-key retry; no third team or H-B membership needed |
+| Q and R request Team A | Two request commands, at most two attempts each; L approves Q and rejects R, at most two attempts per exact decision |
+| L invites R and X to Team A | Two separate recipient-bound issue commands, at most two attempts each; issuance reserves no seat |
+| R redeems, X tries full Team A before creating Team B | R adds the third/final member; X gets team_full, stays unassigned and grant stays pending; at most two attempts per exact redemption |
+| Negative authorization/recovery | Enumerate exact extra attempts separately in the concrete manifest: e.g. nonleader issue, wrong-recipient redeem, lost-ack retry. No blanket wildcard/write budget |
+
+Main sequence: create A -> Q/R requests -> approve Q/reject R -> issue R/X ->
+redeem R -> X full conflict -> X creates B. Team A ends with L/Q/R, Team B with X;
+H-B has no memberships. R's rejected request is a separate record and does not
+authorize or block its legitimate invitation. With no extra distinct commands,
+the expected domain effects are 2 teams, 4 memberships, 2 resolved requests,
+2 invitations (one redeemed, one pending), 9 successful idempotency records and
+9 audit/outbox links; Team A version 8, Team B version 1. Matching-key success
+replays add no such effects; full failure adds none. These are proposed expected
+counts, **not measured results**. New-key duplicate requests have their own
+documented idempotency semantics, so they are not interchangeable with same-key
+retries. Throttle/session/account writes must be counted separately.
+
+All registration writes users/account_credentials plus register throttle state.
+Login attempts can commit IP/account throttle charges even on failure, successful
+login creates auth_sessions, logout updates scoped revoked_at. Invitation attempts
+charge separate durable account issue/redeem buckets even on domain failure.
+Domain writes include memberships, team version/time, request/grant resolution,
+stored idempotent result and audit/outbox atomically through the existing services.
+No deletes, email, password reset, leadership change or outbox dispatch is approved.
+Retain everything; reruns require separately approved fresh scopes and budgets.
+
+### Owner gates and operating sequence
+
+| Gate | Approval/evidence needed before action |
+|---|---|
+| A: offline implementation | Approve the bounded host/preparer/certifier design above, implement and review actual files/tests/CLI. This analysis grants no live rights |
+| B: read-only preflight | Explicitly approve local merge_test/merge_app connection, exact 0005 identity/permissions and account-name/fixture checks plus global invariant/fingerprint reads; private DB password, no server/writes |
+| C: fixture preparation | Approve the exact fresh run ID, two hackathon UUIDs/labels/sizes and two retained INSERTs. Fail closed on existing IDs or drift; no adoption/repair |
+| D: browser run | Approve real four usernames/returned ID bindings, private credentials, exact endpoint/account/hackathon/command attempt budgets, registration/session/throttle/domain writes, localhost listeners/browser and retained evidence policy |
+| E: injected recovery | Separately review/approve the specific browser-only delivery/lost-ack/401 injection cases and their retry attempt budgets. Injection proves labelled UI behavior, not natural COMMIT failure or real revoked-session authentication |
+| F: final certification / incomplete run | Approve fresh read-only observers. Missing before-state, timeout, forced exit or unrelated writer means inconclusive, never repaired by a later current-state snapshot or automatic restart |
+| Later: deployment/HTTPS | Separate topology/proxy/TLS/origin/privilege and production-secret review. No deployment authorization here |
+
+Gate B has one **existing** optional identity/revision-only command, after separate
+owner approval in a private interactive PowerShell terminal; **not run here**:
+
+```powershell
+Set-Location I:\Merge\backend
+Remove-Item Env:MERGE_TEST_DB_PASSWORD -ErrorAction SilentlyContinue
+.\.venv\Scripts\python.exe -m test_support.database verify --confirm-merge-test --revision 0005_invitations
+if ($LASTEXITCODE -ne 0) { throw 'Read-only target verification failed. Stop.' }
+```
+
+Enter the existing role password only at a genuinely hidden prompt; abort on any
+getpass echo warning (this older CLI does not trap GetPassWarning as strictly as
+the browser host). It checks actual target, READ COMMITTED, schema permissions
+and recorded revision, not fixture ownership/full schema drift or credentials.
+It runs no migration. The future host must repeat stronger guards on every
+checkout; this optional command is not authorization to serve or proof of safety.
+
+**No supported full-stack backend serve command exists at this checkpoint.**
+Do not substitute `test_support.browser --revision 0005_invitations`, change its
+constant, downgrade, use ordinary app.serve or publish a guessed new CLI. Gate A
+must deliver exact inspect/prepare/serve/verify commands and sanitized readiness/
+completion labels together with offline tests; until then startup is blocked.
+
+After A-D actually pass: inspect -> prepare the approved two fixtures -> independent
+read-only scope/before snapshot -> guarded single backend -> wait for its specific
+ready label -> start existing Vite in a second private terminal:
+
+```powershell
+Set-Location I:\Merge\frontend
+npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort
+```
+
+Open only http://127.0.0.1:5173 in the approved profiles. Do not change to localhost,
+another port/host, trusted proxy, wildcard Origin, CORS relaxation, secure-cookie
+override, public join or client actor header. Stop if either port is occupied;
+do not kill unrelated listeners. Local HTTP verifies local policy, not HTTPS.
+
+Shutdown contract for the proposed host: finish/release test gates; stop new
+clicks; retain any uncertain-command tab; log out within approved budgets only
+when doing so does not discard needed recovery; stop owned Vite with Ctrl+C;
+press Ctrl+C once in owned backend terminal. Require positive completed drain,
+empty tracked connections/tasks, complete lifespan, fresh final comparison,
+Engine/listener disposal, fixed final certification label and exit 0. A second
+interrupt, forced stop or timeout is inconclusive even if rows later look valid.
+Existing BrowserServer supplies this lifecycle behavior; the new host must
+preserve and test it, not merely copy a successful print statement.
+
+If target/auth/route/budget/drift/final checks fail, stop, retain fixtures and
+sanitized run IDs/categories, do not rerun seed/migration/cleanup or increase
+budgets automatically. A lost mutation response needs the same in-memory command
+and key after authorized session restoration; check canonical membership/inbox
+before interpreting it. Reload/crash loses exact recovery; stop for separately
+approved read-only diagnosis, never invent a new key or assume rollback. A lost
+registration reply has no command journal: try the known credentials/check the
+approved username through separately scoped verification, not blind re-register.
+
+### Browser record - every live item below remains pending
+
+Record source hash + diff scope, run/manifest ID, browser/version/profile, exact
+target/preflight, viewport, case, expected/actual result and injection label. No
+HAR, trace, raw Network/header/auth-body/storage dumps or credential screenshots.
+Keep only reviewed UI captures and metadata under Git-ignored test-results; hide
+password forms and DevTools. Inspect captures before retaining/sharing. Real
+service observers, not screenshots alone, certify committed-state invariants.
+
+| Case | Acceptance to record |
+|---|---|
+| Registration | Four approved names: 201, confirmation then sign-in, no automatic membership/session. Invalid input safe; private password cleared. Registration stays blocked in legacy host |
+| Login/restore | Known credentials -> correct account; one budgeted wrong password -> safe 401. Reload/focus/session restore shows only canonical account data. Inspect cookie attribute booleans privately, never its value |
+| Cookies/security | Development cookie HttpOnly/Lax/Path=/, no Domain, Secure false locally; bearer absent from JSON/DOM/JS storage/URLs/logs; CSRF is allowed in session JSON/memory. Original CSRF/Origin/header/strict-JSON negative calls stay denied with no domain effect |
+| Discovery/scope | Select the exact two approved UUIDs; H-B empty is legitimate. Detail/My Team show canonical counts/leader. Pagination beyond 20 needs additional separately approved data; this small fixture plan does not prove multi-page browser behavior |
+| Team creation | L creates A and X later B; rapid submit yields one command/effect; confirmed result triggers canonical reads. No optimistic membership from mutation response; another account sees only its own state |
+| Requests/decisions | Q/R create one each; canonical mine supplies status. Only L sees applicants; approve Q/reject R exactly, then refresh canonical membership/list/detail. Nonleader list/decision stays denied; no applicant leakage |
+| Invitations | Recipients share session-derived account UUID privately as public ID; L enters exact recipient_id, no username lookup. Inbox only addressed grants, server availability/expiry, labelled team UUID opens canonical details; issue reserves no seat |
+| Redemption | R redeems with its current session/CSRF, third member appears through GETs; X receives team_full and remains unassigned with pending/null-redeemed grant, then can create B. Wrong account/known invitation UUID is never authority |
+| Error/expiry/permission | Full/assigned/expired/stale/used/missing/403/429 states stay accurate; no optimistic consumption. Natural expiry needs approved expired data/time, stale issuer has no UI transfer route. Mark unavailable live cases skipped; synthetic responses prove UI only, never modify immutable expiry/leader rows |
+| Workspace/session races | Hold a real read/issue/redeem reply, select H-B or Team B, release; current account/draft/reads stay intact. Away/back must not revive old ownership; returning can recover original command. Hold old-account success/401 across logout/login and current-session restoration; no leakage/new-session expiry. A real or explicitly labelled injected old-workspace 401 must not expire the new selection; a current-workspace 401 must preserve expiry behavior |
+| Uncertain retries | Lose a real acknowledgement after one dispatch, keep tab, refresh inbox/remove row only through naturally changed canonical state, retry exact URL/body/key/scope with current CSRF. One committed effect; no new automatic key/POST. Row disappearance on demand requires separately reviewed response gate; no DB deletion. Recovery after reload/crash is explicitly unsupported |
+| Desktop/mobile/keyboard | 1440x900, 375x812, 320x740, 200% zoom; no clipping/UUID overflow. Skip link/Tab/Shift+Tab/Enter/Space, visible focus, labels/errors, loading/empty/denied states, heading focus, status announcements; record actual screen reader/reduced-motion coverage. Viewport emulation is not a physical-phone test |
+| Logout | Real scoped revoke and cookie removal, guest UI, next protected read 401; delayed old result ignored. Lost logout acknowledgement hides private data and offers session verification; it is not confirmed logout until verified |
+| Final state | Independent exact-0005 certification of declared effects and unchanged unrelated rows, version/audit/outbox/idempotency/membership/request/grant invariants; positive shutdown and exit 0 |
+
+UUID-only selection is a real usability limit: no username search, delivery,
+team-name inbox field or transferable bearer invite. Public UUID possession is
+not authority. Recovery is memory-only; even canonical membership cannot recover
+a lost exact key/reply after reload/crash/tab closure. Document these in the demo.
+
+### Flakiness and release priority
+
+M-014C's first concurrent frontend run: 258 passed/3 initial-loading failures;
+unchanged standalone: 261 passed. Scheduling/resource contention is plausible,
+not demonstrated. Historical M-013A fetch-count mismatch was consistent with
+unflushed new-workspace effects; M-013B added a bounded wait for those expected
+reads. Preserve the concern: neither that synchronization repair nor a later pass
+proves all timing risks solved. In contrast, R1's five old-hackathon 401 failures
+were reproduced before a source repair and pass afterwards: a demonstrated
+product defect with regression evidence. Do not conflate the two categories.
+This review changes no tests/assertions/timeouts. Run future UI verification
+standalone; keep any failed result and diagnose repeatable failures before release.
+
+Local browser blockers: new exact-0005 host/certifier/preparer, approved private
+account plan and write budgets, exclusive target preflight, reviewed response gate
+for deterministic races, and actual browser execution. Browser/HTTPS deployment
+acceptance, CI API/race runs, 10k/2k seed and measured 100-client p95, public repo/
+URL/design/load/video artifacts remain release blockers, not post-submission
+polish. Current routes also lack required departure/succession/last-member deletion/
+removal, realtime and matching flows; this browser milestone cannot certify those.
+Requirements R-05/06/09/10/13 and the remaining submission gates require separate
+bounded work. No feature is added here. Search/delivery polish, durable recovery
+UX, broader device coverage and optional tooling can follow only after mandatory
+acceptance; documented limitations do not waive required accessible usable UI.
+
+Owner exercise: explain why health can pass before the wrong ordinary Settings
+path connects. In an offline host test remove one of the five service overrides;
+the proposed host must refuse before Settings or any SQL can run. Confirm that
+changing legacy REVISION is not a legitimate 0005 readiness implementation.
+
+## Historical M-011A-R4 - test-only guarded browser host
 
 M-013A's admission router is also explicitly excluded by router identity; the
 exact dependency/route inventory still guards every request. The host remains
