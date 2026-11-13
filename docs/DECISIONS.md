@@ -1,5 +1,25 @@
 # Merge — Architecture Decision Records (ADRs)
 
+### M-019A — owner-authorized mandatory lifecycle, 2026-11-13
+
+The M-019A request authorizes additive leave/removal/member-roster APIs and React
+controls using the existing schema and transaction/lock/retry framework. The
+pre-implementation contract is [LIFECYCLE.md](LIFECYCLE.md). Successor selection is
+earliest joined_at then user UUID. All affected user locks precede the team lock;
+successor selection takes no new user lock. Final departure soft-deletes atomically.
+Keep actor-scoped leave replay after departure; removal replay still requires
+current leadership before granting replay proof. Record complete before/after
+membership/leader/deletion state, version, audit, outbox and reply under one owner.
+Private paginated roster reads expose member display names, never auth data.
+
+No migration, security weakening, cleanup or parallel mutation framework. New
+commands use the existing explicit idempotency allowlist. Old guarded browser
+hosts exclude the lifecycle router; old manifests grant no new permissions.
+The separate exact-0005 lifecycle PostgreSQL suite retains fresh fixtures and
+validates historical admission records without assuming members can never leave.
+Offline tests cannot certify its races. Live database/browser execution and commit
+remain separate owner approvals. M-017's reported certificate covers earlier code.
+
 ### M-016 - owner-authorized exact lookup and public navigation persistence, 2026-11-13
 
 Reuse the catalog's documented exclusive UUID ordering with limit=1 and an exact

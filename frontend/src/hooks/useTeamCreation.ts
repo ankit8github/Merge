@@ -103,5 +103,12 @@ export function useTeamCreation(scope: Scope | null, onExpired: () => void) {
       if (failure.status === 401 && !workspace.aborted) onExpired();
     });
   }
-  return { operation, submit };
+  return { operation, submit, newTeam: (hackathon: string) => {
+    const owner = current.current;
+    if (!owner || owner.signal.aborted) return;
+    const id = `${owner.session.identity.user_id}:${hackathon}`, saved = commands.current.get(id);
+    if (saved && !saved.uncertain && ['success', 'assigned'].includes(saved.status)) {
+      commands.current.delete(id); if (alive.current) render();
+    }
+  } };
 }

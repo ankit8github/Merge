@@ -7,11 +7,29 @@
 
 ## Current verified context
 
-M-016A final review is complete offline below: two reproduced lifecycle races
-were corrected with focused regressions; final frontend 333 passed and strict
-typecheck/production build passed. No remaining offline code blocker was found;
-commit and real-browser acceptance still require owner approval. The underlying
-M-016 exact UUID lookup/navigation implementation remains uncommitted. The owner
+M-019 lifecycle is implemented and has passed the owner-run guarded local
+PostgreSQL suite: lifecycle / exact 0005_invitations / one repetition / ten
+collected and ten completed / zero failures, skips or incomplete cases / exit 0 /
+suite_and_fixture_checks_completed. M-019D reviewed the retained sanitized report;
+M-019E authorizes documentation reconciliation and one local commit. Offline
+backend evidence is 1464 passed / 32 database deselected; frontend is 350 passed /
+12 files, with typecheck/build passed. No tests are rerun by documentation closure.
+Report, hash and provenance limits are recorded in the M-019E entry below.
+Browser lifecycle/mobile/keyboard, HTTPS, load, CI and deployment verification
+remain pending. No new G1 or production certification is claimed. M-017's
+owner-reported local browser certificate covers the preceding implementation,
+not the new lifecycle controls. Prior manifests, fixtures and G1 evidence are
+retained. Review baseline: main / 14e64cb2315fd4301b0fe4dfa908298b25bcce90; the
+resulting local commit is identified by Git history and the owner-facing closure.
+Historical checkpoint statements below retain their original scope and are
+superseded for current lifecycle PostgreSQL status by M-019E.
+
+M-016 was committed locally as `14e64cb2315fd4301b0fe4dfa908298b25bcce90` after
+owner approval, with the reviewed 20-file scope and a clean post-commit tree.
+M-016A's final offline frontend evidence remains 333 passed plus typecheck/build.
+M-017A now has a fresh ignored manifest/runbook/evidence template prepared and
+validated offline below; no live gate is approved or executed by this work.
+Only this progress document is a pending tracked change. The owner
 reports M-015F incomplete/uncertified, L registered and Team
 A created, guarded backend stopped and read-only verify passed. Q registration
 remains unconfirmed; no restart/resume or certification is inferred. No TCP
@@ -7387,6 +7405,351 @@ change, backend/frontend startup, staging, commit or push. Owner exercise: defer
 two mocked session replies, issue a second history/focus event and release replies
 in reverse order; explain why only the newest validated account can activate the
 latest public hint. STOP for owner approval before commit or any live validation.
+
+## M-017A - fresh browser acceptance preparation, 2026-11-13
+
+Offline draft complete; STOP for owner review before every live gate. Initial
+branch main/HEAD 14e64cb2315fd4301b0fe4dfa908298b25bcce90 and Git clean were
+confirmed. M-016B created exactly one local commit after its exact 20-file index
+and cached whitespace checks; no push or deployment. M-015C and M-015F remain
+incomplete/uncertified, with old manifests/evidence/fixtures retained. Owner
+reports backend/Vite stopped and prior current-state verify passed; no live
+database/browser/process validation is newly asserted by this preparation.
+
+Read AGENTS, BROWSER_ACCEPTANCE, FRONTEND, TEST_DATABASE, relevant architecture/
+decisions/requirements and actual browser_full scope/state/startup/shutdown code.
+No frontend, backend, schema, dependency, harness or security-policy change.
+
+New ignored directory:
+`frontend/test-results/m017/a02ef824-d389-4782-83f8-9c4fe6bf9332/`
+contains draft.json, OWNER_RUNBOOK.md, validate_draft.py and
+HOST_EVIDENCE_TEMPLATE.json. The latter is explicitly TEMPLATE_NOT_EXECUTION_EVIDENCE,
+classification NOT_RUN, with all observation fields null. No host exit/status
+or browser outcome was fabricated. The real host/evidence commands are references
+for later owner approvals, not actions executed here.
+
+- Run UUID4: `a02ef824-d389-4782-83f8-9c4fe6bf9332`.
+- H-A: `75ff135c-41a6-4b3b-8b8d-e394a1cd7cb7`,
+  `m015b_a02ef824_challenge_a`.
+- H-B: `96853194-5c11-4c86-a20d-36d438c3c911`,
+  `m015b_a02ef824_challenge_b`.
+- Team names: `m015b_a02ef824_team_a`, `m015b_a02ef824_team_b`; both teams are
+  created later in H-A, with H-B reserved for empty/read-only navigation.
+- Account usernames: `m015b_a02ef824_l`, `m015b_a02ef824_q`,
+  `m015b_a02ef824_r`, `m015b_a02ef824_x`. Account/team/request/grant UUIDs remain
+  server-generated/bound after actual successful results; none are preallocated.
+- Exact manifest SHA-256:
+  `8a11da1df126dfb1649b4e5a0c536e129d5fb648f993ca88245fff89921c4b84`, 1844 bytes.
+
+The existing parser requires m015b_<run prefix> names despite task M-017. All
+11 new identifiers (3 UUID4 + 8 names) are internally unique and disjoint from
+BOTH prior scopes. This local comparison does not establish PostgreSQL absence;
+that requires the separately approved guarded Gate B. Prior manifest hashes remain
+092989b094c1356c342f22050d90be2f6570e579234665717a8ac4219cf57a4d (M-015C) and
+fcd625ae60b77a0c04d9924b29d8df96a2eacf1332562e2e48c12bcdf0db1f55 (M-015F).
+
+Budgets and schema match both prior owner-approved scopes exactly: L/Q/R/X each
+register/login/logout = 1/1/0 in FOUR new independent profiles; ten required
+domain calls one attempt each; deny_issue_q/deny_decide_q/deny_redeem_x zero.
+All thirteen manifest entries/order are preserved. No password, token, account
+UUID, fault field or budget headroom is added. Confirm all four registrations
+and logins before domain commands, rather than proceeding with uncertain Q.
+Main execution order remains create_a -> request_q -> request_r -> approve_q ->
+reject_r -> issue_r -> issue_x -> redeem_r -> redeem_x (expected team_full) ->
+create_b. Any other failure/uncertainty stops; no retries, restart or adoption.
+
+OWNER_RUNBOOK.md provides separately gated exact inspect, one-time prepare,
+guarded foreground serve, later Vite, guest Origin preflight and optional later
+current-state verify commands at exact 0005. Both 8000 and 5173 must be free before
+serve (the launcher checks 5173 too); backend starts before Vite. Hidden DB-role
+password entry requires a real interactive terminal. No Tee/redirection/transcript,
+detached process, ordinary Settings/merge_dev or header/security bypass is used.
+
+Host evidence procedure keeps native I/O unchanged and captures LASTEXITCODE
+immediately after normal native return. A finally block writes only fixed public
+run/HEAD/hash/revision metadata, timestamp and captured numeric exit code to a
+new ignored host-exit.json; it explicitly does not certify the run. Readiness and
+final banners are manually attested as booleans/times in separate owner observations,
+without terminal/header/auth dumps. Require this original invocation's exact final
+banner AND actual exit 0 AND the complete journey/ready observation. Interrupted
+bookkeeping, forced termination, missing evidence or uncertain status cannot pass.
+The wrapper is syntax-checked only; no real PowerShell Ctrl+C/TTY behavior is
+claimed tested. Hard kill/terminal loss can prevent capture and remains inconclusive.
+No later verify can reconstruct a missing before-state/ledger/drain or certify it.
+
+M-016 navigation checks: exact UUID lookup followed by explicit Select is required
+discovery. Optional GET-only view/catalog/H-A/H-B navigation, foreground return,
+app-owned Back/Forward and one same-tab reload may be approved BEFORE the first
+domain POST, when there is no domain command journal to lose. Return every role
+to H-A. Such checks do not spend login/domain attempts or require name search.
+Empty team paging may not exercise Next; never create extra teams to manufacture
+coverage. Same-profile account switching/logout/relogin/expiry/security/fault/retry
+exercises are deferred. After command 1 begins, keep all tabs/App instances intact;
+perform only required navigation after confirmed replies/canonical outcomes.
+Focus/history checks can abort pending transports and rotate display tokens;
+full reload/crash loses journal keys even if navigation hints survive. On uncertainty,
+retain tabs/effects and seek review rather than reloading or issuing another POST.
+
+Expected retained effects after a later COMPLETE successful run, not observed:
+2 min2/max3 hackathons; 4 users/credentials; 4 unrevoked eight-hour sessions;
+2 teams/4 memberships (A=L/Q/R, B=X); 2 resolved requests; 2 grants (R redeemed,
+X pending); 9 completed idempotency, 9 audit, 9 unpublished outbox rows;
+versions A8/B1. Sixteen durable counter consumptions (register_ip4, login_ip4,
+login_account4, L issue2, R redeem1, X redeem1), with physical rows window-dependent.
+Old rows must preserve fingerprints. No automatic cleanup/outbox dispatch occurs.
+
+Actual offline validation from I:\Merge:
+`.\backend\.venv\Scripts\python.exe 'I:\Merge\frontend\test-results\m017\a02ef824-d389-4782-83f8-9c4fe6bf9332\validate_draft.py'`
+passed, exit 0, using the real read_scope parser with database/driver/engine,
+socket connect/bind/listen and credential prompts blocked before imports.
+Confirmed all new/old hash/schema/identifier/budget comparisons and the matching
+unexecuted evidence template/runbook. PowerShell Parser.ParseInput accepted all
+7 powershell fences as syntax only; none were invoked. Existing test-results/
+ignore rule covers all four new artifacts. Public secret/artifact/AST/whitespace
+and Git-scope checks accompany final review. Full app suites/build were not rerun
+for this artifact-only task; prior 333/typecheck/build evidence remains historical.
+
+Only docs/PROGRESS.md is tracked and changed. No PostgreSQL connection, live API/
+browser operation, backend/Vite startup, registration/login/domain write, fixture
+preparation/migration/cleanup, old artifact edit, staging, commit, remote or push.
+Owner exercise: explain why the new prefix prevents old-scope adoption, why a
+navigation hint is not an exact-command journal, and why an exit-only evidence
+file or later verify success cannot replace the original final certification.
+
+## M-019A — mandatory team lifecycle, offline implementation, 2026-11-13
+
+Owner requested member leave, deterministic automatic succession, leader removal,
+last-member deletion, atomic idempotency/audit/outbox and minimal React controls.
+Read repository requirements/decisions/architecture/progress/database guidance and
+actual schema/services/retry/harness/UI/tests first. A read-only listener check
+found no listener on 5173 before editing; no server was started or stopped.
+Design was recorded in LIFECYCLE.md before implementation.
+
+No schema/dependency changes: existing deferred leader FK and final-state triggers
+support deletion of active membership plus successor/tombstone update in one owner.
+Reuse reservation, _run_composed, TeamService._execute and existing outbox helper.
+Exact order: reservation -> hackathon SHARE -> sorted affected users NO KEY UPDATE
+-> exact team NO KEY UPDATE -> membership/team/audit/outbox/completion -> commit.
+Successor is earliest (joined_at,user_id), selected under the team lock without
+late user locks. Below-minimum teams remain forming. Last member tombstones, never
+hard-deletes, the team; existing active discovery excludes it.
+
+Add POST scoped /leave and /members/{user_id}/remove with strict {}, current cookie/
+CSRF/Origin/Fetch Metadata/identity checks and exact Idempotency-Key; add member-only
+paginated GET /members. Actor always comes from session; self-removal uses leave.
+Leave replay works after departure/deletion and never removes a later membership.
+Removal replay still checks current leadership before noting replay proof. New
+typed errors preserve existing APIs' mappings. Old browser hosts exclude the new
+router; their five overrides, route allowlists and manifests gain no permissions.
+
+React adds explicit Manage membership, named roster rows and inline first-action
+confirmations/Cancel. Memory-only account-scoped lifecycle journal retains exact
+uncertain commands beyond disappearing detail/roster rows. Retry is explicit and
+uses current session CSRF; sticky uncertainty and workspace/session ownership fence
+late callbacks. Canonical reads refresh after success. Former founders can
+explicitly start another creation only after a successful teamless membership read;
+this cannot clear pending/uncertain creation. No command/auth data enters storage.
+
+Changed tracked paths (18, including the preserved earlier progress edit):
+backend/app/main.py; backend/app/services/errors.py; backend/app/services/idempotency.py;
+backend/test_support/browser.py; backend/test_support/browser_full.py;
+backend/test_support/concurrency.py; backend/tests/test_read_api.py;
+backend/tests/test_team_api.py; docs/ARCHITECTURE.md; docs/DECISIONS.md;
+docs/FRONTEND.md; docs/PROGRESS.md; docs/TEST_DATABASE.md; frontend/src/App.tsx;
+frontend/src/api.ts; frontend/src/components/CreateTeam.tsx;
+frontend/src/components/Discovery.tsx; frontend/src/hooks/useTeamCreation.ts.
+
+New paths (11): backend/app/lifecycle_api.py; backend/app/services/lifecycle.py;
+backend/lifecycle_tests/conftest.py; backend/lifecycle_tests/test_lifecycle.py;
+backend/tests/test_lifecycle.py; backend/tests/test_lifecycle_api.py;
+backend/tests/test_lifecycle_readiness.py; docs/LIFECYCLE.md;
+frontend/src/Lifecycle.test.tsx; frontend/src/components/Lifecycle.tsx;
+frontend/src/hooks/useLifecycle.ts.
+
+Actual commands/results, from backend/frontend as appropriate:
+
+| Command | Result |
+| --- | --- |
+| `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short` | FINAL 1455 passed, 32 deselected, 97.49s, exit 0; one existing Starlette/HTTPX warning |
+| `.\.venv\Scripts\python.exe -m pytest -q tests/test_lifecycle.py tests/test_lifecycle_api.py tests/test_lifecycle_readiness.py tests/test_read_api.py tests/test_team_api.py --tb=short` | 222 passed, 22.53s, exit 0; same warning |
+| `npm.cmd test -- --reporter=dot` | FINAL 350 passed, 12 files, 75.25s, exit 0 |
+| `npm.cmd run build` | TypeScript passed; Vite built 47 modules in 3.63s, exit 0 |
+| `.\.venv\Scripts\python.exe -m pytest --collect-only -q lifecycle_tests --race-repetitions=1` | 10 collected, 0.13s, exit 0; no fixtures/credentials/database execution |
+
+Final targeted static review: all 15 changed/new Python files parsed; 29 pending
+paths reviewed; targeted private-key/token/credential-URL patterns flagged none.
+Three retained M-015C/M-015F/M-017 manifest hashes and the original G1 evidence hash
+match the prior recorded values. Build/browser/evidence files remain ignored.
+No model/migration/dependency/ignore-file changes, and staging is empty.
+`git -c safe.directory=I:/Merge -c core.safecrlf=false diff --check` passed.
+
+Earlier red checks were corrected without weakening assertions: new operations
+were initially absent from the explicit idempotency allowlist; the new roster
+needed its own bounded-query guard rather than the route-name-specific admission
+guard; two exact OpenAPI inventories needed the three additive routes enumerated.
+TypeScript caught two mock-call tuple types. One new React assertion initially
+checked creation before its required membership refetch completed; it now waits
+for that canonical result. Final full suites passed. Offline rollback/replay tests
+include unknown commit acknowledgement and losing leadership during reconciliation.
+
+Separate fixed --suite lifecycle requires exact 0005 and the original opt-in;
+initial/new/pooled/observer connections reuse ConnectionGuard. Fresh retained
+fixtures exercise departures, removal, succession, same-key contention, approval,
+redemption and cross-team admission races plus outbox-failure rollback. One case
+requires actual rooted PostgreSQL lock contention. Teardown verifies committed
+membership/leadership/capacity and exact version/audit/outbox/completed chains,
+including deletion. Historical approved/redeemed records no longer imply current
+membership in this separate suite; legacy suites and their checks remain unchanged.
+Supported owner command and write scope: TEST_DATABASE.md / LIFECYCLE.md.
+
+Recommendation CONDITIONAL: offline implementation passes; no PostgreSQL lifecycle
+execution, new real-browser/mobile/keyboard/HTTPS lifecycle acceptance, G1 rerun,
+load/CI/deployment or production claim. No PostgreSQL/live API/browser interaction,
+server launch, fixture/manifest edit, cleanup/reset/migration, dependency install,
+staging/commit/remote/push. Old manifests/evidence remain retained. Preserve this
+boundary: old browser hosts do not authorize lifecycle. A separately reviewed new
+browser scope is required before UI live validation. Stop for owner review before
+live test or commit. Owner exercise: explain simultaneous departures and the
+absence of a late successor-user lock; modify the deterministic tie-break test.
+
+### 2026-11-13 - M-019B guarded PostgreSQL acceptance review (offline only)
+
+Recommendation: CONDITIONAL for separately approved live lifecycle acceptance.
+Reviewed the complete M-019 pending implementation, service composition/retries,
+locking/constraints, API/auth boundaries, frontend controls, and guarded fixture
+runner. No production defect was demonstrated. Same-team writers serialize on
+the parent team after sorted user locks; succession takes no late successor-user
+lock. Leave replay remains actor-scoped after departure, while removal replay
+requires current leadership. Existing constraints, CSRF/Origin/session guards,
+legacy suites, old browser scopes and retained evidence remain unchanged.
+
+Demonstrated/fixed acceptance-check defect: eight offline corrupted receipt/event
+examples were accepted by the original lifecycle teardown (8 failed, 1 passed
+before correction). Tightened backend/lifecycle_tests/conftest.py to check exact
+receipt scope/count/version/schema/status/headers, event type/schema, audit-chain
+continuity, deletion/readiness and removal authorization state. Added nine offline
+tests in backend/tests/test_lifecycle_acceptance_review.py. Strengthened the live
+succession case to replay a previously successful removal after leadership changes
+(403), and require exact domain codes for two 409 race outcomes. No production
+service/rule changes. The ten live cases remain unexecuted.
+
+Actual commands from backend:
+
+| Command | Result |
+| --- | --- |
+| `.\.venv\Scripts\python.exe -m pytest -q tests/test_lifecycle_acceptance_review.py tests/test_lifecycle.py tests/test_lifecycle_api.py tests/test_lifecycle_readiness.py --tb=short` | 64 passed, 4.03s, exit 0 |
+| `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short` | 1464 passed, 32 deselected, 42.63s, exit 0 |
+| `.\.venv\Scripts\python.exe -m pytest --collect-only -q lifecycle_tests --race-repetitions=1` | 10 collected, 0.04s, exit 0; no fixtures/database execution |
+
+All pytest commands above have the existing Starlette/HTTPX deprecation warning.
+Frontend unchanged in this review: 350 tests/build are the preceding M-019A
+evidence, not newly executed frontend checks.
+The owner PowerShell proposal passed AST parsing without execution; its isolated
+metadata-only guard accepted a valid synthetic report and rejected eighteen
+failure cases. Sixteen pending Python files parsed; targeted secret/artifact and
+`git -c safe.directory=I:/Merge -c core.safecrlf=false diff --check` checks passed.
+Three prior manifest hashes and the retained G1 report hash are unchanged.
+All retained artifacts and proposed owner receipts remain Git-ignored.
+
+Owner-only proposal and complete fail-closed PowerShell block: LIFECYCLE.md,
+M-019B section. Fixed target is 127.0.0.1:5432 / merge_test / merge_app / exact
+0005_invitations; no application Settings/merge_dev fallback or migration. Initial
+preflight is read-only; fresh/pooled/observer fixture connections enforce exact
+identity/revision, READ COMMITTED, autocommit off and bounded timeouts. Use a quiet
+owner-controlled window: no other writer/runner/dispatcher. No global exclusive
+lock or prior-row fingerprint is claimed. Existing retained merge_test fixtures
+can coexist through fresh UUID scopes. One successful repetition retains ten
+hackathons, 31 accounts/credentials/sessions, eleven teams, thirteen invitations,
+one join request, and associated membership/tombstone/receipt/audit/outbox/throttle
+effects. No cleanup/reset or old browser manifest is involved.
+
+The proposed wrapper requires native exit 0 plus exactly ten collected/completed
+teardowns, no skips/failures, exact suite/revision/repetition and certified final
+invariants in its new sanitized report. It records source hashes and native exit
+in a separate new ignored owner receipt, never overwrites prior evidence, and
+refuses ambient test credentials. Python's fatal GetPassWarning policy was
+checked offline; no hidden-input fallback may echo a password. Do not pipe or
+transcribe the interactive command. Failed/interrupted runs retain partial writes
+and evidence and require review before any retry. Exact same successful replay
+after a leadership change now has a live test; not every race order is forced.
+Real COMMIT transport loss is covered offline only; no new G1/load/browser/TLS or
+deployment evidence is implied.
+
+M-019B adds one new pending path to the M-019A inventory above: now 18 modified
+tracked files plus twelve new files, nothing staged. Earlier PROGRESS edits are
+preserved. No PostgreSQL/live API/browser connection, service startup, fixture or
+manifest preparation/edit/cleanup, migration, dependency installation, commit or
+remote action. STOP for owner approval before executing the proposed live tests.
+Owner exercise: explain why a concurrent departing successor is safe, then change
+one synthetic receipt field and show that the real teardown checker rejects it.
+
+### 2026-11-13 - M-019E final documentation and authorized local commit
+
+Owner accepted the M-019D review and authorizes reconciliation of PROGRESS.md,
+TEST_DATABASE.md and LIFECYCLE.md plus exactly one local commit titled
+`feat(teams): implement race-safe team lifecycle`. The reviewed inventory is 18
+modified tracked files and twelve new files, including the preserved earlier
+progress edits. This task changes only those three documentation files; the
+reviewed production code/tests, dependencies and schema are unchanged.
+
+Retained report:
+`backend/test-results/guarded/run-114f00ece8514d9ebd9c54d738b6cd3e.json`
+
+SHA256:
+`9aba72d5f97d32479cb0bcc97caf1acc7dccd34ee38e0fe261202777497f9c86`
+
+| Recorded field | Accepted result |
+| --- | --- |
+| suite / revision | lifecycle / 0005_invitations |
+| repetitions | 1 |
+| collected / teardowns_completed | 10 / 10 |
+| failures / skipped / incomplete cases | 0 / 0 / 0 (no active node) |
+| status / stage / exit_code | passed / pytest / 0 |
+| invariant_verification | suite_and_fixture_checks_completed |
+
+Owner-run guarded command, recorded here as provenance, NOT executed by M-019E:
+
+```powershell
+Set-Location -LiteralPath 'I:\Merge\backend'
+.\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite lifecycle --revision 0005_invitations --repetitions 1
+```
+
+M-019D verified the report fields and hash against the actual artifact and checked
+the ten-case source and final invariant verifier. M-019E rechecked the same
+artifact/hash. The owner confirms native exit 0; the report also records exit 0.
+No owner receipt with source hashes or independently captured native process exit
+was found. The JSON is aggregate evidence: it has no per-case race winners,
+execution timestamps or Git/source hash. Its distinct UUID filename and filesystem
+metadata support retention/freshness, not an independent binding to the executed
+worktree. Do not manufacture a source-bound receipt after execution. The ignored
+report stays local; this tracked record retains its identity/hash and limits.
+
+The ten cases cover leave/removal/final deletion/discovery, succession and former-
+leader replay denial, simultaneous departures, same-key contention, removal vs
+departure, leader departure vs removal/approval, final departure vs redemption,
+cross-team admission and real transactional outbox-failure rollback. Fresh-scope
+teardown checks cover committed membership/capacity/leadership/tombstones, exact
+version/audit/outbox/reply chains and no pending idempotency work. One repetition
+does not force every race ordering; only simultaneous departure requires observed
+rooted PostgreSQL lock waiters. Real COMMIT transport loss remains offline-only
+coverage. This is local lifecycle acceptance, not a new G1/50-caller run, load/CI,
+browser/HTTPS or production certification. Existing fixture effects are retained.
+
+Prior actual offline evidence remains 1464 backend tests passed / 32 deselected,
+350 frontend tests passed / 12 files, and successful TypeScript/production build
+(exact commands/results in M-019A/B above). No test suite or database action is
+rerun for this documentation-only reconciliation. No server/browser, migration,
+fixture/manifest modification or cleanup, dependency install, remote action or
+deployment is part of M-019E. The authorized local commit contains implementation,
+tests and documentation only, excluding ignored reports/manifests/private data.
+
+Still pending: a separately approved fresh lifecycle-capable guarded browser scope,
+confirmation/Cancel, canonical membership/succession/removal/deletion refresh,
+original-key uncertain recovery and account/navigation isolation, phone/keyboard
+checks, HTTPS, load and deployment verification. Old browser hosts exclude the
+lifecycle router; M-017 and old manifest budgets do not authorize these actions.
+Owner exercise: explain why simultaneous departures need no late successor-user
+lock and why an old leader cannot replay removal after losing leadership.
 
 ## Daily work log template
 ```

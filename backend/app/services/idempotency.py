@@ -15,7 +15,7 @@ from app.services.errors import DomainError, ErrorCode
 from app.services.teams import _CreateTeamCommand, _CreateTeamRequest, _JoinTeamCommand, _query
 
 _OPERATIONS = ('team.create.v1', 'team.join.v1', 'request.create.v1', 'request.decide.v1',
-               'invitation.issue.v1', 'invitation.redeem.v1')
+               'invitation.issue.v1', 'invitation.redeem.v1', 'team.leave.v1', 'member.remove.v1')
 _MAX_REPLY_BYTES = 16_384
 _HEADERS = {'content-type': 'application/json', 'cache-control': 'no-store'}
 

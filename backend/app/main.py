@@ -20,6 +20,8 @@ from app.admission_api import router as admission_router, admission_error_handle
 from app.services.admission import AdmissionError
 from app.invitation_api import router as invitation_router, invitation_error_handler
 from app.services.invitations import InvitationError
+from app.lifecycle_api import router as lifecycle_router, lifecycle_error_handler
+from app.services.lifecycle import LifecycleError
 
 
 def create_app(policy: AuthSettings | None = None) -> FastAPI:
@@ -54,11 +56,13 @@ def create_app(policy: AuthSettings | None = None) -> FastAPI:
     app.add_exception_handler(DomainError, team_error_handler)
     app.add_exception_handler(AdmissionError, admission_error_handler)
     app.add_exception_handler(InvitationError, invitation_error_handler)
+    app.add_exception_handler(LifecycleError, lifecycle_error_handler)
     app.include_router(router)
     app.include_router(read_router)
     app.include_router(team_router)
     app.include_router(admission_router)
     app.include_router(invitation_router)
+    app.include_router(lifecycle_router)
 
     @app.get('/health')
     def health() -> dict[str, str]:

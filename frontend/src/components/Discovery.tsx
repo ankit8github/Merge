@@ -11,6 +11,8 @@ import { useWorkspaceSignal, type WorkspaceSignal } from '../hooks/useWorkspaceS
 import { ErrorNotice, Loading } from './Feedback';
 import HackathonLookup from './HackathonLookup';
 import type { Navigation, UpdateNavigation } from '../hooks/useDiscoveryNavigation';
+import type { Lifecycle } from '../hooks/useLifecycle';
+import TeamLifecycle, { LifecycleRecovery } from './Lifecycle';
 
 function Pager({ cursor, next, previous, advance }: { cursor: string | null; next: string | null; previous: () => void; advance: () => void }) {
   return <nav className="pagination" aria-label="Pagination">
@@ -71,10 +73,11 @@ function TeamList({ hackathon, open, onExpired, page }: { hackathon: Hackathon; 
     <p className="fine-print">Counts reflect the latest fetched snapshot. Open a team to request membership or review requests.</p>
   </>;
 }
-function TeamDetail({ hackathon, id, back, onExpired, admission, invitations, membership, restore, workspace }: {
+function TeamDetail({ hackathon, id, back, onExpired, admission, invitations, lifecycle, membership, restore, workspace }: {
   hackathon: Hackathon; id: string; back: () => void; onExpired: () => void; admission: Admission;
   membership: ReturnType<typeof useRead<Team | null>>; restore: () => void;
   invitations: Invitations;
+  lifecycle: Lifecycle;
   workspace: WorkspaceSignal;
 }) {
   const load = useCallback((signal: AbortSignal) => api.team(hackathon.id, id, signal), [hackathon.id, id]);
@@ -90,6 +93,8 @@ function TeamDetail({ hackathon, id, back, onExpired, admission, invitations, me
       <dl><dt>Hackathon</dt><dd>{hackathon.name}</dd><dt>Created</dt><dd>{new Date(state.data.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}</dd></dl>
       <TeamAdmission team={state.data} admission={admission} membership={membership} restore={restore} onExpired={onExpired} workspace={workspace} />
       <InvitationIssuer team={state.data} invitations={invitations} restore={restore} workspace={workspace} />
+      {membership.state.status === 'success' && membership.state.data?.id === state.data.id &&
+        <TeamLifecycle team={state.data} lifecycle={lifecycle} workspace={workspace} onExpired={onExpired} />}
     </article>}
   </>;
 }
@@ -103,16 +108,17 @@ function MyTeam({ hackathon, membership, open }: { hackathon: Hackathon; members
   </>;
 }
 
-function SelectedWorkspace({ hackathon, view, detail, creation, admission, invitations, restore, onExpired, open, back, page }: {
+function SelectedWorkspace({ hackathon, view, detail, creation, admission, invitations, lifecycle, restore, onExpired, open, back, page }: {
   hackathon: Hackathon; view: 'discover' | 'mine' | 'invitations'; detail: string | null; creation: TeamCreation;
   admission: Admission; invitations: Invitations;
+  lifecycle: Lifecycle;
   restore: () => void; onExpired: () => void; open: (id: string) => void; back: () => void;
   page: ReturnType<typeof usePage>;
 }) {
   const creationWorkspace = useWorkspaceSignal(hackathon.id);
   const commandWorkspace = useWorkspaceSignal(`${view}:${detail ?? ''}`);
   const operation = creation.operation(hackathon.id);
-  const revision = `${operation?.status === 'success' || operation?.status === 'assigned' ? operation.key : ''}:${admission.revision(hackathon.id)}:${invitations.revision(hackathon.id)}`;
+  const revision = `${operation?.status === 'success' || operation?.status === 'assigned' ? operation.key : ''}:${admission.revision(hackathon.id)}:${invitations.revision(hackathon.id)}:${lifecycle.revision(hackathon.id)}`;
   const lastRevision = useRef(revision);
   useEffect(() => {
     if (lastRevision.current !== revision) { lastRevision.current = revision; if (page.cursor !== null) page.reset(); }
@@ -120,17 +126,18 @@ function SelectedWorkspace({ hackathon, view, detail, creation, admission, invit
   const load = useCallback((signal: AbortSignal) => api.myTeam(hackathon.id, signal), [hackathon.id, revision]);
   const membership = useRead(load, onExpired);
   return <>
+    <LifecycleRecovery lifecycle={lifecycle} hackathon={hackathon.id} workspace={creationWorkspace} />
     <CreateTeam hackathon={hackathon} creation={creation} membership={membership} restore={restore} workspace={creationWorkspace} />
     <div key={`${view}:${detail ?? ''}:${revision}`}>
       {view === 'mine' ? <MyTeam hackathon={hackathon} membership={membership} open={open} />
         : view === 'invitations' ? <InvitationInbox hackathon={hackathon} invitations={invitations} membership={membership} restore={restore} onExpired={onExpired} open={open} workspace={commandWorkspace} />
-        : detail ? <TeamDetail hackathon={hackathon} id={detail} onExpired={onExpired} back={back} admission={admission} invitations={invitations} membership={membership} restore={restore} workspace={commandWorkspace} />
+        : detail ? <TeamDetail hackathon={hackathon} id={detail} onExpired={onExpired} back={back} admission={admission} invitations={invitations} lifecycle={lifecycle} membership={membership} restore={restore} workspace={commandWorkspace} />
         : <TeamList hackathon={hackathon} onExpired={onExpired} open={open} page={page} />}
     </div>
   </>;
 }
 
-export default function Discovery({ onExpired, creation, admission, invitations, restore, navigation: nav, updateNavigation: update }: { onExpired: () => void; creation: TeamCreation; admission: Admission; invitations: Invitations; restore: () => void; navigation: Navigation; updateNavigation: UpdateNavigation }) {
+export default function Discovery({ onExpired, creation, admission, invitations, lifecycle, restore, navigation: nav, updateNavigation: update }: { onExpired: () => void; creation: TeamCreation; admission: Admission; invitations: Invitations; lifecycle: Lifecycle; restore: () => void; navigation: Navigation; updateNavigation: UpdateNavigation }) {
   const [selected, setSelected] = useState<Hackathon | null>(null);
   const { view, detail } = nav;
   const [restoreError, setRestoreError] = useState<ApiError | null>(null);
@@ -172,7 +179,7 @@ export default function Discovery({ onExpired, creation, admission, invitations,
     <div className="workspace"><Hackathons selected={active} onExpired={onExpired} page={catalogPage} choose={item => { setRestoreError(null); setSelected(item); update(current => ({ ...current, hackathon: item.id, teams: [null], view: 'discover', detail: null })); setNavigation(old => old + 1); }} />
       <section className="discovery-content" aria-label="Team workspace" key={wanted}>
         {!active ? <>{restoreError ? <ErrorNotice error={restoreError} retry={wanted ? () => setAttempt(old => old + 1) : undefined} /> : wanted ? <Loading>Restoring hackathon access…</Loading> : <div className="panel empty"><span className="empty-symbol" aria-hidden="true">✳</span><h2>Choose a hackathon.</h2><p>Every great collaboration starts with a shared challenge.<br />Pick one to explore its teams.</p></div>}</>
-          : <SelectedWorkspace hackathon={active} view={view} detail={detail} creation={creation} admission={admission} invitations={invitations} restore={restore} onExpired={onExpired} page={teamPage}
+          : <SelectedWorkspace hackathon={active} view={view} detail={detail} creation={creation} admission={admission} invitations={invitations} lifecycle={lifecycle} restore={restore} onExpired={onExpired} page={teamPage}
               back={() => { update(current => ({ ...current, detail: null })); setNavigation(old => old + 1); }} open={id => { update(current => ({ ...current, view: 'discover', detail: id })); setNavigation(old => old + 1); }} />}
       </section>
     </div>

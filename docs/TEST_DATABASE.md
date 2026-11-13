@@ -1,5 +1,51 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+## M-019 lifecycle suite - guarded local acceptance passed (M-019E)
+
+Owner-run suite accepted after M-019D review: lifecycle / exact 0005_invitations /
+one repetition / 10 collected / 10 completed teardowns / zero failures, skips or
+incomplete cases / status passed / stage pytest / exit 0 /
+suite_and_fixture_checks_completed. The owner confirms native exit 0. M-019E only
+reconciles documentation and rechecks the retained report; it opens no database.
+
+Report: `backend/test-results/guarded/run-114f00ece8514d9ebd9c54d738b6cd3e.json`
+
+SHA256: `9aba72d5f97d32479cb0bcc97caf1acc7dccd34ee38e0fe261202777497f9c86`
+
+This ignored report is aggregate evidence, without per-case race winners, execution
+timestamps or a Git/source hash. No owner source-hash/native-exit receipt was
+found; independently captured process exit and exact worktree binding cannot be
+reconstructed from the JSON. Filename/filesystem metadata support retention, not
+independent execution provenance. One repetition does not exercise every ordering;
+only simultaneous departures require observed rooted PostgreSQL lock waiters.
+Real COMMIT transport-loss coverage remains offline only. Prior G1 evidence is
+unchanged; no new G1, browser lifecycle, HTTPS, load, CI, deployment or production
+certification is claimed. Those separate validations remain pending.
+
+Separate explicit `--suite lifecycle --revision 0005_invitations` uses new retained
+fixtures and all current production service APIs. Collection is credential-free.
+Initial/new/pooled/observer connections reuse the full exact-0005 ConnectionGuard;
+ordinary Settings/merge_dev never supply a test engine. Existing suites/revision
+restrictions are unchanged. No schema migration or cleanup is needed or performed.
+
+Any further run still needs separate owner approval for fresh accounts, sessions,
+hackathons, teams, admission/invitation/lifecycle/auth-throttle/audit/outbox/
+idempotency writes and read-only final observers. The supported one-repetition
+command is:
+
+```powershell
+Set-Location I:\Merge\backend
+.\.venv\Scripts\python.exe -m test_support.concurrency --confirm-merge-test --suite lifecycle --revision 0005_invitations --repetitions 1
+if ($LASTEXITCODE -ne 0) { throw 'Lifecycle run failed or incomplete. Preserve evidence; stop.' }
+```
+
+Enter an existing DB-role password only at the hidden prompt; never include it in
+argv/transcripts. The accepted run does not authorize another execution. Require
+exit 0, all cases and teardown checks completed and `suite_and_fixture_checks_completed` in the
+sanitized unique report. Retain fixtures on success/failure. Separate review can
+approve further repetitions; no blind retry. Earlier browser manifests grant no
+lifecycle scope and must not be reused. Details: [LIFECYCLE.md](LIFECYCLE.md).
+
 ## M-015B browser host - implemented offline only, 2026-11-11
 
 The separate `test_support.browser_full` CLI supports inspect/prepare/serve/verify

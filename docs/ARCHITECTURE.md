@@ -1,5 +1,14 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
+M-019A implements the owner-requested lifecycle slice using the existing schema:
+member leave, deterministic automatic succession, current-leader removal and
+last-member soft deletion. All reuse reservation-first transaction ownership,
+sorted affected-user locks before the team lock, atomic version/audit/outbox/reply
+and bounded retry/reconciliation. New member-only roster reads and React
+confirmation/recovery controls are additive. See [LIFECYCLE.md](LIFECYCLE.md).
+No migration or new dependency. Old guarded browser hosts exclude these routes;
+new PostgreSQL lifecycle schedules are not live-verified until separately approved.
+
 M-016 adds owner-authorized public navigation hints in per-tab sessionStorage and
 history.state, plus exact UUID lookup through the existing catalog cursor API.
 Only public UUIDs/cursors/view choice persist; authentication and mutation journals

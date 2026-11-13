@@ -175,7 +175,10 @@ def test_read_openapi_types_preserved_alongside_create(discovery):
         base+'/{hackathon_id}/teams/{team_id}/join-requests/{request_id}/decision':{'post'},
         base+'/{hackathon_id}/invitations/mine':{'get'},
         base+'/{hackathon_id}/teams/{team_id}/invitations':{'post'},
-        base+'/{hackathon_id}/teams/{team_id}/invitations/{invitation_id}/redeem':{'post'}}
+        base+'/{hackathon_id}/teams/{team_id}/invitations/{invitation_id}/redeem':{'post'},
+        base+'/{hackathon_id}/teams/{team_id}/leave':{'post'},
+        base+'/{hackathon_id}/teams/{team_id}/members':{'get'},
+        base+'/{hackathon_id}/teams/{team_id}/members/{user_id}/remove':{'post'}}
     assert {path:set(operations) for path,operations in paths.items()} == expected
     for path,operations in paths.items():
         if 'get' not in operations: continue

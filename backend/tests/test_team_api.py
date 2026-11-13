@@ -229,7 +229,7 @@ def test_lazy_mutation_dependency_reuses_engine_without_connecting():
     assert caught.value.code == ErrorCode.TRANSACTION_CONFIGURATION
 
 
-def test_openapi_has_only_scoped_create_admission_and_invitation_mutations_with_required_keys(creation):
+def test_openapi_has_only_scoped_domain_mutations_with_required_keys(creation):
     schema = creation.api.client.get('/openapi.json').json()
     paths = schema['paths']
     mutations = [(path,method) for path,operations in paths.items() if path.startswith('/api/')
@@ -238,7 +238,9 @@ def test_openapi_has_only_scoped_create_admission_and_invitation_mutations_with_
     assert mutations == [(base,'post'),(base+'/{team_id}/join-requests','post'),
         (base+'/{team_id}/join-requests/{request_id}/decision','post'),
         (base+'/{team_id}/invitations','post'),
-        (base+'/{team_id}/invitations/{invitation_id}/redeem','post')]
+        (base+'/{team_id}/invitations/{invitation_id}/redeem','post'),
+        (base+'/{team_id}/leave','post'),
+        (base+'/{team_id}/members/{user_id}/remove','post')]
     for path,method in mutations:
         assert next(p for p in paths[path][method]['parameters'] if p['name']=='Idempotency-Key')['required']
     operation = paths[mutations[0][0]]['post']

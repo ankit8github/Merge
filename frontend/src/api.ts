@@ -19,6 +19,9 @@ export type Invitation = {
   status: 'pending' | 'redeemed'; created_at: string; expires_at: string; redeemed_at: string | null;
 };
 export type InboxInvitation = Invitation & { available: boolean };
+export type Member = { user_id: string; display_name: string; joined_at: string };
+export type LifecycleReceipt = { hackathon_id: string; team_id: string; user_id: string;
+  member_count: number; team_version: number; leader_user_id: string | null; deleted: boolean };
 export type CreatedTeam = { schema_version: 1; data: {
   team_id: string; hackathon_id: string; user_id: string; member_count: 1; team_version: 1;
 } };
@@ -174,6 +177,30 @@ async function request<T>(path: string, parse: (value: unknown) => T,
 const query = (cursor: string | null) => `?limit=20${cursor ? `&cursor=${encodeURIComponent(uuid(cursor))}` : ''}`;
 const scope = (id: string) => `/api/hackathons/${uuid(id)}`;
 export const api = {
+  members: (h: string, t: string, cursor: string | null, signal?: AbortSignal) => request(scope(h) + '/teams/' + uuid(t) + '/members' + query(cursor), value => {
+    const result = page<Member>(value, item => {
+      const v = object(item);
+      if (typeof v.joined_at !== 'string' || !Number.isFinite(Date.parse(v.joined_at))) throw new ApiError(0, 'invalid_response');
+      return { user_id: uuid(v.user_id), display_name: string(v.display_name, 80), joined_at: v.joined_at };
+    });
+    if (new Set(result.items.map(row => row.user_id)).size !== result.items.length ||
+        (result.next_cursor !== null && result.next_cursor !== result.items.at(-1)?.user_id)) throw new ApiError(0, 'invalid_response');
+    return result;
+  }, signal),
+  lifecycle: (kind: 'leave' | 'remove', h: string, t: string, subject: string, key: string, csrf: string, signal?: AbortSignal) => {
+    mutationHeaders(key, csrf); uuid(subject);
+    return request(scope(h) + '/teams/' + uuid(t) + (kind === 'leave' ? '/leave' : '/members/' + uuid(subject) + '/remove'), value => {
+      const v = object(value), d = object(v.data);
+      const count = d.member_count, version = d.team_version, leader = d.leader_user_id === null ? null : uuid(d.leader_user_id);
+      if (v.schema_version !== 1 || uuid(d.hackathon_id) !== h || uuid(d.team_id) !== t || uuid(d.user_id) !== subject ||
+          typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0 ||
+          typeof version !== 'number' || !Number.isSafeInteger(version) || version < 2 ||
+          typeof d.deleted !== 'boolean' || d.deleted !== (count === 0) || d.deleted !== (leader === null) ||
+          (kind === 'remove' && (d.deleted || leader === subject))) throw new ApiError(0, 'invalid_response');
+      return { hackathon_id: h, team_id: t, user_id: subject, member_count: count, team_version: version,
+        leader_user_id: leader, deleted: d.deleted } satisfies LifecycleReceipt;
+    }, signal, {}, csrf, 200, key);
+  },
   lookupHackathon,
   invitations: (h: string, cursor: string | null, signal?: AbortSignal) => request(scope(h) + '/invitations/mine' + query(cursor), value => {
     const result = page<InboxInvitation>(value, item => {

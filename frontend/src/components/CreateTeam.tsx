@@ -43,6 +43,7 @@ export default function CreateTeam({ hackathon, creation, membership, restore, w
     <div className="section-top"><div><span className="eyebrow">START SOMETHING TOGETHER</span><h2 id={`${id}-title`}>Create a team</h2></div><span className="badge forming">Founder</span></div>
     <p className="muted">Give your team a name in {hackathon.name}. You will be its first member and leader.</p>
     {operation?.status === 'success' && <p className="notice success" role="status">Team creation confirmed. View My team for the latest membership.</p>}
+    {settled && eligible && !unresolved && <button className="button secondary" onClick={() => { creation.newTeam(hackathon.id); setName(''); }}>Start another team</button>}
     {(member || operation?.status === 'assigned') && operation?.status !== 'success' && <p className="notice" role="status">You already belong to a team in this hackathon. New team creation is unavailable.</p>}
     {message && <div className="notice error" role="alert"><p>{message}</p>{seconds > 0 && <p>Try again in {seconds} seconds.</p>}
       {failure?.status === 403 && <button className="text-button" onClick={restore}>Restore session</button>}</div>}

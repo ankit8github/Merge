@@ -1,5 +1,30 @@
 # Merge authentication, discovery, creation, admission and invitation UI
 
+## M-019A lifecycle controls
+
+Canonical membership matching the current detail team enables Manage membership.
+It loads a private, bounded member roster on explicit expansion, with display-name
+removal buttons only for the currently displayed leader. Every first leave/remove
+requires inline confirmation and supports Cancel. Backend authorization remains
+authoritative. Leaving the leader transfers to earliest joined_at/user UUID; final
+departure tombstones the team. Successful receipts trigger canonical membership,
+detail/list/roster refreshes, never optimistic roster synthesis.
+
+useLifecycle keeps exact commands/keys in account-bound App-lifetime memory.
+Session abort fences late callbacks; workspace tokens prevent old 401s from
+expiring the new workspace. Sticky uncertain commands remain reachable outside
+the detail/roster, even when the member or team disappears. Only explicit original
+retry uses the current session CSRF; no mutation replay on mount/navigation.
+Confirmed commands can be followed by a newly confirmed command after a later
+rejoin, with a fresh key. A former founder gets an explicit Start another team
+action only after canonical membership is successfully teamless; uncertain creation
+commands cannot be cleared. Reload/crash still loses command journals and keys.
+
+The existing browser manifests/hosts cannot authorize lifecycle operations; the
+hosts exclude the new router. Real browser/mobile/keyboard lifecycle acceptance
+requires a separately reviewed fresh host/scope. Contract/tests/owner command:
+[LIFECYCLE.md](LIFECYCLE.md). No new storage, dependency or auth model.
+
 ## M-016 - exact UUID discovery and validated navigation hints, 2026-11-13
 
 The owner authorized this bounded frontend change after reporting M-015F

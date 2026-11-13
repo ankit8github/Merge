@@ -14,6 +14,8 @@ class ErrorCode(StrEnum):
     ALREADY_ASSIGNED = 'already_assigned'
     TEAM_FULL = 'team_full'
     FORBIDDEN = 'forbidden'
+    MEMBER_NOT_FOUND = 'member_not_found'
+    USE_LEAVE = 'use_leave'
     REQUEST_NOT_FOUND = 'request_not_found'
     REQUEST_RESOLVED = 'request_resolved'
     INVITATION_NOT_FOUND = 'invitation_not_found'
