@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import App from './App';
+import { expectPublicNavigationOnly } from './test/navigationAssertions';
 import { type JoinRequest, type Team, type Session } from './api';
 import { csrf, failure, H1, H2, hackathon, json, session, T1, T2, team, U1 } from './test/fixtures';
 
@@ -23,6 +24,8 @@ function server(leader = false, handler: Handler = () => undefined) {
     if (url === '/auth/session' || url === '/auth/login') return Promise.resolve(json(model.session));
     if (url === '/auth/logout') return Promise.resolve(new Response(null, { status: 204 }));
     if (url === '/api/hackathons?limit=20') return Promise.resolve(json({ items: [hackathon(), hackathon(H2)], next_cursor: null }));
+    if (url === '/api/hackathons?limit=1&cursor=00000000-0000-0000-0000-000000000000') return Promise.resolve(json({ items: [hackathon()], next_cursor: null }));
+    if (url === '/api/hackathons?limit=1&cursor=' + H1) return Promise.resolve(json({ items: [hackathon(H2)], next_cursor: null }));
     const h = url.includes(H2) ? H2 : H1, t = url.includes(T2) ? T2 : T1;
     if (url.endsWith('/teams?limit=20')) return Promise.resolve(json({ items: [publicTeam(T1, h), publicTeam(T2, h)], next_cursor: null }));
     if (url.endsWith('/me/team')) return Promise.resolve(json({ team: model.membership }));
@@ -76,7 +79,7 @@ it('requests with exact CSRF/key/body, refetches canonical status and prevents d
   expect((screen.getByRole('button', { name: 'Request membership' }) as HTMLButtonElement).disabled).toBe(true);
   expect(s.fetch.mock.calls.filter(([url]) => url === path() + '/mine').length).toBeGreaterThanOrEqual(2);
   expect(s.fetch.mock.calls.some(([url]) => url === path() + '?limit=20')).toBe(false);
-  expect(document.body.textContent).not.toContain(csrf); expect(storage).not.toHaveBeenCalled();
+  expect(document.body.textContent).not.toContain(csrf); expectPublicNavigationOnly(storage, csrf, (s.posts()[0][1].headers as Record<string, string>)['Idempotency-Key']);
 });
 
 it.each(['pending', 'approved', 'rejected'] as const)('displays canonical %s status without creating or inventing membership', async status => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { api, type Hackathon, type Team } from '../api';
+import { api, ApiError, type Hackathon, type Team } from '../api';
 import { useRead } from '../hooks/useRead';
 import { type TeamCreation } from '../hooks/useTeamCreation';
 import CreateTeam from './CreateTeam';
@@ -9,6 +9,8 @@ import type { Invitations } from '../hooks/useInvitations';
 import { InvitationIssuer, InvitationInbox } from './Invitations';
 import { useWorkspaceSignal, type WorkspaceSignal } from '../hooks/useWorkspaceSignal';
 import { ErrorNotice, Loading } from './Feedback';
+import HackathonLookup from './HackathonLookup';
+import type { Navigation, UpdateNavigation } from '../hooks/useDiscoveryNavigation';
 
 function Pager({ cursor, next, previous, advance }: { cursor: string | null; next: string | null; previous: () => void; advance: () => void }) {
   return <nav className="pagination" aria-label="Pagination">
@@ -16,19 +18,18 @@ function Pager({ cursor, next, previous, advance }: { cursor: string | null; nex
     <button className="button secondary" disabled={!next} onClick={advance}>Next page <span aria-hidden="true">→</span></button>
   </nav>;
 }
-function usePage() {
-  const [history, setHistory] = useState<(string | null)[]>([null]);
-  return { cursor: history[history.length - 1], reset: () => setHistory([null]),
-    previous: () => setHistory(old => old.length > 1 ? old.slice(0, -1) : old),
-    advance: (next: string | null) => { if (next) setHistory(old => [...old, next]); } };
+function usePage(history: (string | null)[], setHistory: (history: (string | null)[], push?: boolean) => void) {
+  return { cursor: history[history.length - 1], reset: () => setHistory([null], false),
+    previous: () => { if (history.length > 1) setHistory(history.slice(0, -1)); },
+    advance: (next: string | null) => { if (next) setHistory([...history, next]); } };
 }
-function Hackathons({ selected, choose, onExpired }: { selected: Hackathon | null; choose: (item: Hackathon) => void; onExpired: () => void }) {
-  const page = usePage();
+function Hackathons({ selected, choose, onExpired, page }: { selected: Hackathon | null; choose: (item: Hackathon) => void; onExpired: () => void; page: ReturnType<typeof usePage> }) {
   const load = useCallback((signal: AbortSignal) => api.hackathons(page.cursor, signal), [page.cursor]);
   const { state, retry } = useRead(load, onExpired);
   return <aside className="panel hackathons" aria-labelledby="hackathons-title">
     <div className="section-top"><h2 id="hackathons-title">Hackathons</h2><button className="text-button" onClick={() => { page.reset(); retry(); }}>Refresh</button></div>
     <p className="muted">Choose your next challenge.</p>
+    <HackathonLookup choose={choose} onExpired={onExpired} />
     {state.status === 'loading' && <Loading>Loading hackathons…</Loading>}
     {state.status === 'error' && <ErrorNotice error={state.error} retry={retry} />}
     {state.status === 'success' && <>
@@ -51,8 +52,7 @@ export function TeamSummary({ team }: { team: Team }) {
     <div className="leader"><span className="avatar" aria-hidden="true">{Array.from(team.leader.display_name)[0]}</span><span><small>Team leader</small><strong>{team.leader.display_name}</strong></span></div>
   </>;
 }
-function TeamList({ hackathon, open, onExpired }: { hackathon: Hackathon; open: (id: string) => void; onExpired: () => void }) {
-  const page = usePage();
+function TeamList({ hackathon, open, onExpired, page }: { hackathon: Hackathon; open: (id: string) => void; onExpired: () => void; page: ReturnType<typeof usePage> }) {
   const load = useCallback((signal: AbortSignal) => api.teams(hackathon.id, page.cursor, signal), [hackathon.id, page.cursor]);
   const { state, retry } = useRead(load, onExpired);
   return <>
@@ -103,15 +103,20 @@ function MyTeam({ hackathon, membership, open }: { hackathon: Hackathon; members
   </>;
 }
 
-function SelectedWorkspace({ hackathon, view, detail, creation, admission, invitations, restore, onExpired, open, back }: {
+function SelectedWorkspace({ hackathon, view, detail, creation, admission, invitations, restore, onExpired, open, back, page }: {
   hackathon: Hackathon; view: 'discover' | 'mine' | 'invitations'; detail: string | null; creation: TeamCreation;
   admission: Admission; invitations: Invitations;
   restore: () => void; onExpired: () => void; open: (id: string) => void; back: () => void;
+  page: ReturnType<typeof usePage>;
 }) {
   const creationWorkspace = useWorkspaceSignal(hackathon.id);
   const commandWorkspace = useWorkspaceSignal(`${view}:${detail ?? ''}`);
   const operation = creation.operation(hackathon.id);
   const revision = `${operation?.status === 'success' || operation?.status === 'assigned' ? operation.key : ''}:${admission.revision(hackathon.id)}:${invitations.revision(hackathon.id)}`;
+  const lastRevision = useRef(revision);
+  useEffect(() => {
+    if (lastRevision.current !== revision) { lastRevision.current = revision; if (page.cursor !== null) page.reset(); }
+  }, [revision, page]);
   const load = useCallback((signal: AbortSignal) => api.myTeam(hackathon.id, signal), [hackathon.id, revision]);
   const membership = useRead(load, onExpired);
   return <>
@@ -120,27 +125,55 @@ function SelectedWorkspace({ hackathon, view, detail, creation, admission, invit
       {view === 'mine' ? <MyTeam hackathon={hackathon} membership={membership} open={open} />
         : view === 'invitations' ? <InvitationInbox hackathon={hackathon} invitations={invitations} membership={membership} restore={restore} onExpired={onExpired} open={open} workspace={commandWorkspace} />
         : detail ? <TeamDetail hackathon={hackathon} id={detail} onExpired={onExpired} back={back} admission={admission} invitations={invitations} membership={membership} restore={restore} workspace={commandWorkspace} />
-        : <TeamList hackathon={hackathon} onExpired={onExpired} open={open} />}
+        : <TeamList hackathon={hackathon} onExpired={onExpired} open={open} page={page} />}
     </div>
   </>;
 }
 
-export default function Discovery({ onExpired, creation, admission, invitations, restore }: { onExpired: () => void; creation: TeamCreation; admission: Admission; invitations: Invitations; restore: () => void }) {
+export default function Discovery({ onExpired, creation, admission, invitations, restore, navigation: nav, updateNavigation: update }: { onExpired: () => void; creation: TeamCreation; admission: Admission; invitations: Invitations; restore: () => void; navigation: Navigation; updateNavigation: UpdateNavigation }) {
   const [selected, setSelected] = useState<Hackathon | null>(null);
-  const [view, setView] = useState<'discover' | 'mine' | 'invitations'>('discover');
-  const [detail, setDetail] = useState<string | null>(null);
+  const { view, detail } = nav;
+  const [restoreError, setRestoreError] = useState<ApiError | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const selectedId = selected?.id;
+  const wanted = nav.hackathon;
+  const catalogPage = usePage(nav.catalog, (catalog, push) => update(current => ({ ...current, catalog }), push));
+  const teamPage = usePage(nav.teams, (teams, push) => update(current => ({ ...current, teams }), push));
+  useEffect(() => {
+    if (!wanted || selectedId === wanted) return;
+    const controller = new AbortController();
+    setRestoreError(null);
+    void (async () => {
+      const item = await api.lookupHackathon(wanted, controller.signal);
+      if (!item) throw new ApiError(404, 'hackathon_not_found');
+      // Catalog metadata alone does not authorize scoped reads (notably in the
+      // guarded host). Do not mount mutation forms from a persisted hint.
+      await api.myTeam(wanted, controller.signal);
+      if (!controller.signal.aborted) setSelected(item);
+    })().catch((error: ApiError) => {
+      if (controller.signal.aborted) return;
+      if (error.status === 401) onExpired();
+      else {
+        setRestoreError(error);
+        if (error.status === 403 || error.status === 404) update(current => ({ ...current, hackathon: null, teams: [null], view: 'discover', detail: null }), false);
+      }
+    });
+    return () => controller.abort();
+    // View/cursor changes do not restart the same scoped verification.
+  }, [wanted, selectedId, attempt, onExpired, update]);
+  const active = selected?.id === wanted ? selected : null;
   const heading = useRef<HTMLHeadingElement>(null);
   const [navigation, setNavigation] = useState(0);
   useEffect(() => { if (navigation) heading.current?.focus(); }, [navigation]);
-  const navigate = (next: 'discover' | 'mine' | 'invitations') => { setView(next); setDetail(null); setNavigation(old => old + 1); };
+  const navigate = (next: 'discover' | 'mine' | 'invitations') => { update(current => ({ ...current, view: next, detail: null })); setNavigation(old => old + 1); };
   return <>
-    <section className="page-heading"><div><p className="eyebrow">A PLACE TO BUILD TOGETHER</p><h1 ref={heading} tabIndex={-1}>{selected?.name ?? 'Your next great team starts here.'}</h1><p className="muted">Discover people. Share a challenge. Make something matter.</p></div><span className="read-only-label">Build your team</span></section>
-    <nav className="view-nav" aria-label="Workspace"><button aria-current={view === 'discover' ? 'page' : undefined} onClick={() => navigate('discover')}>Discover teams</button><button disabled={!selected} aria-current={view === 'mine' ? 'page' : undefined} onClick={() => navigate('mine')}>My team</button><button disabled={!selected} aria-current={view === 'invitations' ? 'page' : undefined} onClick={() => navigate('invitations')}>Invitations</button></nav>
-    <div className="workspace"><Hackathons selected={selected} onExpired={onExpired} choose={item => { setSelected(item); navigate('discover'); }} />
-      <section className="discovery-content" aria-label="Team workspace" key={selected?.id}>
-        {!selected ? <div className="panel empty"><span className="empty-symbol" aria-hidden="true">✳</span><h2>Choose a hackathon.</h2><p>Every great collaboration starts with a shared challenge.<br />Pick one to explore its teams.</p></div>
-          : <SelectedWorkspace hackathon={selected} view={view} detail={detail} creation={creation} admission={admission} invitations={invitations} restore={restore} onExpired={onExpired}
-              back={() => { setDetail(null); setNavigation(old => old + 1); }} open={id => { setView('discover'); setDetail(id); setNavigation(old => old + 1); }} />}
+    <section className="page-heading"><div><p className="eyebrow">A PLACE TO BUILD TOGETHER</p><h1 ref={heading} tabIndex={-1}>{active?.name ?? 'Your next great team starts here.'}</h1><p className="muted">Discover people. Share a challenge. Make something matter.</p></div><span className="read-only-label">Build your team</span></section>
+    <nav className="view-nav" aria-label="Workspace"><button aria-current={view === 'discover' ? 'page' : undefined} onClick={() => navigate('discover')}>Discover teams</button><button disabled={!active} aria-current={view === 'mine' ? 'page' : undefined} onClick={() => navigate('mine')}>My team</button><button disabled={!active} aria-current={view === 'invitations' ? 'page' : undefined} onClick={() => navigate('invitations')}>Invitations</button></nav>
+    <div className="workspace"><Hackathons selected={active} onExpired={onExpired} page={catalogPage} choose={item => { setRestoreError(null); setSelected(item); update(current => ({ ...current, hackathon: item.id, teams: [null], view: 'discover', detail: null })); setNavigation(old => old + 1); }} />
+      <section className="discovery-content" aria-label="Team workspace" key={wanted}>
+        {!active ? <>{restoreError ? <ErrorNotice error={restoreError} retry={wanted ? () => setAttempt(old => old + 1) : undefined} /> : wanted ? <Loading>Restoring hackathon access…</Loading> : <div className="panel empty"><span className="empty-symbol" aria-hidden="true">✳</span><h2>Choose a hackathon.</h2><p>Every great collaboration starts with a shared challenge.<br />Pick one to explore its teams.</p></div>}</>
+          : <SelectedWorkspace hackathon={active} view={view} detail={detail} creation={creation} admission={admission} invitations={invitations} restore={restore} onExpired={onExpired} page={teamPage}
+              back={() => { update(current => ({ ...current, detail: null })); setNavigation(old => old + 1); }} open={id => { update(current => ({ ...current, view: 'discover', detail: id })); setNavigation(old => old + 1); }} />}
       </section>
     </div>
   </>;

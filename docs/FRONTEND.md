@@ -1,5 +1,95 @@
 # Merge authentication, discovery, creation, admission and invitation UI
 
+## M-016 - exact UUID discovery and validated navigation hints, 2026-11-13
+
+The owner authorized this bounded frontend change after reporting M-015F
+incomplete/uncertified, its guarded backend stopped and current-state verify
+passed. A read-only local listener inventory confirmed no TCP listener on 5173
+before editing. Old fixtures and both manifests are retained unchanged. No live
+API, browser, PostgreSQL, server startup, registration or domain command was run.
+
+Hackathons now has a labelled **Hackathon UUID** form. It accepts only the full
+hyphenated UUID, normalizes hexadecimal case, calculates the exclusive predecessor
+with BigInt (exact 128-bit arithmetic), and reads the existing catalog with limit=1.
+Zero UUID uses the first page with no cursor. A returned neighbor is never a match;
+the normalized returned ID must equal the requested ID. Malformed/oversized
+responses fail validation. Loading, invalid input, missing ID, denied access and
+network failures have accessible feedback; retries are explicit. A separate
+**Select hackathon** button uses the existing selection flow. Lookup alone changes
+neither selection nor either pagination history and sends no mutation. This is
+exact-ID lookup across the catalog, with no name-search feature or backend change.
+
+Source diagnosis proves a React remount path: focus/pageshow calls useSession.restore,
+which enters checking, unmounts Discovery, then accepts a new session epoch. Its
+former local selection/view/cursors were discarded. No document reload is needed.
+There was no router, application location.reload call or component error-boundary
+recovery that deliberately navigated home. StrictMode can replay development
+mount/effect lifecycles. The installed React refresh runtime can remount changed
+hook signatures; Vite's client can perform a full reload. Those are possible
+development causes, not proof of the owner's historical events. No browser
+navigation timing, document request or sanitized HMR-event evidence was available
+to classify the reported resets as actual reloads. GET failures remain inline;
+401/session checks still hide private views immediately.
+
+The sole persistence exception is **public navigation hints** in per-tab
+sessionStorage key `merge.discovery.v1` and namespaced history.state. The versioned
+allowlist contains the public authenticated account UUID, a local navigation
+generation, selected hackathon UUID, catalog/team cursor histories, view enum and
+optional public team-detail UUID. It contains no names/response data, sessions,
+passwords, CSRF, command payloads/keys, pending operations or workspace display
+tokens. Nothing is put in URLs or localStorage. Earlier blanket no-storage
+statements describe the previous implementation; credential and command
+non-persistence remains unchanged. Private inbox/request pagination is still local.
+
+Hints never supply identity or permission. Bootstrap/foreground/history traversal
+first validates the cookie through /auth/session and hides private views while
+checking. Only hints matching that server-returned account can be considered.
+Restoring a selection fetches its canonical metadata through exact catalog lookup
+and successfully reads scoped /me/team before mounting command forms; membership
+null is valid. Detail/list/inbox then use their unchanged canonical scoped reads.
+404/missing or 403 clears the saved selection and reports the error. Temporary
+failures retain the hint with an explicit retry. A stale team cursor shows the
+existing error and **Restart from first page** action; no cursor is authority.
+
+Logout/expiry/identity replacement clears navigation and advances its generation.
+Back/Forward entries from an older account/generation cannot revive it, even after
+switching back to that account. Same-account session checks retain hints while
+still discarding private fetched data and cancelling stale transports. History
+traversal also rechecks the session. M-016A corrected reproduced rapid-history and
+foreground races: Back/Forward, focus or pageshow during checking now supersedes
+the prior session GET; rapid history retains the latest public destination.
+A newly validated different identity discards that hint; late older auth replies
+cannot win. Guest, failed-check and signing-out states do not automatically
+recheck the session on these events. Public history hints remain invisible until
+identity is validated; an explicit logout cannot be aborted or replayed by these
+events. Real document reloads restore hints only
+after authentication; they still lose all mutation journals. SessionStorage may
+be disabled, cleared, or lost on tab closure: navigation works in memory without
+guaranteed reload restoration. Stored input is bounded to 256,000 characters and
+2,048 cursors per list; malformed hints are discarded. App-owned Back/Forward
+entries use the same URL; this is not a shareable deep-link router.
+
+Catalog and team cursors are independent. Team-list position now survives view/
+detail changes, focus restoration and reload; an explicit refresh/new hackathon
+resets the corresponding list, and a confirmed mutation revision resets the team
+page. Functional navigation updates preserve concurrent view/catalog changes.
+Browser/HMR/crash reloads do not recover uncertain mutations or exact keys; keep
+the existing warning and seek separately approved recovery when keys are lost.
+Navigation restoration cannot resume or certify either interrupted host run.
+
+Owner review/manual acceptance (not executed): in a separately approved fresh
+guarded run, enter the reviewed Challenge A UUID, activate Look up UUID, verify
+exact returned ID/name/sizes without workspace change, then explicitly Select.
+Verify keyboard labels/focus/status, independent catalog/team pagination and
+My team/Invitations navigation. With no pending command, check foreground return,
+reload and app-owned Back/Forward: session checks hide private data, then restore
+the verified selection/view/pages without POSTs. On another validated identity,
+old navigation must be empty. Use offline mocked tests for absent IDs, denials,
+network faults and expired sessions; do not expand the minimal live mutation/
+security budgets or inject faults into the next run without separate approval.
+Real browser/HMR/assistive-technology coverage remains pending. Exact offline
+commands/results and failed intermediate runs are recorded in PROGRESS.md.
+
 M-015B implements a separate exact-0005 host with bounded fixture/command scopes
 and fresh final-state certification, plus a manually installed browser-only
 response gate outside src and production bundles. Supported owner commands,

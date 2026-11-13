@@ -41,6 +41,24 @@ const uuid = (value: unknown): string => {
   if (!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(result)) throw new ApiError(0, 'invalid_response');
   return result;
 };
+export function canonicalUuid(value: string): string {
+  if (!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value)) throw new ApiError(422, 'invalid_request');
+  return value.toLowerCase();
+}
+
+async function lookupHackathon(value: string, signal?: AbortSignal): Promise<Hackathon | null> {
+  const id = canonicalUuid(value);
+  const number = BigInt('0x' + id.replaceAll('-', ''));
+  // The catalog uses an exclusive UUID boundary, even for a nonexistent row.
+  const hex = number === 0n ? null : (number - 1n).toString(16).padStart(32, '0');
+  const cursor = hex === null ? null : `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  return request('/api/hackathons?limit=1' + (cursor === null ? '' : `&cursor=${cursor}`), value => {
+    const result = page(value, hackathon);
+    if (result.items.length > 1) throw new ApiError(0, 'invalid_response');
+    const found = result.items[0];
+    return found && canonicalUuid(found.id) === id ? { ...found, id } : null;
+  }, signal);
+}
 const integer = (value: unknown): number => {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) throw new ApiError(0, 'invalid_response');
   return value;
@@ -156,6 +174,7 @@ async function request<T>(path: string, parse: (value: unknown) => T,
 const query = (cursor: string | null) => `?limit=20${cursor ? `&cursor=${encodeURIComponent(uuid(cursor))}` : ''}`;
 const scope = (id: string) => `/api/hackathons/${uuid(id)}`;
 export const api = {
+  lookupHackathon,
   invitations: (h: string, cursor: string | null, signal?: AbortSignal) => request(scope(h) + '/invitations/mine' + query(cursor), value => {
     const result = page<InboxInvitation>(value, item => {
       const v = object(item), row = invitation(v, h);

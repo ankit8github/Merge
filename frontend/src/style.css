@@ -2,6 +2,9 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button, input { font: inherit; }
+.lookup-result { margin: .8rem 0; padding: .7rem; border: 1px solid var(--line); border-radius: .5rem; }
+.lookup-result p { margin: .35rem 0; }
+.public-id { overflow-wrap: anywhere; font-size: .8rem; }
 button, a, input, summary { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .55; }

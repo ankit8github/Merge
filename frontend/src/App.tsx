@@ -7,9 +7,12 @@ import { useSession } from './hooks/useSession';
 import { useTeamCreation } from './hooks/useTeamCreation';
 import { useAdmission } from './hooks/useAdmission';
 import { useInvitations } from './hooks/useInvitations';
+import { useDiscoveryNavigation } from './hooks/useDiscoveryNavigation';
 
 export default function App() {
   const auth = useSession();
+  const navigation = useDiscoveryNavigation(auth.state.status === 'authenticated' ? auth.state.session.identity.user_id :
+    auth.state.status === 'guest' || auth.state.status === 'ending' ? null : undefined);
   const creation = useTeamCreation(auth.state.status === 'authenticated' ? auth.state : null, auth.expired);
   const scope = auth.state.status === 'authenticated' ? auth.state : null;
   const admission = useAdmission(scope, auth.expired);
@@ -27,7 +30,7 @@ export default function App() {
       {auth.state.status === 'checking' && <div className="center-state panel"><Loading>Restoring your session...</Loading></div>}
       {auth.state.status === 'error' && <div className="center-state panel"><h1>Let us reconnect.</h1><ErrorNotice error={auth.state.error} retry={auth.restore} /><p className="muted">We could not verify your session. Your workspace will stay hidden until we can.</p></div>}
       {auth.state.status === 'guest' && <AuthForm onSession={auth.accept} restore={auth.restore} message={auth.state.message} />}
-      {auth.state.status === 'authenticated' && <Discovery key={auth.state.epoch} onExpired={expireWorkspace} creation={creation} admission={admission} invitations={invitations} restore={auth.restore} />}
+      {auth.state.status === 'authenticated' && <Discovery key={auth.state.epoch} onExpired={expireWorkspace} creation={creation} admission={admission} invitations={invitations} restore={auth.restore} navigation={navigation.navigation} updateNavigation={navigation.update} />}
       {auth.state.status === 'ending' && <div className="center-state panel"><h1>Signing out</h1>{auth.state.error ? <>
         <ErrorNotice error={auth.state.error} retry={() => { if (auth.state.status === 'ending') auth.logout(auth.state.session); }} />
         <p>Sign-out is not confirmed. Your server session may still be active. Your workspace has been cleared from this view.</p>

@@ -47,11 +47,18 @@ export function useSession() {
   }, [start]);
   useEffect(() => { restore(); return () => { generation.current++; current.current?.abort(); }; }, [restore]);
   useEffect(() => {
+    // A cookie can be replaced while an earlier check is pending. The newest
+    // lifecycle event must supersede it without interrupting explicit logout or
+    // automatically retrying a failed check / guest authentication.
+    if (state.status !== 'authenticated' && state.status !== 'checking') return;
+    const events = ['focus', 'pageshow', 'popstate'] as const;
+    for (const event of events) window.addEventListener(event, restore);
+    return () => { for (const event of events) window.removeEventListener(event, restore); };
+  }, [state.status, restore]);
+  useEffect(() => {
     if (state.status !== 'authenticated') return;
     const timer = window.setTimeout(expired, Math.max(0, Math.min(2147483647, Date.parse(state.session.expires_at) - Date.now())));
-    const focus = () => restore(); // A different tab may revoke or replace the cookie.
-    window.addEventListener('focus', focus); window.addEventListener('pageshow', focus);
-    return () => { window.clearTimeout(timer); window.removeEventListener('focus', focus); window.removeEventListener('pageshow', focus); };
-  }, [state, expired, restore]);
+    return () => window.clearTimeout(timer);
+  }, [state, expired]);
   return { state, accept, expired, restore, logout };
 }

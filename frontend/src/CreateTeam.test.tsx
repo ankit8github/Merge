@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import App from './App';
+import { expectPublicNavigationOnly } from './test/navigationAssertions';
 import { created, csrf, failure, H1, H2, hackathon, json, session, T1, T2, team, U1 } from './test/fixtures';
 
 type Handler = (url: string, options: RequestInit) => Response | Promise<Response> | undefined;
@@ -13,6 +14,8 @@ function server(handler: Handler) {
     if (url === '/auth/session' || url === '/auth/login') return Promise.resolve(json(session()));
     if (url === '/auth/logout') return Promise.resolve(new Response(null, { status: 204 }));
     if (url === '/api/hackathons?limit=20') return Promise.resolve(json({ items: [hackathon(), hackathon(H2)], next_cursor: null }));
+    if (url === '/api/hackathons?limit=1&cursor=00000000-0000-0000-0000-000000000000') return Promise.resolve(json({ items: [hackathon()], next_cursor: null }));
+    if (url === '/api/hackathons?limit=1&cursor=' + H1) return Promise.resolve(json({ items: [hackathon(H2)], next_cursor: null }));
     if (url.endsWith('/teams?limit=20')) return Promise.resolve(json({ items: [], next_cursor: null }));
     if (url.endsWith('/me/team')) return Promise.resolve(json({ team: null }));
     throw new Error('Unexpected mocked request');
@@ -115,7 +118,7 @@ it.each(['outcome_uncertain','network','bad-reply'])('retains the same key/name 
   expect(posts).toHaveLength(2);
   expect(posts[0][1].body).toBe(posts[1][1].body);
   expect(posts[0][1].headers).toEqual(posts[1][1].headers);
-  expect(storage).not.toHaveBeenCalled();
+  expectPublicNavigationOnly(storage, csrf, JSON.parse(String(posts[0][1].body)).name, (posts[0][1].headers as Record<string, string>)['Idempotency-Key']);
   expect(document.body.textContent).not.toMatch(/private transport|Untrusted upstream/);
 });
 

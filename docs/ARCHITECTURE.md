@@ -1,5 +1,15 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
+M-016 adds owner-authorized public navigation hints in per-tab sessionStorage and
+history.state, plus exact UUID lookup through the existing catalog cursor API.
+Only public UUIDs/cursors/view choice persist; authentication and mutation journals
+retain their existing authority and memory-only recovery model. Hints are gated
+by the current server-validated identity and fresh scoped reads before restoring
+command views; account changes fence older history entries. No backend/API/schema/
+transaction/dependency/deployment change. FRONTEND.md defines the precise storage
+exception, remount diagnosis and unverified live-browser limits; PROGRESS.md holds
+offline evidence. Neither interrupted browser run gains certification or resume.
+
 M-015B adds separate test-only full-stack browser tooling at exact 0005: fixed
 loopback/guarded merge_test engine, all five real service dependency overrides,
 bounded fresh registration/domain command scopes, separate retained-hackathon

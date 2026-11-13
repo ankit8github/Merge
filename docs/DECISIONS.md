@@ -1,5 +1,29 @@
 # Merge — Architecture Decision Records (ADRs)
 
+### M-016 - owner-authorized exact lookup and public navigation persistence, 2026-11-13
+
+Reuse the catalog's documented exclusive UUID ordering with limit=1 and an exact
+BigInt predecessor; zero UUID omits the cursor. Verify returned ID equality and
+require an explicit Select action. No metadata endpoint, name search or scope
+exception is added. Ordinary list cursors remain independent.
+
+Keep session revalidation/unmounts on focus/pageshow; add revalidation on history
+traversal. Preserve only public navigation hints in per-tab sessionStorage and
+history.state, bounded and allowlisted as described in FRONTEND.md. The owner's
+M-016 request authorizes this limited exception to earlier no-browser-storage
+statements. A hint cannot authenticate or authorize: current server identity,
+fresh catalog lookup and successful scoped membership read gate restoration.
+Account/logout generations fence old history entries; functional updates prevent
+late page resets from overwriting newer navigation. Pending mutations, exact keys,
+credentials, CSRF and private response data remain memory-only and are never
+reconstructed from hints. Keep the existing crash/reload recovery limitation.
+
+Observed historical document reloads are unverified; source confirms foreground
+session restoration remounted the former local-only Discovery. Installed HMR can
+also remount/reload, but no live attribution is claimed. No change to backend
+authorization, transactions, schema, API, budgets or dependencies. Evidence and
+owner review limits: FRONTEND.md and PROGRESS.md.
+
 ### M-007B.3B — owner-scoped durable auth throttling, 2026-11-10
 
 Implementation contract proposed before coding: reuse unchanged

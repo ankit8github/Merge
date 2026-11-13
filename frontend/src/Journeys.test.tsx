@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import App from './App';
+import { expectPublicNavigationOnly } from './test/navigationAssertions';
 import { csrf, failure, H1, H2, hackathon, json, session, T1, T2, team, U1 } from './test/fixtures';
 
 type Handler = (url: string, options: RequestInit) => Response | Promise<Response> | undefined;
@@ -12,6 +13,8 @@ function server(handler: Handler = () => undefined, authenticated = true) {
     if (url === '/health') return Promise.resolve(json({ status: 'ok' }));
     if (url === '/auth/session') return Promise.resolve(authenticated ? json(session()) : failure(401, 'invalid_session'));
     if (url === '/api/hackathons?limit=20') return Promise.resolve(json({ items: [hackathon(), hackathon(H2)], next_cursor: null }));
+    if (url === '/api/hackathons?limit=1&cursor=00000000-0000-0000-0000-000000000000') return Promise.resolve(json({ items: [hackathon()], next_cursor: null }));
+    if (url === '/api/hackathons?limit=1&cursor=' + H1) return Promise.resolve(json({ items: [hackathon(H2)], next_cursor: null }));
     if (url.endsWith('/teams?limit=20')) return Promise.resolve(json({ items: [team()], next_cursor: null }));
     if (url.endsWith('/me/team')) return Promise.resolve(json({ team: null }));
     if (url.endsWith('/teams/' + T1)) return Promise.resolve(json(team()));
@@ -28,14 +31,14 @@ function fillForm() {
 }
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
-it('restores a cookie session after refresh without browser storage or exposed CSRF', async () => {
+it('restores a cookie session after refresh without persisted auth data or exposed CSRF', async () => {
   const storage = vi.spyOn(Storage.prototype, 'setItem'); const fetch = server();
   const app = render(<App />);
   await screen.findByText('@test_builder');
   expect(screen.getByRole('main').id).toBe('main');
   expect(screen.getByRole('link', { name: 'Skip to content' }).getAttribute('href')).toBe('#main');
   expect(document.body.textContent).not.toContain(csrf);
-  expect(storage).not.toHaveBeenCalled();
+  expectPublicNavigationOnly(storage, csrf);
   app.unmount(); render(<App />); await screen.findByText('@test_builder');
   expect(fetch.mock.calls.filter(([url]) => url === '/auth/session')).toHaveLength(2);
 });

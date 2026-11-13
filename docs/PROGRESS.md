@@ -1,14 +1,24 @@
 # Merge — Verified Progress, Risks & Next Actions
 
-**Last updated:** 2026-11-11
+**Last updated:** 2026-11-13
 **Competition:** Hack4Hack Crew Hiring Challenge 2026, PS1.
 **Official deadline:** 2026-11-15 23:59 IST.
 **Status policy:** Mark DONE only with recorded evidence. 'Planned', 'in progress', 'implemented', 'tested' and 'verified' are not interchangeable.
 
 ## Current verified context
 
-The M-015B final safety audit below is current; no live operation is approved.
-Real-browser execution remains pending. M-014C is committed locally as
+M-016A final review is complete offline below: two reproduced lifecycle races
+were corrected with focused regressions; final frontend 333 passed and strict
+typecheck/production build passed. No remaining offline code blocker was found;
+commit and real-browser acceptance still require owner approval. The underlying
+M-016 exact UUID lookup/navigation implementation remains uncommitted. The owner
+reports M-015F incomplete/uncertified, L registered and Team
+A created, guarded backend stopped and read-only verify passed. Q registration
+remains unconfirmed; no restart/resume or certification is inferred. No TCP
+listener on 5173 was found before source editing or at the final local inventory.
+Both interrupted runs' fixtures/manifests are retained unchanged; no Codex live
+API/browser/database or server action occurred. Earlier read-error entries retain
+their checkpoint scope. M-014C is committed locally as
 `b8abacd5c0f5796488916da4884d2c672ee4eb6d`, superseding its final-review blocker
 and R1 owner-review pause.
 Earlier milestone/open/not-applied statements retain their checkpoint scope.
@@ -6843,6 +6853,540 @@ calls; PostgreSQL and the original transaction/lock protocol remain authoritativ
 In an offline test remove invitation_api.get_invitation_service's override and
 explain why health fails before Settings can initialize; restore it and explain
 why the sticky failure still prevents success. No live command is needed.
+
+## M-015C - minimal owner-review manifest draft, 2026-11-12
+
+**Draft generated and parsed offline; stop for owner review before live work.**
+Baseline HEAD remains `f6975e2eb9166b12f55aedde0c9ec23faa3e77fe`; Git was clean.
+Owner resolved the earlier scope questions: preserve the exact schema, generate
+only run/two-hackathon UUID4 values, use four run-prefixed usernames and bind real
+account UUIDs from confirmed registration later. Ten main commands get one
+attempt each; three optional negative commands get zero. Fault injection,
+optional security exercises and retries are deferred. No schema change.
+
+Created only these ignored local public artifacts under
+`frontend/test-results/m015c/7acf7851-48de-41aa-a397-6cfb717022a8/`:
+`draft.json`, `OWNER_REVIEW.md`, `validate_draft.py`. The draft is 1844 UTF-8 bytes,
+SHA-256 `092989b094c1356c342f22050d90be2f6570e579234665717a8ac4219cf57a4d`.
+Run UUID: `7acf7851-48de-41aa-a397-6cfb717022a8`; first/H-A hackathon UUID:
+`91179875-34ef-403d-a030-eb6f590c5280`; second/H-B UUID:
+`6f165274-0599-4d05-8a6d-ede7aa13bc47`. Names use the parser-required
+`m015b_7acf7851_` prefix despite this task's M-015C number. Locally generated
+UUIDs/names have NOT been checked against PostgreSQL; live freshness is pending.
+
+Minimum auth derivation: use the runbook's FOUR separate clean profiles/storage
+partitions, one per role, retaining the original L/R sessions when returning to
+their steps. Each account has register/login/logout budgets **1/1/0**. Registration
+does not create a session; each protected actor needs one login. No profile
+changes account, so no logout/re-login is needed. Focus/pageshow restoration uses
+GET /auth/session, not POST login. The runbook's shutdown logout is conditional
+and the certifier allows retained unrevoked sessions. Four new session rows will
+remain until their eight-hour expiry (rows are retained afterward); no revocation
+is budgeted. A shared-profile plan would require separately reviewed allowances.
+
+Planned order: create_a L -> request_q Q -> request_r R -> approve_q L ->
+reject_r L -> issue_r L -> issue_x L -> redeem_r R -> redeem_x X (team_full) ->
+create_b X. All four registrations/bindings/logins precede this sequence. Both
+teams are in H-A; H-B remains empty. One attempt includes failures/replays, so
+there is no retry headroom. On uncertainty or a failed required step, stop,
+retain effects/tabs and seek separate recovery review; never expand budgets or
+restart/adopt a retained run automatically.
+
+Expected writes after separate live approval, NOT observed: two prepared min2/max3
+hackathons; four users/four credential rows; four sessions and zero revocations;
+two teams/four memberships (A=L/Q/R, B=X); two requests (Q approved/R rejected);
+two invitations (R redeemed/X pending); nine completed idempotency, nine audit
+and nine unpublished outbox rows; A version8/B version1. Durable throttle counter
+consumptions: register_ip 4, login_ip 4, login_account 4, L issue 2, R/X redeem 1
+each = 16; bucket-row counts depend on 300-second windows. Full denial has no
+domain effect but keeps its throttle charge. No prior row changes or cleanup.
+
+Actual offline validation from I:\Merge:
+`.\backend\.venv\Scripts\python.exe 'I:\Merge\frontend\test-results\m015c\7acf7851-48de-41aa-a397-6cfb717022a8\validate_draft.py'`
+exited 0. It invokes the actual read_scope parser, checks three UUID4 values,
+four accounts at 1/1/0, all thirteen exact commands and ten total main attempts.
+It disables engine/driver connections, socket connect/bind/listen and credential
+prompts before importing the parser. No browser_full CLI action is invoked.
+`git -c safe.directory=I:/Merge check-ignore -v --` with the three exact artifact
+paths confirmed `.gitignore:13:test-results/` for each. Public artifact/whitespace
+checks accompany final review. Full pytest/frontend/build suites are not run for
+this public-data/documentation-only task; prior M-015B results remain historical.
+
+OWNER_REVIEW.md contains every budget/effect, exact checklist, manifest hash and
+supported inspect/prepare/serve/verify commands with separate B/C/D-F/read-only
+approval boundaries and stop-on-error checks. Those commands are reference only,
+NOT executed. The chosen draft scope does not authorize any live connection or
+listener. No password, account UUID, account, database fixture, credential/token,
+browser/Vite/backend startup, migration, reset/cleanup, source/dependency change,
+staging, commit, remote or push. Only this tracked progress document is modified.
+
+Owner explanation/exercise: compare one attempt with two in the parser without
+writing a changed draft, and explain why the second would permit a replay and
+need new review. Returning to L's existing profile consumes no new login, while
+signing out/re-authenticating would exceed this draft's zero/one allowances.
+
+## M-015D - missing prepared hackathon, offline diagnosis, 2026-11-12
+
+Owner-reported current state: existing exact-0005 host and Vite running; Gate B
+inspection and Gate C preparation succeeded; L registered/authenticated; expected
+`91179875-34ef-403d-a030-eb6f590c5280` / `m015b_7acf7851_challenge_a` not visible
+after using Next; no team-creation mutation attempted. These are owner reports,
+not Codex-observed database/browser results. HEAD remains
+`f6975e2eb9166b12f55aedde0c9ec23faa3e77fe`; prior M-015C PROGRESS edits preserved.
+
+Source findings, no production/harness correction justified:
+
+- TeamReadService.hackathons selects ALL public hackathons, ordered by id ASC,
+  with strict id > cursor and LIMIT limit+1. The cursor is the last displayed
+  row, not the extra lookahead row. New UUID4 insertion does not place a fixture
+  first or last by age. Retained fixtures may put A beyond two 20-row pages;
+  actual row counts/page rank have NOT been read. The guarded Reads facade
+  deliberately keeps this global catalog canonical, without manifest filtering.
+- api.ts sends limit=20 and the returned cursor. Discovery.tsx::usePage keeps
+  cursor history; Hackathons updates its load dependency, advances from the
+  returned next_cursor, and disables Next only when it is null. useRead cancels
+  and ignores stale loads. There is no two-page ceiling in source. Catalog and
+  team lists have separate pagers; use the one INSIDE the Hackathons sidebar.
+  For a stable catalog, repeated successful Next loads can traverse all pages.
+  No defect has been demonstrated in the owner's live navigation or responses.
+- Gate C success means both manifest IDs/names/min2/max3 were checked by a fresh
+  observer after commit, prior fingerprints preserved and exactly two added rows.
+  It does not pin/sort/auto-select fixtures, guarantee a first-page position or
+  identify which manifest file the owner actually supplied. Serve readiness also
+  requires both prepared fixtures before registration, for its supplied manifest.
+- Do NOT rerun inspect now: its preflight requires zero scoped accounts/domain
+  state, so L's registration makes it refuse. verify is read-only but snapshot
+  validation does not require the expected hackathon rows/names to exist; its
+  generic success alone cannot prove this exact fixture. Neither is a substitute
+  for a targeted current read. No new diagnostic code is needed.
+
+Smallest targeted existing-facility action, for separate OWNER review only:
+in a NEW tab in the already authenticated L profile, open exactly this GET URL
+through the already running Vite/guarded backend. Do not execute it from Codex,
+log in again, copy cookie/CSRF headers, or change running services:
+
+```text
+http://127.0.0.1:5173/api/hackathons?limit=1&cursor=91179875-34ef-403d-a030-eb6f590c527f
+```
+
+The cursor is the exact numeric UUID predecessor of expected A, derived OFFLINE
+using UUID(int=UUID(expected).int-1). Catalog cursors need not identify an existing
+row; limit=1 is supported by PageQuery. Thus the first result, if A exists in the
+served snapshot, must be A. Its public item should have exactly the expected ID,
+name and sizes 2/3. next_cursor may be A or null depending on later rows.
+
+Interpretation: matching item proves current catalog visibility/existence; it
+still does not prove the UI navigated to the correct page. HTTP 200 with no item
+or a greater UUID means A is absent from that catalog snapshot; stop and review
+the actual supplied manifest/preparation evidence without preparing again.
+401/403/422/503 is a diagnostic failure, not proof of fixture absence; stop and
+report only sanitized status/code, never authenticate/retry/restart around it.
+This GET uses existing real read-only catalog and session checks and charges no
+registration/login/logout/domain/invitation mutation attempt. It WOULD read
+PostgreSQL, so it was NOT executed and still awaits explicit owner approval.
+
+Only if needed afterward, the existing scoped GET
+`/api/hackathons/91179875-34ef-403d-a030-eb6f590c5280/teams?limit=1`
+distinguishes an existing empty hackathon (200, items=[]) from missing (404,
+hackathon_not_found); a scope rejection is a separate result. It supplies no
+hackathon name. Prefer the one catalog GET above for both public ID and name.
+
+Actual offline verification (all synthetic doubles/jsdom, no running-host calls):
+
+- Backend `.\.venv\Scripts\python.exe -m pytest -q tests/test_team_reads.py tests/test_read_api.py -m 'not database' --tb=short`: 94 passed, one existing Starlette/HTTPX warning, 11.46s, exit 0. Covers bounded UUID catalog ordering/cursors, typed pagination, read-only ownership and missing-vs-empty hackathon behavior.
+- Frontend `npm.cmd test -- src/Journeys.test.tsx -t "paginates the hackathon catalog using its independent cursor"`: 1 passed, 28 skipped by filter, 5.82s, exit 0. Existing regression confirms the returned catalog cursor reaches the second page independently of team pagination; it is not real-browser or arbitrary-live-page evidence.
+- Offline UUID predecessor calculation passed; protected app/frontend/harness
+  sources compare unchanged. Final diff/whitespace/Git checks accompany review.
+  No full-suite, typecheck/build or live PostgreSQL/browser acceptance rerun.
+
+Most plausible source-supported explanation is catalog position among retained
+fixtures (or use of the other pager), conditional on actual preparation of this
+manifest. The actual cause is unresolved until the owner supplies a targeted
+read or page/cursor evidence. Do not claim an API/UI defect or missing fixture
+from the current evidence. No speculative filter, sorting or API change.
+
+Only PROGRESS.md changed; no schema/dependency/source/test/manifest or running
+service change, PostgreSQL/merge_dev connection, registration/login, mutation
+attempt, fixture preparation/migration/cleanup, restart, staging, commit or push.
+Owner exercise: explain why cursor equal to A would skip A, while its immediate
+predecessor includes it; then distinguish the catalog's Next from the team pager.
+
+## M-015F - fresh browser acceptance recovery preparation, 2026-11-13
+
+**New isolated draft prepared/offline validated; stop for review before live use.**
+Owner reports old run `7acf7851-48de-41aa-a397-6cfb717022a8` stopped and its guarded
+read-only verify passed. That does not certify the incomplete journey or restore
+the lost ledger. L's registration and all other old committed rows remain retained.
+No Codex database verification occurred. HEAD remains
+`f6975e2eb9166b12f55aedde0c9ec23faa3e77fe`; prior pending PROGRESS edits preserved.
+
+Scope: create only a fresh public manifest, owner runbook and offline validator,
+plus this evidence entry. No production, harness, schema, proxy, dependency or
+security-policy correction. The original manifest/old artifact files are untouched.
+
+New ignored artifacts:
+`frontend/test-results/m015f/7c433ace-0669-469d-9481-e5580e32694b/draft.json`,
+`OWNER_RUNBOOK.md` and `validate_draft.py` in the same directory. Exact draft size
+1844 UTF-8 bytes; SHA-256
+`fcd625ae60b77a0c04d9924b29d8df96a2eacf1332562e2e48c12bcdf0db1f55`.
+
+- Run UUID4: `7c433ace-0669-469d-9481-e5580e32694b`.
+- First/H-A UUID4: `6ed60838-e377-428b-a925-c4662c0d5c0a`, name
+  `m015b_7c433ace_challenge_a`.
+- Second/H-B UUID4: `55035bf9-0769-4158-927f-e4ae7171df31`, name
+  `m015b_7c433ace_challenge_b`.
+- Team names: `m015b_7c433ace_team_a` / `m015b_7c433ace_team_b`.
+- Usernames: `m015b_7c433ace_l`, `m015b_7c433ace_q`, `m015b_7c433ace_r`,
+  `m015b_7c433ace_x`. Account/team UUIDs remain server-generated and bound later;
+  no fabricated IDs or extra schema fields. The m015b_ prefix is parser-required.
+
+All eleven generated entity identifiers (three UUIDs/eight names) are mutually
+distinct and disjoint from the old manifest. Structural roles/command tags are
+intentionally preserved. This is a local comparison, not proof of DB absence;
+that needs a separately approved guarded gate B inspection of the NEW scope.
+The old manifest SHA-256 remains
+`092989b094c1356c342f22050d90be2f6570e579234665717a8ac4219cf57a4d`.
+
+Budgets unchanged: all thirteen command entries match the old manifest exactly,
+ten required commands one attempt each, three deny_* commands zero. Every role
+has registration/login/logout limits 1/1/0, using FOUR new independent clean
+profiles and retaining each session. No old cookie/profile reuse, logout,
+re-login, mutation retry, fault hook or optional security schedule. Main order:
+create_a L -> request_q Q -> request_r R -> approve_q L -> reject_r L -> issue_r L
+-> issue_x L -> redeem_r R -> redeem_x X/team_full -> create_b X. Both teams in
+H-A; H-B for empty-state navigation only. Stop on uncertainty/budget exhaustion;
+no restart/adoption or budget expansion. New scopes require separate approval.
+
+Origin review: AuthBoundary allows exact http://127.0.0.1:5173, rejects duplicate
+Origin/Fetch Metadata, rejects same-site/cross-site values and requires Origin
+on mutations. The specific old failing request metadata is absent, so no exact
+runtime cause is claimed. Vite's existing numeric-loopback 5173/strictPort proxy
+routes /auth,/api,/health to 8000; installed shorthand changeOrigin alters Host,
+not normal HTTP Origin. No localhost/8100/CORS bypass or speculative config edit.
+
+Owner runbook has static Origin review first, separately approved inspect ->
+prepare -> guarded serve -> Vite commands, then GUEST preflight before credentials:
+in new empty profiles inspect only bootstrap GET /auth/session, expected 401/guest,
+not origin_rejected. Record only page origin, request URL/path, method/status,
+Origin-or-absent and Sec-Fetch-Site; no cookies, credentials, payloads, auth response
+panes, HAR/cURL/header copies, recordings or screenshots. Preserve log OFF; clear
+guest log and close DevTools BEFORE password entry. A GET may omit Origin; when
+present it must match. same-origin is expected, none is allowed; same-site/cross-site
+means stop. Do not POST dummy credentials or spoof headers. Guest GET does not
+prove later POST Origin or full acceptance. No browser was started for this work.
+
+Runbook requires exact new IDs/names, per-role registration/login and ordered
+main journey; warns that retained catalog fixtures are UUID-paged and sidebar
+pagination is separate from team pagination. Shutdown: stop new clicks, finish
+all work, no logout, stop owned Vite, Ctrl+C once in backend. Record fixed final
+banner and exit 0 manually, without transcripts. Incomplete journey/failed drain
+is unsuccessful; old verify success and future current-state verify cannot
+substitute for final certification. All B/C/D/F live gates remain owner review.
+
+Expected NEW retained writes, not observed: two min2/max3 hackathons; four users,
+four credential rows, four unrevoked eight-hour sessions; two teams/four memberships
+(A=L/Q/R, B=X); two resolved requests; two grants (R redeemed, X pending); nine
+completed idempotency, nine audit and nine unpublished outbox rows; versions A8/B1.
+Sixteen durable counter consumptions: register_ip4, login_ip4, login_account4,
+L issue2, R redeem1, X redeem1. Bucket-row counts depend on time windows. Old rows
+must remain unchanged under the existing global fingerprint checks; no cleanup.
+
+Actual offline command from I:\Merge:
+`.\backend\.venv\Scripts\python.exe 'I:\Merge\frontend\test-results\m015f\7c433ace-0669-469d-9481-e5580e32694b\validate_draft.py'`
+exited 0 using the real read_scope parser with DB engine/driver, sockets and
+credential prompts blocked. Verified UUID4/identifier uniqueness, exact unchanged
+auth/command budgets and old byte hash. No browser_full CLI action was invoked.
+Secret/artifact/AST/whitespace/Git-scope checks accompany final review. Full app
+pytest/frontend/typecheck/build suites not run for this artifact/doc-only task;
+no production-code change. New artifacts remain ignored by test-results/.
+
+Limitations: old verification is owner-reported only; old run stays uncertified;
+no measured DB freshness/drift/preservation or real header/UI outcome here;
+exclusive trusted local setup, memory-only recovery, retained sessions, UUID-only
+recipient UX and catalog paging constraints remain. No passwords generated/read,
+database connection/write, registration/login, server/browser startup, fixture
+preparation/migration/cleanup, old manifest edit, staging, commit or push.
+
+Owner explanation/exercise: explain why a guest GET can omit Origin while POST
+cannot, then why repeated login or reuse of the old scope is outside this fresh
+manifest's one-login-per-profile contract. Review actual runbook and hash before
+approving any live step; drafting alone grants no live rights.
+
+## M-015F - browser read-error source/offline diagnosis, 2026-11-13
+
+Owner reports guarded backend/Vite running, fresh L registered/authenticated and
+catalog HTTP 200 returning exact A `6ed60838-e377-428b-a925-c4662c0d5c0a` with the
+correct name. A previous /me/team request showed 403; no domain mutation was
+attempted. No live request, browser or database observation was performed here.
+HEAD remains `f6975e2eb9166b12f55aedde0c9ec23faa3e77fe`; earlier PROGRESS edits kept.
+
+Exact route mapping: api.ts::myTeam sends GET
+`/api/hackathons/{hackathon_id}/me/team`, without query/body/CSRF or actor override,
+using same-origin cookies. For approved A, the expected full browser URL is
+`http://127.0.0.1:5173/api/hackathons/6ed60838-e377-428b-a925-c4662c0d5c0a/me/team`.
+The supplied /me/team suffix alone does NOT identify the UUID of the observed
+failed request. SelectedWorkspace calls myTeam immediately on hackathon selection,
+even in Discover view; clicking My team is not required to generate that GET.
+
+Teamless is a successful state: read_api.my_team takes the server session actor;
+TeamReadService.my_team returns HTTP 200 / {team:null} for an existing hackathon
+with no current membership. Missing hackathon is 404, invalid session is 401;
+GET does not require CSRF or current leadership. Lack of membership is not a 403
+condition. A read 403 may coexist with authenticated UI for another reason, and
+useRead displays it without treating it as a 401/global sign-out.
+
+The catalog is intentionally global/unfiltered in browser_full.Reads.hackathons.
+Scoped my_team instead calls Ledger.read(h,actor), permitting only the two NEW
+manifest hackathons and bound actors. An authenticated L can see an old retained
+hackathon in the catalog but gets expected browser_scope_rejected 403 upon
+selecting it and triggering scoped reads. This is a possible explanation, NOT
+evidence that the observed request actually used an old ID. AuthBoundary can
+instead return origin_rejected for wrong/duplicate Origin or disallowed Fetch
+Metadata (including same-site/cross-site); forwarded-header rejection can return
+client_identity_rejected. The generic frontend 403 text mentions origin/session
+regardless of error.code, so that wording alone cannot identify the cause.
+
+Classification remains unresolved: need the ALREADY observed request's method,
+full public pathname/hackathon UUID, error.code, timing relative to navigation,
+and whether an error is currently displayed. A retained Network/console entry
+may be historical; no evidence here identifies it as active or resolved. Do not
+request raw headers, cookies, CSRF, auth responses, HAR or credential dumps. An
+actual current approved-A failure with valid session/request context merits
+further diagnosis; do not create a team to try to repair it or weaken security.
+
+Documented schema (READ_API.md and backend/app/read_models.py): catalog envelope
+{items:[...],next_cursor:uuid|null}; each hackathon has id, name, min_team_size,
+max_team_size. Expected A has min_team_size=2 and max_team_size=3, not min_size,
+max_size or camelCase aliases. React reads those exact fields and displays 2-3
+per team. No schema mismatch was demonstrated.
+
+Smallest supported UI approach, owner review only: keep the existing authenticated
+L app tab at http://127.0.0.1:5173; use Refresh INSIDE the Hackathons sidebar to
+start at page one if necessary, then that sidebar's Next page, waiting for each
+load, until `m015b_7c433ace_challenge_a` appears. Select its actual button, verify
+the selected heading/name and 2-3 range, then open My team if desired. Catalog
+pages are ascending UUID/20 rows, not insertion date; the team workspace has a
+different pager. Keep the UI window active while paging; focus/session restore
+can remount the session-keyed Discovery and reset its local selection/page state.
+Discovery holds selection in React state, with no URL-driven selector/deep link,
+ID entry or search input. The JSON API URL does not select A in the app. No React
+state/DOM injection, handcrafted UI DTO, arbitrary URL parameter, login, mutation
+or server restart is needed. No such UI action was executed during diagnosis.
+
+Offline evidence only, all synthetic/ASGI doubles and jsdom:
+
+- Created ignored `backend/.pytest_cache/m015f_read_error_probe/test_read_errors.py`.
+  It uses existing forbid_live/API fixtures and the public NEW manifest, without
+  changing it. Four probes require approved-A/teamless 200 without CSRF, global
+  catalog 200 plus out-of-scope my_team 403, and two Origin/Fetch Metadata 403s
+  before authentication. Every probe asserts zero charged budgets and no register,
+  login, revoke, throttle or team-create service calls. No live endpoint is used.
+- Backend `.\.venv\Scripts\python.exe -m pytest -q .pytest_cache/m015f_read_error_probe/test_read_errors.py tests/test_team_reads.py tests/test_read_api.py -m 'not database' --tb=short`: 98 passed (94 prior + 4 probes), 12.67s, exit 0; one existing Starlette/HTTPX warning.
+- Frontend `npm.cmd test -- src/api.test.ts src/Journeys.test.tsx -t "uses bounded keyset URLs without identity or CSRF on reads|paginates the hackathon catalog using its independent cursor"`: 2 passed, 58 skipped by filter, two files, 7.77s, exit 0. Confirms exact GET/teamless parsing and independent catalog navigation, not live behavior.
+- Final AST/artifact/whitespace/Git-scope checks accompany review. Full suites,
+  typecheck/build and PostgreSQL/browser execution were not run. No production
+  defect/fix or new live acceptance claim follows from these synthetic results.
+
+No production/harness/schema/dependency/manifest changes; only this progress
+document and ignored probe artifact were written. No live browser/API/database
+action, account/domain mutation, attempt-budget use, restart, security weakening,
+staging, commit or push. Stop for owner review of the missing public request
+metadata and navigation procedure. Owner exercise: distinguish an old catalog ID
+denied by Ledger.read from an approved-A {team:null} response without changing
+the guard or submitting any team-creation command.
+
+## M-016 - exact UUID discovery and navigation reliability, 2026-11-13
+
+Implemented, offline verified, uncommitted; STOP for owner review. The owner reports
+M-015F incomplete/uncertified, guarded backend stopped and guarded current-state
+verify passed. Existing accounts/domain fixtures and both manifests remain
+retained. A read-only Get-NetTCPConnection listener inventory found no listener
+on 5173 before editing and at final inventory. No Codex live API/browser/database
+call, server start/restart/shutdown, registration/login/domain action, migration,
+fixture write/cleanup, budget change, staging, commit or push occurred.
+
+Changes: api.ts adds strict hyphenated UUID validation/case normalization and
+limit=1 catalog lookup using exact BigInt predecessor arithmetic; zero omits the
+cursor, and only exact returned-ID equality is a match. HackathonLookup.tsx adds
+labelled input, loading/invalid/not-found/sanitized error feedback, explicit GET
+retry and a separate Select action. No automatic selection, name-search claim,
+backend endpoint, filter/scope/security exception or mutation accompanies lookup.
+Catalog/team pagination remains independent.
+
+Diagnosis: useSession.restore enters checking and unmounts Discovery on focus or
+pageshow, then increments the accepted session epoch. The former component-local
+selected hackathon/view/cursors were lost on that remount. No document reload is
+required for this confirmed source path. Installed React refresh can remount
+changed signatures and Vite has a full-reload path, but historical HMR/reload
+attribution is unverified offline. No app router, location.reload or error-boundary
+home-navigation path was found. StrictMode's dev effect replay and inline API
+errors do not themselves prove a real document reload. FRONTEND.md distinguishes
+future sanitized document/HMR observations from these source conclusions.
+
+useDiscoveryNavigation.ts retains only public account/hackathon/team UUIDs,
+independent cursor stacks, view enum and a local navigation generation in per-tab
+sessionStorage/history.state. Storage is versioned, bounded and allowlisted;
+unknown history fields are not copied. No metadata/response/private auth data,
+password, CSRF, operation/key/payload, pending mutation or workspace display token
+is persisted. Identity change/logout/expiry clears hints and advances a generation
+so older Back/Forward entries cannot revive them, even on later return to the old
+account. No localStorage or URL state is used; blocked storage/history falls back
+to in-memory navigation. Private inbox/request pagination remains local.
+
+App still hides private data during every session check. Restoration requires
+the server-returned current account, fresh exact catalog metadata and successful
+scoped /me/team (including legitimate null membership) before command forms mount.
+List/detail/inbox continue their real scoped reads. Missing/403 selections clear;
+temporary failures retain hints and require explicit retry; stale team cursors
+have manual first-page recovery. Back/Forward also revalidates the cookie. Team
+pages now survive view/detail changes and remounts; explicit refresh/new selection
+and confirmed mutation revisions reset the appropriate page. Functional updates
+prevent an old page-reset callback overwriting a newer view/catalog position.
+Mutation journals remain App-lifetime memory only, with unchanged loss/recovery
+limits on full reload/crash; hints cannot resume or certify an interrupted host.
+
+Files: App.tsx, api.ts, Discovery.tsx, new HackathonLookup.tsx and navigation hook,
+useSession.ts (adds popstate revalidation), small public-ID/result styles; two new
+regression files; existing creation/admission/invitation/journey mock servers gain
+the new canonical restoration GETs. Shared test setup isolates tab storage/history
+between cases. Existing blanket no-storage assertions now require the exact public
+allowlist and sessionStorage context and reject CSRF/command/key persistence.
+All existing mutation contract assertions remain. FRONTEND/ARCHITECTURE/DECISIONS
+document the owner-authorized public-hint exception. No dependencies or migrations.
+
+Actual evidence, Windows PowerShell, existing Node/npm/TypeScript/Vite dependencies,
+jsdom and mocked fetch only, from I:\Merge\frontend unless stated otherwise:
+
+- First focused lookup/navigation run: 19 passed / 16 failed. It exposed a null
+  bootstrap-state access; additional failures were malformed parameterized test
+  rows and test heading/default-GET assumptions. All were corrected.
+- Initial standalone typecheck failed on the same null access and parameterized
+  test typing; corrected before the successful builds.
+- Focused `npm.cmd test -- src/HackathonLookup.test.tsx src/DiscoveryNavigation.test.tsx --reporter=dot`: 35 passed, then 39 passed after extra history/security cases.
+- First full `npm.cmd test -- --reporter=dot`: 301 passed / 6 failed. Those six
+  asserted no storage of any kind; updated to the explicit public-only schema
+  while retaining credential/command non-persistence and original POST contracts.
+- Next full run: 312 passed / 1 failed in confirmed-create read-refresh navigation.
+  The same unchanged test passed in isolation (1 passed / 35 skipped), so timing
+  dependence is recorded. Source review identified stale whole-navigation writes
+  from page reset; replaced by functional updates and added atomic-update coverage.
+- Focused `npm.cmd test -- src/HackathonLookup.test.tsx src/DiscoveryNavigation.test.tsx src/CreateTeam.test.tsx --reporter=dot`: 78 passed across 3 files, 12.05s.
+- FINAL `npm.cmd test -- --reporter=dot`: **314 passed across 11 files**, 73.96s,
+  exit 0. Includes 42 new lookup/navigation cases, all prior auth/read/creation/
+  admission/invitation tests and the test-only response-gate cases.
+- FINAL `npm.cmd run build`: **passed**, including `tsc --noEmit`, 45 modules,
+  Vite build 4.33s, exit 0. Backend tests were not run for this frontend-only change.
+- Repository `git diff --check` passed; manifest hashes match prior recorded
+  FCD625AE...DB1F55 (M-015F) and 092989B0...A4D (M-015C). Both paths and dist remain
+  Git-ignored. Final Git-scope review is read-only; HEAD remains f6975e2.
+
+Known limits/owner exercise: all navigation/reload/Back tests use jsdom, including
+actual jsdom Back/Forward traversal and simulated focus/pageshow/remount. This is
+not browser, HMR, mobile, screen-reader, HTTPS or DB evidence. Owner should explain
+why UUID-1 + strict id>cursor finds an exact ID only after equality verification,
+then change an offline restoration mock to 403 and show that no command form or
+POST is restored. Manual acceptance steps are in FRONTEND.md; require review and
+a new approved fresh host scope. Do not reuse either incomplete scope, enlarge
+budgets, add fault/security exercises or treat current-state verify as certification.
+
+## M-016A - final implementation review, 2026-11-13
+
+Recommendation: CONDITIONAL for browser acceptance readiness; offline implementation
+passes after the fixes below. No remaining code/security-isolation blocker found
+within this offline review. Owner approval before commit or live testing remains
+required, together with a fresh reviewed browser-host scope. Both interrupted
+M-015C/M-015F scopes remain uncertified; current-state verify cannot certify them.
+
+Read/review first: inspected the actual pending production/test/documentation diff
+and all six new files. The PROGRESS diff also includes inherited M-015C/D/F evidence;
+those historical entries were reviewed and preserved, not attributed to this review.
+Read AGENTS, relevant REQUIREMENTS/ARCHITECTURE/DECISIONS, FRONTEND and current
+progress; checked catalog SQL semantics. Local listener metadata showed no listener
+on 8000/5173 before runtime fixes and at final inventory. No server was launched.
+
+Findings and demonstrated corrections:
+
+- P2 / medium, FIXED: a second Back/Forward event during session checking was
+  discarded by both the public-hint handler and auth event registration. A new
+  deterministic test failed with saved view `mine` instead of latest `discover`.
+  useDiscoveryNavigation now retains only a matching owner/generation public hint
+  while checking; it remains hidden until server identity validation. useSession
+  supersedes the previous auth GET on each traversal, and ignores its late reply.
+- P2 / medium, FIXED: focus/pageshow during a pending auth check did not request a
+  newer identity check. Both deterministic tests failed (one request, expected two).
+  A full run also exposed the account-switch timing issue, 330 passed / 1 failed.
+  The three lifecycle listeners now remain active in authenticated/checking states
+  only. Guest, failed-check and signing-out states do not auto-retry authentication
+  or interrupt/replay logout. Absolute-expiry enforcement remains unchanged.
+- Test gaps closed without speculative runtime edits: UUID case normalization,
+  full 128-bit arithmetic, zero boundary and neighbor checks remain correct. Added trailing LF,
+  CR, CRLF and Unicode line-separator invalid-input cases; all passed before any
+  UUID runtime change, so api.ts was NOT modified by M-016A. Added integration
+  cases for lookup missing/403/network preserving selection and cursors, late
+  catalog 200/401 after reset, late restoration permission 200/401/403 after a new
+  selection, out-of-order auth identities, and pending/failed logout isolation.
+- Nonblocking limits: jsdom does not establish real browser/HMR/Back/BFCache,
+  assistive-technology, mobile or HTTPS acceptance. Historical reload attribution
+  remains unknown. Storage can be unavailable/cleared; reload loses all mutation
+  journals and exact keys. None of these limitations is reported as a live pass.
+
+Security/correctness trace: exact lookup uses validated normalized UUID -> BigInt
+exclusive predecessor -> existing relative GET catalog limit=1 -> exact returned-ID
+equality. Zero omits cursor. It never calls a domain POST or chooses automatically.
+Lookup failure/late reply does not change selection (active 401 still expires the
+session as required). Cursor stacks remain independent, with functional updates.
+App hides private views while checking; only the server-returned identity can
+activate hints, and fresh catalog + scoped membership reads gate restored command
+forms. 403/missing clears restored selection; unrelated late reads cannot clear a
+new selection/session. Account/logout generation fences reject older history.
+
+Persistence still reconstructs only the public account/hackathon/team UUIDs,
+bounded cursor lists, view, version and local navigation generation. Unknown
+fields are discarded. No credential/session/CSRF, pending mutation, payload,
+idempotency key or one-use workspace token enters sessionStorage/history/URLs.
+Original auth, Origin, CSRF, scope and explicit-command POST paths are unchanged;
+new lifecycle handling dispatches only session GETs. No automatic domain replay.
+
+M-016A touched only six already-pending paths: hooks/useSession.ts,
+hooks/useDiscoveryNavigation.ts, DiscoveryNavigation.test.tsx,
+HackathonLookup.test.tsx, docs/FRONTEND.md and docs/PROGRESS.md. No new file,
+dependency, migration, backend/service, manifest or fixture change was introduced.
+The complete reviewed pending scope remains 14 modified tracked + six new files:
+
+- Runtime: frontend/src/App.tsx, api.ts, components/Discovery.tsx,
+  components/HackathonLookup.tsx (new), hooks/useSession.ts,
+  hooks/useDiscoveryNavigation.ts (new), style.css.
+- Tests: frontend/src/Admission.test.tsx, CreateTeam.test.tsx, Invitations.test.tsx,
+  Journeys.test.tsx, DiscoveryNavigation.test.tsx (new), HackathonLookup.test.tsx (new).
+- Test support/config: frontend/src/test/navigationAssertions.ts (new),
+  frontend/src/test/setup.ts (new), frontend/vite.config.ts. Existing blanket
+  storage assertions now allow only the exact public-hint schema and explicitly
+  exclude auth data/commands/keys; original mutation contract assertions remain.
+- Docs: docs/ARCHITECTURE.md, DECISIONS.md, FRONTEND.md, PROGRESS.md.
+
+Actual commands from I:\Merge\frontend, existing installed tools, mocked fetch /
+jsdom only:
+
+- Red history regression: filtered run 10 passed / 1 failed / 37 skipped before
+  the runtime fix. Red foreground regressions: 2 failed / 35 skipped before fix.
+- `npm.cmd test -- src/HackathonLookup.test.tsx src/DiscoveryNavigation.test.tsx --reporter=dot`: FINAL **61 passed**, 2 files, 8.16s, exit 0 (19 additional cases over M-016's 42).
+- `npm.cmd test -- --reporter=dot`: FINAL **333 passed**, 11 files, 41.04s, exit 0;
+  includes all earlier auth/creation/admission/invitation/response-gate regressions.
+- `npm.cmd run build`: passed including `tsc --noEmit`, 45 modules,
+  Vite build 2.58s, exit 0. Backend tests not run; backend diff is empty.
+- Repository `git diff --check` passed. Final review also checks new-file
+  whitespace, exact pending/staged scope and unchanged HEAD f6975e2.
+- Both manifest hashes remain exactly the prior recorded values:
+  M-015F fcd625ae60b77a0c04d9924b29d8df96a2eacf1332562e2e48c12bcdf0db1f55;
+  M-015C 092989b094c1356c342f22050d90be2f6570e579234665717a8ac4219cf57a4d.
+  Manifests and dist remain Git-ignored. No DB/fixture preservation is newly
+  asserted from inspection: no Codex database access or write occurred.
+
+No live browser/API/PostgreSQL, fixture preparation/cleanup, schema/manifest/budget
+change, backend/frontend startup, staging, commit or push. Owner exercise: defer
+two mocked session replies, issue a second history/focus event and release replies
+in reverse order; explain why only the newest validated account can activate the
+latest public hint. STOP for owner approval before commit or any live validation.
 
 ## Daily work log template
 ```

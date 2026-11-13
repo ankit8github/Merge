@@ -12,5 +12,5 @@ export default defineConfig({
       '/api': 'http://127.0.0.1:8000',
     },
   },
-  test: { environment: 'jsdom', restoreMocks: true },
+  test: { environment: 'jsdom', restoreMocks: true, setupFiles: ['./src/test/setup.ts'] },
 });
