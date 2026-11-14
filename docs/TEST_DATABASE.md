@@ -1,5 +1,51 @@
 # Dedicated disposable PostgreSQL database — M-006B.1
 
+## Batch B — independent new targets, offline preparation only
+
+The historical Batch A paragraph below remains its checkpoint record. Separate
+release_support tooling now supports merge_profile_test/merge_app and
+merge_bench/merge_bench_app, fixed actual127.0.0.1:5432. Legacy TARGET_REVISIONS,
+exact0003/0004/0005 guards, fixtures, manifests and reports are unchanged. 0006
+is still UNAPPLIED. New create-only provisioning proposals, explicit empty-schema
+prepare-to0005, transactional0005->0006 preservation and exact0006 acceptance
+are implemented but NOT RUN. Thirty profile cases collect only; four original
+SSE cases remain a separately approved exact0005 run. No old DB is upgraded.
+Full safety contract, retained-write scope, receipt checks, stop instructions and
+dependency-ordered commands: [RELEASE_VALIDATION.md](RELEASE_VALIDATION.md).
+
+## Batch A — collection only; new migration is not an executable target
+
+Preserved suites independently collect at one repetition: realtime 4, lifecycle
+10, invitations 13. Combining their conftests in one pytest process duplicates
+shared CLI option registration; collect each suite separately. No fixture ran.
+0006_profiles is source-only and NOT in TARGET_REVISIONS. The static migration
+graph test now sees that unapplied head and explicitly proves that both 0006 and
+head remain rejected by validate_migration_start. Existing target guards, runner
+choices, manifests, budgets, ledgers and old fixture files remain unchanged.
+Old browser hosts exclude the new profile/ranking router before closed audits.
+
+Review/rerun the four exact-0005 SSE cases before any separately approved 0006
+migration. New profile CAS/eligibility/SQL/integrity acceptance requires its own
+reviewed exact-0006 harness/migration permissions, not a broadened old scope.
+Detailed outstanding plan and offline evidence: BATCH_A.md and RANKING.md.
+
+## M-020A realtime suite - offline collected, live NOT RUN
+
+The fixed guarded runner adds only `--suite realtime`, requiring explicit
+0005_invitations before credentials. Target settings, ConnectionGuard, opt-in,
+timeouts, diagnostics, existing suites and retained-data protections are unchanged.
+Fresh fixtures reuse the lifecycle exact-0005 guard/teardown; legacy browser hosts
+remove the SSE router before their unchanged closed route/dependency audits.
+No old browser manifest is adopted, edited or extended.
+
+Four cases are collected for one repetition: uncommitted/rollback invisibility;
+late commit across independent teams plus exact replay; request privacy/scope and
+succession; recipient-private issuance, public redemption and removal. They test
+actual polling SQL and production mutation composition, not real browser/proxy
+transport. No PostgreSQL execution has occurred in M-020A. Exact proposed owner
+command, certification fields, retained write effects and limits: REALTIME.md.
+Any execution needs separate owner approval. No migration/cleanup is required.
+
 ## M-019 lifecycle suite - guarded local acceptance passed (M-019E)
 
 Owner-run suite accepted after M-019D review: lifecycle / exact 0005_invitations /

@@ -44,6 +44,9 @@ class InvitationReply(StrictBody):
 
 class InboxItem(InvitationView):
     available: bool
+    team_name: str | None = None
+    recipient_display_name: str | None = None
+    recipient_username: str | None = None
 
 
 class Inbox(BaseModel):

@@ -1,5 +1,40 @@
 # Merge — Architecture Blueprint (Proposed v1.0)
 
+Batch C proposes a separate production-only entry point and single-host HTTPS
+package (Caddy/static React, one FastAPI worker, private PostgreSQL17). Production
+uses fixed merge_prod with separate runtime/migration roles, mounted secrets,
+preflight/readiness and explicit owned migration transactions. Ordinary Settings,
+test/release guards and domain/auth/SSE/frontend services remain unchanged.
+Production role/volume/proxy/TLS behavior is NOT live verified. Exact design,
+configuration, launch/rollback and gaps: PRODUCTION.md. This overlays earlier
+local-only/hosting-out-of-scope checkpoint statements, without extending old
+acceptance evidence or authorizing a live operation.
+
+Batch B adds isolated release tooling only: new fixed exact-0006 profile and
+benchmark targets, caller-owned additive migration transactions, version-specific
+ephemeral CI jobs, deterministic scale seed and authenticated board/SSE benchmark.
+Production authentication, lifecycle locks, SSE and ranking remain unchanged.
+No new runtime dependency or production deployment topology is introduced.
+Owner execution order and outstanding live evidence: RELEASE_VALIDATION.md.
+Implementation/review/offline results: BATCH_B.md. All live commands remain
+unexecuted; old exact-0005 evidence/manifests retain their original scope.
+
+Batch A adds own-account validated profiles and current-leader deterministic
+teammate rankings, keeping the documented 70/30 skill/time-zone weights. A single
+bounded SQL snapshot supplies permissions and eligibility; its connection closes
+before exact scoring and sorting. Optional profile rows require the unapplied
+0006_profiles migration. No membership/authentication/transaction or SSE change.
+Read-only applicant/inbox labels are additive; stored mutation replies stay fixed.
+Contract, formula, privacy, cursor and live-verification limits: RANKING.md.
+
+M-020A implements authenticated SSE invalidation through bounded independent
+read-only polling of committed, subscriber-visible outbox records. Separate public/
+private count fingerprints avoid commit-order cursor gaps; every reconnect resets
+canonical reads. Session/Origin guards, mutation transactions and outbox retention
+remain unchanged. React closes old subscriptions and refreshes reads without
+remounting command forms. No broker, migration or dependency. Offline evidence,
+privacy contract, resource bounds and pending live/deployment checks: REALTIME.md.
+
 M-019A implements the owner-requested lifecycle slice using the existing schema:
 member leave, deterministic automatic succession, current-leader removal and
 last-member soft deletion. All reuse reservation-first transaction ownership,
@@ -144,7 +179,11 @@ Performance: k6 → deployed/staging board with fixed seed and test environment
 Browser verification: Playwright → accessible mobile/keyboard flows
 ```
 
-**Deployment assumption:** Start with a single backend instance for SSE delivery simplicity. No correctness rule may depend on one instance; PostgreSQL remains authority. A multi-replica fanout design will require cross-instance event distribution (e.g. LISTEN/NOTIFY plus replay) before scaling horizontally.
+**Deployment assumption:** Start with a single backend instance. No domain
+correctness rule depends on one instance; PostgreSQL remains authority. M-020A's
+independent polls of the shared primary avoid process-local delivery gaps across
+workers, without ordered/exactly-once fanout. Multi-instance capacity, polling cost
+and proxy behavior remain unverified; measure before scaling horizontally.
 
 ## 3. Modules (one codebase, clear ownership)
 - `identity`: accounts, safe sessions, password hashing, profiles/skills/timezone.
@@ -286,10 +325,17 @@ GET  /teams/{id}/audit       GET  /events
 
 ## 9. Realtime strategy
 - Server writes an outbox event in the same transaction as the relevant team mutation.
-- Dispatcher publishes **after commit** to connected SSE clients; events can be duplicated or missed if disconnected.
-- Clients invalidate cached team/board queries and refetch authoritative state (TanStack Query recommended).
-- Reconnection must always re-fetch latest state; optionally use event IDs/replay to reduce refresh cost.
-- For multiple API replicas, implement shared fanout before asserting robust cross-instance live delivery.
+- M-020A samples committed visible outbox/audit rows in short read-only snapshots;
+  it does not claim publication or update published_at/attempt_count.
+- Authenticated hackathon streams expose only invalidation plus own identity/scope;
+  private request/issuance signals obey current requester/leader/recipient bounds.
+- Every connection resets/refetches canonical reads. Fingerprints bind actor/scope
+  to separate public/private counts, not UUID/timestamp order. Duplicates/gaps are
+  repaired by refetch; event history and exactly-once delivery are not promised.
+- Fixed subscriber/lease/poll/backoff limits bound resource use. Existing React
+  useRead and command journals remain separate; no automatic mutation replay.
+- Independent shared-primary polling can observe other workers' commits. This is
+  eventual invalidation; real multi-instance/proxy/load acceptance remains pending.
 
 ## 10. Teammate recommendations
 - Filter to eligible, discoverable, currently unassigned users for given hackathon.

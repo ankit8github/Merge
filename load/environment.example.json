@@ -1,0 +1,10 @@
+{
+  "client_cpu": "REQUIRED: actual CPU model and allocated cores",
+  "client_ram": "REQUIRED: actual RAM/allocation",
+  "server_cpu": "REQUIRED: actual CPU model and allocated cores",
+  "server_ram": "REQUIRED: actual RAM/allocation",
+  "postgres_topology": "REQUIRED: PostgreSQL version, local process/container, shared hardware and resources",
+  "server_workers": "1",
+  "storage": "REQUIRED: SSD/HDD/container volume and limits",
+  "cache_conditions": "REQUIRED: cold/warm state, other workloads and 20-second warmup conditions"
+}

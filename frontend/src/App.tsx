@@ -9,6 +9,7 @@ import { useAdmission } from './hooks/useAdmission';
 import { useInvitations } from './hooks/useInvitations';
 import { useDiscoveryNavigation } from './hooks/useDiscoveryNavigation';
 import { useLifecycle } from './hooks/useLifecycle';
+import ProfilePanel from './components/Profile';
 
 export default function App() {
   const auth = useSession();
@@ -29,10 +30,11 @@ export default function App() {
       {auth.state.status === 'authenticated' && <div className="account"><span className="username">@{auth.state.session.identity.username}</span><button className="button secondary" onClick={() => { if (auth.state.status === 'authenticated') auth.logout(auth.state.session); }}>Sign out</button></div>}
     </div></header>
     <main id="main" className="app-main" tabIndex={-1}>
+      {auth.state.status === 'authenticated' && <ProfilePanel key={`profile:${auth.state.epoch}`} session={auth.state.session} signal={auth.state.signal} onExpired={expireWorkspace} />}
       {auth.state.status === 'checking' && <div className="center-state panel"><Loading>Restoring your session...</Loading></div>}
       {auth.state.status === 'error' && <div className="center-state panel"><h1>Let us reconnect.</h1><ErrorNotice error={auth.state.error} retry={auth.restore} /><p className="muted">We could not verify your session. Your workspace will stay hidden until we can.</p></div>}
       {auth.state.status === 'guest' && <AuthForm onSession={auth.accept} restore={auth.restore} message={auth.state.message} />}
-      {auth.state.status === 'authenticated' && <Discovery key={auth.state.epoch} onExpired={expireWorkspace} creation={creation} admission={admission} invitations={invitations} lifecycle={lifecycle} restore={auth.restore} navigation={navigation.navigation} updateNavigation={navigation.update} />}
+      {auth.state.status === 'authenticated' && <Discovery key={auth.state.epoch} sessionSignal={auth.state.signal} onExpired={expireWorkspace} creation={creation} admission={admission} invitations={invitations} lifecycle={lifecycle} restore={auth.restore} navigation={navigation.navigation} updateNavigation={navigation.update} />}
       {auth.state.status === 'ending' && <div className="center-state panel"><h1>Signing out</h1>{auth.state.error ? <>
         <ErrorNotice error={auth.state.error} retry={() => { if (auth.state.status === 'ending') auth.logout(auth.state.session); }} />
         <p>Sign-out is not confirmed. Your server session may still be active. Your workspace has been cleared from this view.</p>

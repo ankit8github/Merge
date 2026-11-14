@@ -1,0 +1,71 @@
+{
+  "name": "merge-production",
+  "services": {
+    "postgres": {
+      "image": "postgres:17-bookworm",
+      "environment": {"POSTGRES_DB": "merge_prod", "POSTGRES_USER": "postgres", "POSTGRES_PASSWORD_FILE": "/run/secrets/admin_db_password", "POSTGRES_HOST_AUTH_METHOD": "scram-sha-256", "POSTGRES_INITDB_ARGS": "--auth-host=scram-sha-256 --auth-local=peer"},
+      "secrets": ["admin_db_password"],
+      "command": ["postgres", "-c", "log_statement=none", "-c", "log_min_error_statement=panic", "-c", "password_encryption=scram-sha-256", "-c", "max_connections=80"],
+      "volumes": ["postgres-data:/var/lib/postgresql/data"],
+      "networks": {"database": {"ipv4_address": "172.30.241.3"}},
+      "healthcheck": {"test": ["CMD-SHELL", "pg_isready -U postgres -d merge_prod"], "interval": "10s", "timeout": "5s", "retries": 5, "start_period": "20s"},
+      "restart": "unless-stopped", "stop_grace_period": "60s",
+      "security_opt": ["no-new-privileges:true"], "logging": {"driver": "local", "options": {"max-size": "10m", "max-file": "3"}}
+    },
+    "api": {
+      "image": "merge-api:${MERGE_IMAGE_TAG:?Reviewed release image tag required}",
+      "build": {"context": "..", "dockerfile": "deploy/Dockerfile.api"},
+      "environment": {"MERGE_PROD_ORIGIN": "${MERGE_PROD_ORIGIN:?Exact public HTTPS origin required}"},
+      "secrets": ["runtime_db_password", "throttle_key"],
+      "networks": {"edge": {"ipv4_address": "172.30.240.3"}, "database": {"ipv4_address": "172.30.241.2"}},
+      "depends_on": {"postgres": {"condition": "service_healthy"}},
+      "healthcheck": {"test": ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=8).close()"], "interval": "30s", "timeout": "10s", "retries": 3, "start_period": "30s"},
+      "read_only": true, "tmpfs": ["/tmp:rw,noexec,nosuid,size=64m"],
+      "cap_drop": ["ALL"], "security_opt": ["no-new-privileges:true"],
+      "restart": "unless-stopped", "stop_grace_period": "30s",
+      "logging": {"driver": "local", "options": {"max-size": "10m", "max-file": "3"}}
+    },
+    "web": {
+      "image": "merge-web:${MERGE_IMAGE_TAG:?Reviewed release image tag required}",
+      "build": {"context": "..", "dockerfile": "deploy/Dockerfile.web"},
+      "ports": ["80:80", "443:443"],
+      "volumes": ["./private/caddy.json:/etc/caddy/config.json:ro", "caddy-data:/data", "caddy-config:/config"],
+      "networks": {"edge": {"ipv4_address": "172.30.240.2"}},
+      "depends_on": {"api": {"condition": "service_healthy"}},
+      "security_opt": ["no-new-privileges:true"],
+      "restart": "unless-stopped", "stop_grace_period": "30s",
+      "logging": {"driver": "local", "options": {"max-size": "10m", "max-file": "3"}}
+    },
+    "migrate": {
+      "image": "merge-api:${MERGE_IMAGE_TAG:?Reviewed release image tag required}",
+      "profiles": ["operations"],
+      "environment": {"MERGE_PROD_ORIGIN": "${MERGE_PROD_ORIGIN:?Exact public HTTPS origin required}"},
+      "secrets": ["migrator_db_password"],
+      "networks": {"database": {"ipv4_address": "172.30.241.4"}},
+      "entrypoint": ["python", "-m", "app.production.migrate"],
+      "read_only": true, "tmpfs": ["/tmp:rw,noexec,nosuid,size=64m"],
+      "cap_drop": ["ALL"], "security_opt": ["no-new-privileges:true"], "restart": "no"
+    },
+    "bootstrap": {
+      "image": "merge-api:${MERGE_IMAGE_TAG:?Reviewed release image tag required}",
+      "profiles": ["operations"],
+      "environment": {"MERGE_PROD_ORIGIN": "${MERGE_PROD_ORIGIN:?Exact public HTTPS origin required}"},
+      "secrets": ["admin_db_password", "runtime_db_password", "migrator_db_password"],
+      "networks": {"database": {"ipv4_address": "172.30.241.5"}},
+      "entrypoint": ["python", "-m", "app.production.bootstrap"],
+      "read_only": true, "tmpfs": ["/tmp:rw,noexec,nosuid,size=64m"],
+      "cap_drop": ["ALL"], "security_opt": ["no-new-privileges:true"], "restart": "no"
+    }
+  },
+  "networks": {
+    "edge": {"ipam": {"config": [{"subnet": "172.30.240.0/29"}]}},
+    "database": {"internal": true, "ipam": {"config": [{"subnet": "172.30.241.0/29"}]}}
+  },
+  "volumes": {"postgres-data": {}, "caddy-data": {}, "caddy-config": {}},
+  "secrets": {
+    "admin_db_password": {"file": "./private/admin_db_password"},
+    "runtime_db_password": {"file": "./private/runtime_db_password"},
+    "migrator_db_password": {"file": "./private/migrator_db_password"},
+    "throttle_key": {"file": "./private/throttle_key"}
+  }
+}

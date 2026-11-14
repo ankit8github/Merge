@@ -1,11 +1,114 @@
 # Merge — Verified Progress, Risks & Next Actions
 
-**Last updated:** 2026-11-13
+**Last updated:** 2026-11-14
 **Competition:** Hack4Hack Crew Hiring Challenge 2026, PS1.
 **Official deadline:** 2026-11-15 23:59 IST.
 **Status policy:** Mark DONE only with recorded evidence. 'Planned', 'in progress', 'implemented', 'tested' and 'verified' are not interchangeable.
 
 ## Current verified context
+
+Final release-candidate freeze, 2026-11-14: reviewed all97 pending paths
+(31 tracked modifications /66 new), including executable source/tests, fixed
+production/local target separation, auth/CSRF/Origin/cookies/proxy, SSE privacy/
+resource ownership, profile CAS/70-30 ranking, unchanged lifecycle/admission
+transaction methods and exact0005 guards. No material local-freeze blocker found.
+No product code, dependencies, tests, migrations or historical manifests changed
+in this freeze; only README/current progress/submission instructions are updated.
+The owner explicitly authorizes one reviewed local commit with subject
+`feat(release): complete merge ps1 release candidate`; resulting hash/inventory
+are identified by Git history and the final owner report. Earlier UNCOMMITTED
+batch statements below are historical checkpoints, not current Git status.
+
+Actual freeze validation (existing Windows PowerShell, Python3.11.9 venv,
+Node22.15.0/npm10.9.2, no installs/network/services):
+
+| Command (component directory) | Actual result |
+| --- | --- |
+| backend ` .\.venv\Scripts\python.exe -m pytest tests/test_production.py -q --tb=short` |89 passed,2.94s, native exit0|
+| backend ` .\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short` |1711 passed /32 deselected,97.22s, native exit0|
+| frontend `npm test -- --reporter=dot --maxWorkers=1` |394 passed /15 files,71.94s, native exit0|
+| frontend `npm run build` |tsc --noEmit passed; Vite50 modules,2.02s, native exit0|
+| backend ` .\.venv\Scripts\python.exe -m app.production.check` |offline JSON/topology/security contracts passed, native exit0|
+| backend ` .\.venv\Scripts\python.exe test-results/rc-freeze/review.py` |97 paths;52 Python ASTs;70 original A/B hashes unchanged plus3 existing doc overlays; graph0005->0006; CI/deployment JSON, Dockerfile instruction syntax, targeted secret/artifact/whitespace checks passed, native exit0|
+| backend `python -m pytest <suite> --collect-only -q --race-repetitions=1` (separate processes) |auth-api18 /team-api35 /admission35 /invitations13 /lifecycle10 /realtime4, all exit0; no fixtures executed|
+| backend `python -m pytest profile_tests --collect-only -q --confirm-profile-test` |30 collected, exit0; no fixtures executed|
+| root `node --check load/board.js`; `git -c safe.directory=I:/Merge diff --check` |both native exit0|
+
+Freeze logs, starting97-path hashes and source-bound offline check metadata are
+retained under ignored backend/test-results/rc-freeze; frontend logs are ignored
+frontend/test-results/rc-freeze-{frontend,build}.log. Secret scanning finds no
+high-confidence private-key/access-token patterns; source fixtures contain only
+reviewed synthetic passwords/tokens. Generated reports/builds/private files are
+excluded. Existing Starlette/httpx warning and prior frontend timing failures
+remain documented; this isolated pass does not prove the flake is fixed.
+Docker/Caddy are unavailable: native validation/builds remain NOT RUN. Syntax
+contracts do not replace native runtime checks. No live PostgreSQL,0006 execution,
+server/browser/load, remote, push or deployment occurred. Existing retained data
+and historical acceptance evidence remain unchanged.
+
+Recommendation: local freeze passes offline gates, **CONDITIONAL for live release**.
+Required next scopes and native-exit/artifact/stop contracts are in the current
+freeze overlay in [SUBMISSION.md](SUBMISSION.md), with exact commands in
+[RELEASE_VALIDATION.md](RELEASE_VALIDATION.md) and [PRODUCTION.md](PRODUCTION.md).
+Owner exercise: explain why0006 source discovery does not authorize migration of
+retained merge_test; change a synthetic production port to8000 and explain the
+failing contract test, then restore it. Do not run that exercise on the frozen tree.
+
+Consolidated Batch C production/submission packaging is implemented offline,
+UNCOMMITTED. Final backend:1711 passed /32 database deselected (83.11s); focused
+production config/package/security tests:89 passed (2.38s). Full frontend one-
+worker isolated rerun:394 passed /15 files (44.66s); TypeScript/Vite build passed
+(Vite1.77s). The first one-worker frontend run had1 initial-render Lifecycle failure
+and393 passes (61.18s); both logs are retained, assertions/timeouts unchanged, and
+flakiness remains open. Separate production config/entry point, fixed merge_prod
+runtime/migrator roles, secret-file/Compose/Caddy packaging, explicit bootstrap/
+owned migration/catalog actions, current README, concise one-page design source,
+4:50 demo script and submission link checklist are prepared. No new dependency
+or migration;0006 remains UNAPPLIED. No existing A/B code/guards/CI/frontend or old
+manifests/fixtures are changed. Native Docker/Caddy/image/role/TLS/volume and live
+PostgreSQL/browser/CI/load/deployment acceptance remain NOT RUN. Recommendation
+CONDITIONAL for owner review, not approved public release. Commands, evidence,
+inventory and owner exercise: [BATCH_C.md](BATCH_C.md), [PRODUCTION.md](PRODUCTION.md),
+[SUBMISSION.md](SUBMISSION.md). No DB access, startup, remote, commit or publication.
+
+Consolidated Batch B is implemented and offline validated, UNCOMMITTED. Final
+backend database-free suite:1622 passed /32 deselected (59.01s); focused new
+release tooling:67 passed (4.85s). Frontend:394 passed /15 files with
+--maxWorkers=1 (59.51s); TypeScript/Vite build passed (Vite2.06s). Seven guarded
+suites independently collect only:18auth-api,35team-api,35admission,13invitations,
+10lifecycle,4realtime,30profiles. No fixture/database action ran. Original Batch A
+production source/0006/old test harnesses are preserved. Separate fixed new
+profile/benchmark targets, transactional preservation checks, PostgreSQL16 CI
+matrix, deterministic10k/2k seed and100-VU k6/SSE tooling are prepared. New0006
+remains UNAPPLIED; CI, seed/load and public acceptance remain NOT RUN. Parallel
+frontend failures are retained, with no weakened assertions/timeouts. New source-
+bound evidence validators reject incomplete/stale/failed results. Recommendation
+CONDITIONAL for owner review; no commit/push/deployment or remote action. Exact
+commands, limits, inventory, results and owner exercise: [BATCH_B.md](BATCH_B.md)
+and [RELEASE_VALIDATION.md](RELEASE_VALIDATION.md). Historical checkpoints below
+retain their original scope.
+
+Consolidated Batch A preserves the uncommitted SSE implementation and adds
+validated profiles, explained deterministic 70/30 teammate ranking and essential
+UX fixes. Final offline backend: 1555 passed / 32 database deselected (93.20s).
+Full frontend with one worker: 394 passed / 15 files (95.00s); TypeScript/Vite
+build passed. Parallel runs remain intermittent (six failures, then two with
+two workers); no timeout/assertion/configuration was weakened. Migration
+0006_profiles is added and offline-rendered only, NOT applied or permitted by old
+guarded targets. Realtime 4 / lifecycle 10 / invitations 13 cases collect separately,
+none executed. Recommendation CONDITIONAL, not live R-09/R-13 or deployment
+acceptance. Exact evidence, review findings, inventory, outstanding guards and
+owner exercise: [BATCH_A.md](BATCH_A.md); API/formula: [RANKING.md](RANKING.md).
+
+M-020A SSE invalidation is implemented offline on main at the committed M-019
+baseline abfea1a6116dbe0295b45d21e290c56f84a91eb5. Final database-free backend:
+1494 passed / 32 database deselected; frontend: 365 passed / 13 files; final
+typecheck/production build passed. Four new
+guarded realtime database cases collect only; none executed. Realtime contract,
+ADR, resource/privacy limits and owner-only test proposal: REALTIME.md. SSE browser,
+PostgreSQL visibility, proxy/HTTPS, load and multi-instance acceptance remain
+pending. No live service/database/browser action, migration, commit or push.
+The M-019 checkpoint below remains historical local acceptance evidence.
 
 M-019 lifecycle is implemented and has passed the owner-run guarded local
 PostgreSQL suite: lifecycle / exact 0005_invitations / one repetition / ten
@@ -7751,7 +7854,182 @@ lifecycle router; M-017 and old manifest budgets do not authorize these actions.
 Owner exercise: explain why simultaneous departures need no late successor-user
 lock and why an old leader cannot replay removal after losing leadership.
 
+### 2026-11-14 - M-020A realtime SSE, offline implementation
+
+Started main / abfea1a6116dbe0295b45d21e290c56f84a91eb5 with a clean tree.
+Read requirements, architecture, decisions, progress, frontend and actual auth,
+Origin/proxy/session, read-owner, audit/outbox and workspace/journal code first.
+Recorded the ADR and REALTIME.md contract before implementation. Scope is one
+bounded additive authenticated SSE endpoint plus canonical React read invalidation.
+No migration, dependency, domain mutation/lock/constraint or session model change.
+
+GET /api/hackathons/{hackathon_id}/events retains existing cookie/Origin/Fetch
+Metadata/HTTPS/proxy enforcement. Public board changes notify that authenticated
+hackathon; private requests only requester/current live-team leader and issuance
+only recipient. Frames project schema_version, hackathon_id and own user_id, with
+an actor/scope-bound fingerprint; no private/domain event payloads or auth material.
+Each poll revalidates the original session and counts committed visible outbox
+rows in an owned read-only snapshot. Separate public/private counters prevent
+visibility loss masking a public increment. Counting retained rows avoids late
+commit gaps inherent in UUID/transaction-timestamp high-water cursors. No dispatcher
+publication/update or long-lived database transaction; all sync work is threaded
+and connections close before yield/wait. Caps: 64 per process, two per account;
+poll 2s, nominal lease 60s (in-flight bounded DB work can extend wall time), no
+event queue. Expiry/storage errors close with sanitized control signals. Body and
+subscriber claims close on send failure/cancellation, including before body start.
+Network sends have a ten-second deadline; both ASGI 2.3/2.4 disconnect branches
+were exercised in memory without network or database access.
+
+React opens one active-hackathon EventSource, validates own identity/scope/strict
+frame bounds, always refetches on reset, deduplicates repeated invalidations and
+uses 2-to-30s reconnect backoff with current-session probing. Closing/changing a
+workspace/session aborts probes/timers and fences stale callbacks. Layout cleanup
+closes ownership before the new workspace's layout effects, while connection setup
+remains passive. A read-only
+context refreshes mounted canonical reads without remounting successful forms or
+rotating mutation display tokens. No automatic command retry/replay, new browser
+storage or navigation/pagination reset. Existing stale-cursor recovery remains.
+EventSource absence/construction errors have nonintrusive manual-refresh feedback.
+
+Old browser hosts exclude the SSE router before their unchanged exact audits;
+their route allowlists, ledgers/budgets, manifests and database target guards are
+not extended. Fixed runner adds --suite realtime with explicit exact-0005 rejection
+before credentials. Four fresh retained-scope tests reuse existing lifecycle
+connection/teardown guards. No old fixture is adopted or modified. REALTIME.md
+records the exact owner proposal, native-exit/source-hash receipt and write scope.
+
+Changed tracked paths (13): backend/app/main.py; backend/test_support/browser.py;
+backend/test_support/browser_full.py; backend/test_support/concurrency.py;
+backend/tests/test_read_api.py; docs/ARCHITECTURE.md; docs/DECISIONS.md;
+docs/FRONTEND.md; docs/PROGRESS.md; docs/TEST_DATABASE.md; frontend/src/App.tsx;
+frontend/src/components/Discovery.tsx; frontend/src/hooks/useRead.ts.
+New paths (8): backend/app/realtime_api.py; backend/app/services/realtime.py;
+backend/realtime_tests/conftest.py; backend/realtime_tests/test_realtime.py;
+backend/tests/test_realtime.py; docs/REALTIME.md; frontend/src/Realtime.test.tsx;
+frontend/src/hooks/useRealtime.ts.
+
+Actual commands/results (backend/frontend working directories as appropriate):
+
+| Command | Actual result |
+| --- | --- |
+| `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short` | FINAL 1494 passed, 32 deselected, 80.65s, exit 0; one existing Starlette/HTTPX warning |
+| `.\.venv\Scripts\python.exe -m pytest -q tests/test_realtime.py --tb=short` | FINAL 30 passed, 3.44s, exit 0; same warning |
+| `.\.venv\Scripts\python.exe -m pytest -q tests/test_realtime.py tests/test_read_api.py tests/test_lifecycle_readiness.py --tb=short` | Earlier read-owner/cancellation checkpoint: 106 passed, 18.58s, exit 0; same warning |
+| `npm.cmd test -- --reporter=dot` | FINAL 365 passed, 13 files, 40.69s, exit 0 |
+| `npm.cmd run build` | FINAL TypeScript passed; Vite built 48 modules in 5.42s, exit 0 |
+| `.\.venv\Scripts\python.exe -m pip check` | No broken requirements found |
+| `.\.venv\Scripts\python.exe -m pytest --collect-only -q realtime_tests --race-repetitions=1` | FINAL four cases collected, 0.06s, exit 0; no fixture/credential/database execution |
+
+Earlier offline full suites passed 1489 backend / 361 frontend, then 1493 backend /
+364 frontend before the final stalled-send edge case. That regression initially
+failed because the installed Starlette maps send TimeoutError to ClientDisconnect;
+handling both fixed the demonstrated failure. The final full suite includes it.
+Explicit body-close/lease/read-owner and constructor/session-frame cases passed.
+Initial new React test failures were test expectations: an unstable callback
+remounted its hook, backoff at 60s includes the fifth probe, and API errors use the
+existing generic UI message. Production errors were not hidden or tests weakened.
+A further preserved regression failed before the layout fence: a queued old
+stream expiry callback fired during the new workspace layout, before passive
+cleanup, and expired the new view. Immediate layout cleanup now stops ownership
+and callbacks before that phase. The final 365-test frontend suite includes it;
+the earlier 364-test suite passed before this additional demonstrated race fix.
+The final full suites above include the corrected expectations and edge cases.
+
+Final static evidence: ten pending Python files compile in memory; targeted
+private-key/token/credential-URL/artifact checks pass. ConnectionGuard and closed
+route audits are AST-identical to baseline; target settings, scope/state ledgers,
+auth boundary and transaction/mutation services are unchanged. M-019/G1 reports
+and three retained browser manifests preserve their recorded hashes and ignore
+status; builds and owner receipts remain ignored. Owner proposal passed PowerShell
+AST parsing without execution; its isolated metadata-only guard accepted a valid
+synthetic report and rejected eighteen failure cases. Whitespace checks pass;
+index remains empty. None of these checks certifies live PostgreSQL visibility.
+
+Recommendation CONDITIONAL: offline implementation verified; PostgreSQL commit/
+rollback/late-commit/private-query behavior and real browser/proxy transport are
+not certified. Initial deployment remains one backend instance. Independent
+shared-primary polling avoids worker-local delivery gaps, but ordered/exactly-once
+events and multi-instance capacity are not promised. COUNT over retained history
+has unmeasured cost; inspect plans/polling load and pool budgets before claiming
+100-VU/10,000-participant capacity. Proxy buffering/timeouts/compression and HTTPS
+need separate live verification. No new G1, deployment or production certification.
+No PostgreSQL/live API/browser call, app.serve/Vite startup, fixture cleanup,
+migration, old manifest edit, dependency installation, staging/commit or remote
+action. STOP for owner review before any live test or commit.
+Owner exercise: explain why a late-committing earlier timestamp still changes the
+fingerprint, then change POLL_SECONDS and update its latency/load trade-off tests.
+
+### 2026-11-14 — Consolidated Batch A, offline review checkpoint
+
+Started main at abfea1a6116dbe0295b45d21e290c56f84a91eb5 with the existing
+13 tracked modifications/eight new SSE files. Read source/requirements/decisions/
+progress and complete SSE diff; retained ignored baseline patch/hashes. Wrote the
+RANKING.md/ADR contract before implementation. Official PS1 ranking/explanation
+requirement rechecked. No silent auth/membership/transaction/SSE replacement.
+
+Implemented own-profile GET/CSRF POST with strict skills/IANA validation,
+discovery opt-in and CAS versions; additive UNAPPLIED 0006_profiles; leader-only
+snapshot ranking with exact 70/30 components, eligible unassigned accounts,
+UUID ties, bounded pool and digest pages. SQL resources close before scoring;
+offset/overlap computations are reused. React provides explicit editor/rankings,
+named recipient selection and score explanations. Private GET labels improve
+applicant/invitation context; stored mutation replies and methods are unchanged.
+Registration field focus/errors, lifecycle consequences and narrow form/wrapping
+styles complete essential UX. UUID lookup/entry remain; full-catalog search is
+deferred. No dependency, command journal or persistence expansion.
+
+Evidence (Windows PowerShell, existing Python 3.11.9/Node 22.15.0/npm 10.9.2):
+
+- Backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  FINAL **1555 passed, 32 deselected, 93.20s**, exit 0. Prior full checkpoint
+  1548 passed, 83.89s; final adds connection-release and read-permission cases.
+  Original full run identified two explicit API/graph assertions needing extension;
+  updates preserve domain keys and prove unchanged old revision rejection.
+- Backend focused profiles/SSE/read/harness: 371 passed, 19.29s; profiles/admission/
+  invitations: 235 passed, 13.91s; private label API: 2 passed, 1.27s; later focused
+  resource/API/safety/SSE: 189 passed, 7.64s. Exact commands in BATCH_A.md.
+- Frontend focused profiles/realtime/journeys/invitations/lifecycle: 151 passed,
+  31.21s; new BatchCompatibility: 2 passed, 2.56s. New tests cover confirmation,
+  recipient draft and ranking refresh, succession/private-content loss and no POST.
+- `npm.cmd test -- --reporter=dot`: earlier **394 passed**, 15 files, 53.09s;
+  later **388 passed / 6 failed**, 64.60s (timeouts/loading waits). Unchanged suite
+  with `--maxWorkers=2`: **392 passed / 2 failed**, 61.56s. FINAL
+  `npm.cmd test -- --reporter=dot --maxWorkers=1`: **394 passed**, 15 files,
+  95.00s, exit 0. No assertions/timeouts/config weakened; parallel intermittency
+  remains unresolved. Earlier new-test matcher/fieldset issues and distinct-key
+  repair are recorded in BATCH_A.md, not erased by later passes.
+- `npm.cmd run build`: FINAL TypeScript/Vite pass, 50 modules, 2.33s, exit 0.
+  `python -m pip check`: no broken requirements. Existing Starlette/HTTPX warning.
+- Separate backend `python -m pytest --collect-only -q <suite>
+  --race-repetitions=1`: realtime 4 (0.02s), lifecycle 10 (0.04s), invitations 13
+  (0.19s), exit 0, **no fixture/credential/database execution**. A combined
+  collection attempt failed duplicate CLI option registration; no fixture ran.
+- 0006 Alembic Operations rendered with as_sql=True and no engine/connection:
+  1,138 SQL characters. Old executable targets still reject 0006/head; source
+  graph awareness is distinct from execution permission. Automatic review first
+  rejected the graph-test update; read-only guard evidence plus explicit unchanged
+  allowlist/negative assertions resolved it without expanding permissions.
+- AST/hash/targeted secret/artifact review: ten original SSE source/test/contract/
+  runner files unchanged, old migrations/live scopes and auth/lifecycle/idempotency/
+  retry core unchanged; admission/invitation mutation methods AST-identical.
+  Final inventory, whitespace check and limitations are recorded in BATCH_A.md.
+  Local logs/snapshots/SQL/dist stay ignored; HEAD/index remain unchanged/empty.
+
+No live PostgreSQL, migration application, fixture delete/reset/adoption, old
+acceptance manifest edit, browser/backend startup, dependency install, commit,
+push or deployment. Four realtime cases remain original and unexecuted. Count
+polling/ranking cost, actual PostgreSQL SQL/CAS/eligibility semantics, new exact-
+0006 migration/harness permissions, real SSE/browser/HTTPS/mobile/keyboard,
+CI/load/seed/submission gates remain open. Profiles require manual ranking refresh;
+domain recovery remains memory-only. CONDITIONAL for owner review, not release.
+
+Owner exercise: remove sql from the candidate python/sql skill fixture with team
+coverage python and UTC zones; explain the deterministic score change 65 -> 30.
+Ranking never grants a seat; the original locked mutation does. Stop before DB,
+commit or remote writes. Detailed ordered guarded plan and inventory: BATCH_A.md.
+
 ## Daily work log template
+
 ```
 ### YYYY-MM-DD — [component/task ID]
 Goal:

@@ -265,3 +265,12 @@ The observer needs its own same-role session visibility and pg_blocking_pids;
 the test fails if those observations are unavailable, with no new privilege grant.
 Timeout does not prove daemon work stopped; do not rerun blindly or clean fixtures.
 No migration, backend host or live test was executed by Codex.
+# Batch A inbox context and recipient selection
+
+Recipient-only inbox GET rows add team_name, recipient_display_name and
+recipient_username using fixed joins and the existing recipient predicate.
+Issuance/redemption stored replies, lock order and capacity checks are unchanged.
+Current leaders can select a named, opted-in ranked candidate into the existing
+recipient UUID form; UUID entry remains an advanced fallback. Ranking grants no
+membership or seat reservation. RANKING.md defines that separate read contract.
+Offline evidence and remaining live scope: BATCH_A.md; old manifests stay fixed.

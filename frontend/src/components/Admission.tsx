@@ -65,14 +65,15 @@ function MemberRequest({ team, admission, membership, onExpired, restore, worksp
 }
 
 function DecisionActions({ row, command, team, admission, restore, workspace }: {
-  row: Pick<JoinRequest, 'id' | 'requester_id'>; command: AdmissionCommand | null;
+  row: Pick<JoinRequest, 'id' | 'requester_id' | 'requester_display_name' | 'requester_username'>; command: AdmissionCommand | null;
   team: Team; admission: Admission; restore: () => void;
   workspace: WorkspaceSignal;
 }) {
   const id = useId(), seconds = useCooldown(command?.error ?? null);
   const pending = command?.status === 'pending', settled = command?.status === 'success';
   return <li className="request-card" aria-labelledby={id} aria-busy={pending}>
-    <h4 id={id}>{row.requester_id ? 'Applicant ' + row.requester_id : 'Original decision for request ' + row.id}</h4>
+    <h4 id={id}>{row.requester_display_name ? `${row.requester_display_name}${row.requester_username ? ` (@${row.requester_username})` : ''}` : row.requester_id ? 'Applicant ' + row.requester_id : 'Original decision for request ' + row.id}</h4>
+    {row.requester_display_name && <p className="uuid">Applicant account: {row.requester_id}</p>}
     <CommandFeedback command={command} restore={restore} />
     <div className="admission-actions">
       {command?.uncertain ? <button className="button primary" disabled={pending || seconds > 0}

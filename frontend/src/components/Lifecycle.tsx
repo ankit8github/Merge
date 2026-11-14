@@ -8,7 +8,7 @@ import { ErrorNotice, Loading } from './Feedback';
 function Feedback({ command }: { command: LifecycleCommand }) {
   return <>
     {command.status === 'pending' && <p role="status">Sending team change…</p>}
-    {command.status === 'success' && <p role="status">Team change confirmed. Current membership comes from refreshed server reads.</p>}
+    {command.status === 'success' && <p role="status">Team change confirmed. {command.kind === 'remove' ? 'Member removal completed.' : 'Your departure completed. Leadership passes to a remaining member; a final departure deletes the team.'} Current membership comes from refreshed server reads.</p>}
     {command.error && <p role="alert">{command.error.code === 'forbidden' ? 'Current team permission is required.' :
       command.error.code === 'member_not_found' ? 'The participant is no longer on this team. Refresh current membership.' :
       command.error.code === 'team_not_found' ? 'This team is no longer available.' :
@@ -51,7 +51,7 @@ export default function TeamLifecycle({ team, lifecycle, workspace, onExpired }:
       <Roster team={team} lifecycle={lifecycle} workspace={workspace} onExpired={onExpired} choose={(subject,name) => setConfirmation({kind:'remove',subject,name})} />
       <button className="button secondary" disabled={outstanding} onClick={() => setConfirmation({kind:'leave',subject:lifecycle.actor,name:'your membership'})}>Leave team</button>
       {confirmation && <fieldset aria-labelledby={id} disabled={outstanding}><legend id={id}>{confirmation.kind==='leave' ? `Leave ${team.name}?` : `Remove ${confirmation.name} from ${team.name}?`}</legend>
-        <p>This changes current membership and cannot be undone by cancelling this screen.</p>
+        <p>{confirmation.kind === 'remove' ? `${confirmation.name} will lose membership in ${team.name}.` : `You will leave ${team.name}. If you are the final member, the team will be deleted; otherwise leadership passes when needed.`} Cancel keeps membership unchanged. After confirmation, cancelling this screen cannot undo the change.</p>
         <button className="button primary" onClick={() => { lifecycle.submit(confirmation.kind,team.hackathon_id,team.id,confirmation.subject,workspace()); setConfirmation(null); }}>Confirm {confirmation.kind==='leave' ? 'leave' : 'removal'}</button>
         <button className="button secondary" onClick={() => setConfirmation(null)}>Cancel</button></fieldset>}
     </>}

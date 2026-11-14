@@ -10,7 +10,7 @@ from pydantic import SecretBytes, ValidationError
 from sqlalchemy import create_engine, event, text
 import uvicorn
 
-from app import auth, read_api, team_api, admission_api, invitation_api, lifecycle_api
+from app import auth, read_api, team_api, admission_api, invitation_api, lifecycle_api, realtime_api, profile_api
 from app.main import create_app
 from app.services.credentials import CredentialService
 from app.services.sessions import SessionService
@@ -222,7 +222,7 @@ def browser_app(engine, guard, scope, policy, *, allow_writes=False, host=HOST):
     require(allow_writes is True)
     app=create_app(policy)
     app.routes[:]=[r for r in app.routes if getattr(r,'path',None) not in ('/openapi.json','/docs','/docs/oauth2-redirect','/redoc')
-                  and getattr(r,'original_router',None) is not lifecycle_api.router]
+                  and getattr(r,'original_router',None) not in (lifecycle_api.router,realtime_api.router,profile_api.router)]
     app.openapi_url=app.docs_url=app.redoc_url=None
     ledger=Ledger(scope)
     throttle=ThrottleService(engine,secret=SecretBytes(bytes.fromhex(policy.throttle_secret.get_secret_value())),policy=ThrottlePolicy())

@@ -172,3 +172,17 @@ adversarial cases in 39.72 seconds with three repetitions and fresh-state checks
 (2026-11-08). See TEST_DATABASE.md/PROGRESS.md. This covers the implemented
 multi-connection schedules; service authorization/retries, the 50-way HTTP race,
 deployment and board performance remain separate acceptance work.
+# Batch A profile migration — UNAPPLIED
+
+0006_profiles, chained after 0005_invitations, adds only optional
+public.participant_profiles: user_id primary/FK, bounded skills array, nullable
+IANA zone name, discoverable=false and positive CAS version. Missing rows mean
+private/empty version 0; no backfill, auth/membership mutation, grant or dependency.
+Application validation checks installed IANA data; DB checks bound shape/array
+syntax, count and opt-in consistency. RANKING.md specifies normalization/privacy.
+
+Offline SQL rendering is not PostgreSQL DDL/integrity acceptance. The source graph
+now has head 0006_profiles, while the guarded executable target allowlist remains
+exactly 0002–0005 and rejects both 0006_profiles and head. Do not run ordinary
+upgrade head or use old acceptance commands at 0006. A separate reviewed migration
+and new exact-version acceptance scope are required before database access.

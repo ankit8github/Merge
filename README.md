@@ -1,221 +1,111 @@
 # Merge
 
-Hack4Hack PS1 project. Phase 0 provides a FastAPI liveness endpoint, a React development page, and PostgreSQL/Alembic scaffolding. Domain features are not implemented. See [requirements](docs/REQUIREMENTS.md), [architecture](docs/ARCHITECTURE.md), [decisions](docs/DECISIONS.md), and [verified progress](docs/PROGRESS.md).
+Race-proof hackathon team formation for Hack4Hack PS1. React/TypeScript, FastAPI,
+PostgreSQL, SSE and explained deterministic teammate ranking. Individual submission;
+deadline **15 November 2026, 23:59 IST**.
 
-## Windows prerequisites
+**Status:** product and release tooling are implemented/offline tested as a local
+release candidate. Public CI, deployment, current SSE/ranking live acceptance,
+scale seed and measured performance are **pending**. No live URL/video is claimed.
+See [verified progress](docs/PROGRESS.md) and [submission gate](docs/SUBMISSION.md).
 
-Dedicated concurrency-test database preparation and owner-run commands:
-[docs/TEST_DATABASE.md](docs/TEST_DATABASE.md). This workflow is separate from
-ordinary development setup below; never reset merge_dev for race-test cleanup.
+## Product
 
-- Python **3.11.9**, Node **22.15.0**, npm **10.9.2** (`npm.cmd`).
-- Local PostgreSQL **17**, listening on `127.0.0.1:5432`.
-- Docker is not required for Phase 0 and has not been verified.
+Register and explicitly sign in; discover paginated hackathons/teams; create a
+team; request admission; approve/decline as leader; issue recipient-bound expiring
+invitations and redeem a private inbox. Names/usernames/team labels accompany IDs.
+UUID lookup/recipient entry remain advanced fallbacks. Full-catalog name search
+and email delivery are **not implemented**.
 
-Use commands below from `I:\Merge`, unless another directory is shown. No PowerShell execution-policy changes or virtual-environment activation are needed.
+Members leave, leaders remove members, deterministic succession uses joined_at
+then UUID, and last departure soft-deletes while retaining history. Confirmations
+and explicit uncertain-command recovery explain outcomes. SSE refetches canonical
+state on visible committed changes/reconnect. Profiles opt in to leader discovery;
+rankings explain new skills and working-hour overlap, then select invite recipients.
 
-## One-time database provisioning — owner action required
+## Architecture and correctness
 
-No credentials are supplied by this repository. Do not guess passwords or use a superuser as the application account. Use an administrator account you already know; SQL Shell (psql) or pgAdmin is suitable. The following is a **manual procedure**, not an automatically executed script.
+PostgreSQL owns membership/capacity/leadership. Membership primary key
+`(hackathon_id,user_id)`, scoped foreign keys and deferred final-state triggers
+backstop the shared transaction protocol. Reserve idempotency key/command hash,
+lock hackathon then affected users in UUID order then team/request/invitation,
+recheck authority/capacity, and commit membership/version/audit/outbox/stored reply
+together. Bounded retries preserve the original command/key; uncertain COMMIT
+requires reconciliation. Pending requests reserve no seats; rankings grant none.
 
-Connect to the local server's maintenance database using your known administrator credentials, then inspect:
+Argon2 has a bounded work budget. Sessions store token hashes. Production cookies
+are Secure, HttpOnly, SameSite=Lax and host-only, with exact HTTPS Origin, CSRF,
+durable throttles and one explicitly trusted proxy. Secrets/commands remain in
+memory; only public navigation hints persist. No frontend secret or CORS is needed.
 
-From PowerShell, this exact read-only preflight prompts locally for your known administrator name and password:
+SSE polls committed public/private counts in short read-only transactions every2s,
+with subscriber/lease limits; no private event payload or exactly-once guarantee.
+Retained-history scan cost is unmeasured. Ranking is deterministic, not AI/ML:
+`70 * novel_skill_fraction + 30 * timezone_overlap`, assuming09:00-17:00 local.
+Exact fractions/UUID ties, bounded pool/pages and snapshot cursors preserve stable
+order. Self-reported profiles are not skill verification or actual availability.
+Contracts: [transactions](docs/TEAM_SERVICES.md), [lifecycle](docs/LIFECYCLE.md),
+[retries](docs/TRANSACTION_RETRY.md), [realtime](docs/REALTIME.md), [ranking](docs/RANKING.md).
 
-```powershell
-Set-Location I:\Merge
-$mergeAdminUser = Read-Host 'Your existing PostgreSQL administrator role name'
-if ([string]::IsNullOrWhiteSpace($mergeAdminUser)) { throw 'A known role name is required. Stop.' }
-psql -X -h 127.0.0.1 -p 5432 -U $mergeAdminUser -d postgres -W -v ON_ERROR_STOP=1 -f scripts/inspect_merge_postgres.sql
-if ($LASTEXITCODE -ne 0) { throw 'Inspection failed. Stop; do not provision.' }
-```
+## Reproducible offline setup
 
-Do not send passwords to chat. The script uses a read-only transaction, selects only Merge object metadata, and makes no database/role/global-setting changes. Stop if the returned connection is not the intended local server. If Merge objects exist, stop before creation and review their ownership, role attributes and memberships. A database/role name alone does not prove it is safe to reuse.
-
-The underlying existence checks are:
-
-```sql
-SELECT datname FROM pg_database WHERE datname = 'merge_dev';
-SELECT rolname FROM pg_roles WHERE rolname IN ('merge_owner', 'merge_app');
-```
-
-**If either query returns any rows, STOP.** Inspect ownership and intended use with the owner. Do not run the creation steps, change a password, reuse the objects blindly, reset, alter, or drop anything existing.
-
-Only when both queries return no rows, create new objects:
-
-Open an interactive session with the same known administrator role:
-
-```powershell
-psql -X -h 127.0.0.1 -p 5432 -U $mergeAdminUser -d postgres -W -v ON_ERROR_STOP=1
-```
-
-Repeat the two existence queries immediately before creation. Proceed only if both are empty. Run each following step in order and stop on any error; do not paste the entire procedure blindly. These instructions require a known administrator with sufficient privileges to create the new roles/database and grant schema privileges.
-
-```sql
-CREATE ROLE merge_owner NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-CREATE ROLE merge_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-```
-
-In **psql**, set a new password using its hidden interactive prompt (do not paste a password into SQL, shell history or this chat):
-
-```text
-\password merge_app
-```
-
-Then, outside any transaction:
-
-```sql
-CREATE DATABASE merge_dev OWNER merge_owner;
-REVOKE ALL ON DATABASE merge_dev FROM PUBLIC;
-GRANT CONNECT ON DATABASE merge_dev TO merge_app;
-```
-
-Connect to the **new** database as the administrator:
-
-```text
-\connect merge_dev
-```
-
-Confirm `SELECT current_database();` returns `merge_dev`, then:
-
-```sql
-REVOKE ALL ON SCHEMA public FROM PUBLIC;
-GRANT USAGE, CREATE ON SCHEMA public TO merge_app;
-```
-
-These revocations apply only to newly created Merge objects. The application role has no cluster administration or database-creation privileges. For this development bootstrap it can create its own tables in `merge_dev.public`, including Alembic's version table. Separate runtime and migration roles are deferred until the schema/security design; this is not a production privilege model. Stop and inspect any error; do not automatically retry partial provisioning.
-
-## Configuration and installation
-
-### Recovery inspection after a failed provisioning reconnect
-
-If `provision_merge_postgres.sql` stopped at line 36 (`\connect merge_dev`), do not rerun it. Earlier role/database changes were committed, while lines 37–53 (schema grants and final verification) were skipped. Inspect the new database by connecting directly, with one local administrator password prompt:
+Prerequisites: Python 3.11 (local evidence: 3.11.9), Node 22.15.0, npm 10.9.2, Git.
+Existing Windows venvs need no activation/execution-policy change. Installation
+requires approved package access; PostgreSQL is unnecessary for these checks.
 
 ```powershell
 Set-Location I:\Merge
-psql -X -h 127.0.0.1 -p 5432 -U postgres -d merge_dev -W -v ON_ERROR_STOP=1 -f scripts/inspect_merge_recovery.sql
-if ($LASTEXITCODE -ne 0) { throw 'Recovery inspection failed. Stop; do not change privileges.' }
-```
-
-This script is read-only. It reports CONNECT, schema USAGE/CREATE, schema/database ACLs, ownership, Merge role flags/memberships and user-schema object metadata; it does not select secrets or application rows. Report only this metadata, never a password. No recovery SQL is authorized until the owner reviews and approves the specific statements derived from the results.
-
-Recovery rules: stop for unexpected ownership, elevated role privileges, memberships or unexplained user objects. Normal `public` ownership by `pg_database_owner` does not require an ownership change. If CONNECT is already true, no database GRANT is needed. Grant only missing schema USAGE/CREATE to `merge_app`. Removing remaining PUBLIC schema privileges is the skipped hardening step from the original setup and must be reviewed separately: if approved, revoke the reported PUBLIC privileges and explicitly grant `merge_app` USAGE/CREATE in one transaction so it does not lose inherited access. Do not alter role attributes/passwords or schema/database ownership, create domain objects, or apply migrations as part of recovery inspection.
-
-### Guarded provisioning workflow (after successful owner inspection)
-
-`scripts/provision_merge_postgres.sql` automates the SQL above with fresh existence and connection checks. It stops on the first error, creates only new Merge objects, and prompts for the application password using `\password`. The password-encryption setting is transaction-local, not global. The non-login `merge_owner` owns the database; `merge_app` receives only database CONNECT and public-schema USAGE/CREATE, sufficient to own and migrate its own development tables. No membership in the owner/admin role is granted. Existing databases' privileges are unchanged; PostgreSQL roles are cluster-wide, and this script only creates the two new names.
-
-Run in your own PowerShell terminal, without transcript/session recording:
-
-```powershell
-Set-Location I:\Merge
-psql -X -h 127.0.0.1 -p 5432 -U postgres -d postgres -W -v ON_ERROR_STOP=1 -f scripts/provision_merge_postgres.sql
-if ($LASTEXITCODE -ne 0) { throw 'Provisioning failed. Stop; do not rerun or replace objects.' }
-```
-
-The first password prompt is for the existing administrator. The `merge_app` prompts ask twice for a new application password. Choose a strong, unique, single-line password without `${` syntax (dotenv interprets that syntax). Reconnecting to the new database may prompt again for the administrator password. Do not paste passwords into commands or chat. Database creation cannot share the roles' transaction, so an error can leave a partial setup: stop and report only the error/object metadata, without retrying.
-
-After successful provisioning, the following owner-run helper prompts twice for the **same new merge_app password**, checks Git exclusion, and exclusively creates `backend/.env`. It refuses an existing file or noninteractive input, and prints no secret:
-
-```powershell
-.\backend\.venv\Scripts\python.exe scripts/configure_backend_env.py
-if ($LASTEXITCODE -ne 0) { throw 'Configuration failed. Stop and inspect locally.' }
-```
-
-Once that succeeds, run the migration/verification commands below or let Codex run them. Never give Codex the administrator password. The manual configuration alternative below is for a fresh setup; do not overwrite a file created by the helper.
-
-```powershell
-Set-Location I:\Merge
-if (-not (Test-Path backend/.env)) { Copy-Item .env.example backend/.env }
-git check-ignore backend/.env
-notepad backend/.env
-```
-
-After provisioning, set `MERGE_DB_PASSWORD` in `backend/.env` locally to the new application password. Quote dotenv values containing `#`, spaces or other special characters. Alternatively leave it empty and configure a dedicated PostgreSQL password-file entry for `127.0.0.1:5432:merge_dev:merge_app`. Do not publish the file or print configuration. Environment variables override `backend/.env`; this absolute file location works independently of the working directory. A root `.env` is no longer loaded. Existing local files must be reviewed/moved manually without overwriting either file. Passwords are assembled into a SQLAlchemy URL programmatically, so URL escaping is unnecessary. If Git reports dubious ownership in this workspace, use `git -c safe.directory=I:/Merge check-ignore backend/.env` for this check; do not change global settings.
-
-```powershell
 python -m venv backend/.venv
 .\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements.lock
-.\backend\.venv\Scripts\python.exe -m pip install --no-deps --no-build-isolation -e backend
-Push-Location frontend
-npm.cmd ci
-Pop-Location
+Set-Location frontend
+npm ci
+Set-Location ../backend
+.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short
+if ($LASTEXITCODE -ne 0) { throw 'Backend failed' }
+.\.venv\Scripts\python.exe -m app.production.check
+if ($LASTEXITCODE -ne 0) { throw 'Production configuration failed' }
+Set-Location ../frontend
+npm test -- --reporter=dot --maxWorkers=1
+if ($LASTEXITCODE -ne 0) { throw 'Frontend failed' }
+npm run build
+if ($LASTEXITCODE -ne 0) { throw 'Typecheck/build failed' }
 ```
 
-`backend/requirements.lock` pins the complete Windows/Python 3.11 dependency resolution; `frontend/package-lock.json` pins npm's resolution. Do not use unpinned upgrades as part of setup. To deliberately regenerate the Python lock with uv 0.9.29, use `uv pip compile backend/pyproject.toml --extra dev --python backend/.venv/Scripts/python.exe --output-file backend/requirements.lock` and review the diff.
+Linux uses `backend/.venv/bin/python`. Offline setup never migrates/starts a server.
+Do not use unrestricted DB tests, ordinary `alembic upgrade head`, retained fixture
+cleanup or benchmark startup. [Release validation](docs/RELEASE_VALIDATION.md)
+separates exact-version targets and approvals. **0006_profiles remains unapplied.**
 
-## Migration and verification
+## Hosting and evidence
 
-After manual provisioning and configuration:
+Ordinary Settings/app.serve remain limited to local127.0.0.1:5432/merge_dev as
+merge_app. Development DB setup/startup needs separate reviewed authorization;
+retained merge_test is never a seed target. Vite is only a development proxy.
 
-```powershell
-Push-Location backend
-.\.venv\Scripts\python.exe -m pytest -q -m database
-if ($LASTEXITCODE -ne 0) { throw 'Database smoke failed. Stop before migrations.' }
-.\.venv\Scripts\python.exe -m alembic upgrade head
-if ($LASTEXITCODE -ne 0) { throw 'Migration failed. Stop and inspect.' }
-.\.venv\Scripts\python.exe -m alembic upgrade head
-if ($LASTEXITCODE -ne 0) { throw 'Repeated upgrade failed. Stop and inspect.' }
-.\.venv\Scripts\python.exe -m alembic current
-if ($LASTEXITCODE -ne 0) { throw 'Revision check failed. Stop and inspect.' }
-.\.venv\Scripts\python.exe -m pytest -q
-Pop-Location
-Push-Location frontend
-npm.cmd run typecheck
-npm.cmd test
-npm.cmd run build
-Pop-Location
-```
+[Production packaging](docs/PRODUCTION.md) proposes a Linux VPS, Caddy HTTPS/static
+React, one API worker and private PostgreSQL17/persistent volumes. Separate mounted
+runtime/migration secrets and exact merge_prod identity prevent local/test fallback;
+startup never initializes/migrates. Native images/configuration, TLS and restricted
+DB-role behavior remain unrun. Review launch/backup/rollback gates before deployment.
 
-The baseline contains no domain DDL. Online upgrade creates only Alembic's version table and records `0001_baseline`; the second upgrade should do nothing. Offline SQL generation (`python -m alembic upgrade head --sql`) does **not** prove database connectivity or successful application.
+Prior owner-run local invitation evidence records39 cases (13 x3), including three
+50-distinct-authenticated-caller last-seat races:1 success/49 safe rejections.
+[G1 evidence](docs/G1_ACCEPTANCE.md) documents aggregate/provenance limits. This is
+not public CI or production proof. New SSE4/profile30 acceptance remains pending.
+Actions isolates PostgreSQL16 jobs at0003/0004/0005/0006 and includes the race;
+no public run exists. New disposable merge_bench tooling seeds10000/2000 and k6
+measures100 VUs, p95<200ms, optionally32 SSE clients. No measured result exists.
+Never benchmark retained test or production databases.
 
-From the repository root, `.\backend\.venv\Scripts\python.exe scripts/check_local_http.py` verifies real API/Vite HTTP connectivity, a backend outage and recovery without database access. It requires free ports 8000/5173, starts its own servers, and stops only those processes. Frontend rendering/state tests use jsdom with mocked fetch; this HTTP check complements them and does not claim full browser E2E coverage.
+- [Current freeze results](docs/PROGRESS.md) / [combined 97-file inventory](docs/BATCH_C.md)
+- [One-page design](docs/DESIGN_ONE_PAGE.md)
+- [Five-minute demo script](docs/DEMO.md), no video recorded
+- [Submission links/checklist](docs/SUBMISSION.md)
+- [Batch A](docs/BATCH_A.md) / [Batch B](docs/BATCH_B.md)
+- [Requirements](docs/REQUIREMENTS.md), [architecture](docs/ARCHITECTURE.md), [decisions](docs/DECISIONS.md)
 
-Without database configuration, run `python -m pytest -q -m "not database"` from `backend` using its venv interpreter. The separate `python -m pytest -q -m database` test executes real `SELECT 1`; unavailable credentials cause a failure, never a silently passing mock. Phase 0 database code refuses targets other than `127.0.0.1:5432/merge_dev` with `merge_app`.
-
-## Run locally
-
-Terminal 1:
-
-```powershell
-Set-Location I:\Merge\backend
-$env:MERGE_AUTH_MODE = 'development'
-$env:MERGE_AUTH_ORIGIN = 'http://127.0.0.1:5173'
-if (-not $env:MERGE_AUTH_THROTTLE_SECRET) {
-    $env:MERGE_AUTH_THROTTLE_SECRET = & .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
-    if ($LASTEXITCODE -ne 0) { throw 'Throttle secret generation failed.' }
-}
-.\.venv\Scripts\python.exe -m app.serve --host 127.0.0.1 --port 8000
-```
-
-Terminal 2:
-
-```powershell
-Set-Location I:\Merge\frontend
-npm.cmd run dev
-```
-
-Open <http://127.0.0.1:5173>. Vite proxies `/health` and `/auth` to the API. `/health` returns `{"status":"ok"}`. The page shows loading, success, or a generic error, with a five-second timeout and retry button. Stop the API and press **Check again** to verify failure; restart it and retry to verify recovery. Stop both servers with Ctrl+C.
-
-Auth configuration is explicit and environment-only: default production mode
-requires an exact HTTPS `MERGE_AUTH_ORIGIN`; insecure/missing configuration rejects
-startup. The local commands opt into a separate development cookie on loopback.
-Four auth endpoints are implemented for review, with no login UI or team APIs.
-M-007B.3B PostgreSQL auth throttling is owner-verified locally: 33 throttle,
-54 updated API and 78 session passes (165 in 110.69s). Production HTTPS/browser
-verification remains outstanding. A shared private 32-byte hex throttle secret
-is required at startup.
-Reuse the same key/settings across restarts/workers; regenerating it resets the
-budget. Use app.serve to preserve actual peer identity; default Uvicorn proxy
-middleware is unsupported. Limits, trusted-proxy policy and exact owner tests:
-[AUTH_THROTTLING.md](docs/AUTH_THROTTLING.md). Routes are not production-ready.
-Contracts, cookie/CSRF/Origin policy and guarded merge_test commands:
-[HTTP_AUTH.md](docs/HTTP_AUTH.md). Never run ordinary merge_dev tests for auth verification.
-
-`/health` is public process liveness; it makes no database-readiness claim. The frontend uses a relative URL, so no CORS middleware or frontend secrets are needed. Vite's proxy is development-only: a future deployment must explicitly configure same-origin API routing. Production hosting is out of scope.
-
-## Owner explanation / exercise
-
-`main.py` handles HTTP liveness, `config.py` reads local settings, `session.py` creates a lazy database engine, and Alembic tracks schema revisions separately from API startup. Explain why a healthy HTTP server can coexist with a failed database smoke test. Change the frontend timeout from five to two seconds, rerun its tests, and adapt the timeout assertion.
-
-No commits or pushes are performed automatically. Review `git status`, the source files and `docs/PROGRESS.md` before approving a commit.
+Source review covers labels/native controls, skip link, focus/status handling,
+responsive stacking and long labels. Current real browser/mobile/keyboard proof
+is pending; jsdom is not a browser certificate. Owner exercise: explain why
+/health differs from readiness and why a lost response reuses the original key.
+Local freeze approval does not authorize publication or live actions.

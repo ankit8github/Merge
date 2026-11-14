@@ -191,7 +191,9 @@ class AdmissionService(TeamService):
                 (CAST(:cursor AS uuid) IS NULL OR EXISTS(SELECT 1 FROM public.join_requests a
                     WHERE a.id=CAST(:cursor AS uuid) AND a.team_id=t.id AND a.hackathon_id=t.hackathon_id)) AS cursor_ok,
                 COALESCE((SELECT json_agg(page ORDER BY page.id) FROM
-                    (SELECT r.* FROM public.join_requests r
+                    (SELECT r.*,u.display_name AS requester_display_name,a.username AS requester_username
+                     FROM public.join_requests r JOIN public.users u ON u.id=r.requester_id
+                     LEFT JOIN public.account_credentials a ON a.user_id=r.requester_id
                      WHERE r.team_id=t.id AND r.hackathon_id=t.hackathon_id AND r.status='pending'
                      AND (CAST(:cursor AS uuid) IS NULL OR r.id>CAST(:cursor AS uuid))
                      AND t.leader_user_id=:actor ORDER BY r.id LIMIT :size) page),'[]'::json) AS items
@@ -200,6 +202,7 @@ class AdmissionService(TeamService):
             if row is None: _deny(ErrorCode.TEAM_NOT_FOUND)
             if row['leader_user_id'] != actor_id: _deny(ErrorCode.FORBIDDEN)
             if not row['cursor_ok']: _deny(ErrorCode.INVALID_INPUT)
-            items = [_dto(item) for item in row['items'][:limit]]
+            items = [_dto(item) | {k:item[k] for k in ('requester_display_name','requester_username') if k in item}
+                for item in row['items'][:limit]]
             return {'items': items, 'next_cursor': items[-1]['id'] if len(row['items'])>limit else None}
         return self._execute(read)

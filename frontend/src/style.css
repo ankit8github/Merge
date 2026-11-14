@@ -119,6 +119,11 @@ dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
 .create-team form > .muted { display: inline-block; font-size: .8rem; }
 .unresolved { background: #fff7e6; border: 1px solid #e3c987; color: #695022; }
 .field-error { color: #802c22; font-size: .85rem; margin-top: .5rem; }
+.profile-panel { padding: 1rem; margin-bottom: 1rem; min-width: 0; }
+.profile-panel form { max-width: 40rem; }
+.checkbox-label { display: flex; gap: .7rem; align-items: center; }
+.checkbox-label input { width: auto; }
+.request-card p { overflow-wrap: anywhere; }
 .admission { border-top: 1px solid var(--line); margin-top: 1.5rem; padding-top: 1.5rem; min-width: 0; }
 .admission h3 { margin: 0 0 .8rem; }
 .admission .section-top { flex-wrap: wrap; align-items: flex-start; }

@@ -1,5 +1,54 @@
 # Merge — Architecture Decision Records (ADRs)
 
+### Batch C — proposed production isolation and same-origin HTTPS, 2026-11-14
+
+Prepare a single Linux VPS: Caddy serves compiled React and terminates HTTPS,
+one FastAPI worker behind a single fixed trusted proxy, PostgreSQL on an internal
+container network with persistent storage. No CDN or second proxy is assumed.
+Use a separate production config/engine/entry point, fixed merge_prod identity,
+runtime and migration roles, mounted private secrets, explicit initialization
+and migrations. Existing local/test/release guards and domain services remain
+unchanged. Preserve the exact Origin/CSRF/Secure __Host cookie and transport-peer
+policy; disable Uvicorn forwarded-header processing. Reuse Batch B row-preservation
+snapshots without broadening its target guard. This is an owner-review proposal,
+not deployment acceptance or a provider price/availability claim. BATCH_C.md
+records the bounded contract; PRODUCTION.md will hold execution/rollback details.
+
+### Batch B — proposed isolated release validation targets, 2026-11-14
+
+Prepare separate exact-version profile and benchmark targets, source-bound test
+receipts and ephemeral per-revision CI containers. Preserve all legacy guards,
+fixtures and evidence. Fixed benchmark-only generation/load tools cannot address
+merge_dev or retained merge_test. No production topology/auth/lock/SSE change.
+Contract and acceptance boundaries recorded before coding: BATCH_B.md.
+
+### Batch A — proposed ADR-009 profile/ranking refinement, 2026-11-14
+
+Owner-requested additive profile and leader ranking contract is recorded before
+implementation in [RANKING.md](RANKING.md). Keep 70/30 weights, explicit opt-in,
+current-team skill coverage, explained working-hour proxy, exact deterministic
+ties and snapshot-bound bounded pages. One additive migration remains unexecuted.
+No membership/session/locking/SSE protocol change; stored command replies and old
+acceptance scopes remain unchanged. This is a reviewable implementation proposal,
+not live acceptance.
+
+
+### M-020A - durable SSE invalidation without a broker, 2026-11-14
+
+Before implementation, refine ADR-008 for the owner-requested realtime slice:
+authenticated hackathon SSE, short read-only polls of committed visible outbox
+rows, actor/hackathon-bound count fingerprint, reset/refetch on every reconnect.
+UUIDs and transaction timestamps are not commit-order cursors; counting retained
+visible rows avoids dropping late commits. Filter private request/invitation
+signals using current canonical permissions and expose no domain event payload.
+Do not mark outbox publication, add a schema/sequence/broker, change mutation
+transactions or relax session/Origin guards. Fixed subscription/lease/backoff
+bounds and canonical GET refresh preserve memory-only mutation recovery.
+Initial hosting remains one instance; shared-primary independent polling supports
+eventual invalidation across workers, without claiming ordered/exactly-once fanout
+or measured multi-instance capacity. Full contract, costs and verification gates:
+[REALTIME.md](REALTIME.md). Live database/browser actions and commit are separate.
+
 ### M-019A — owner-authorized mandatory lifecycle, 2026-11-13
 
 The M-019A request authorizes additive leave/removal/member-roster APIs and React

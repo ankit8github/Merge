@@ -499,3 +499,10 @@ separate owner approval is still required for its read-only preflight, DDL/scan
 locks and retained fixture/fault writes. No new approval manifest or credential
 file is generated. R1 does not expand the listed potential writes. Full tests,
 static evidence, changed-file inventory and Git status are in PROGRESS.md.
+# Batch A private applicant labels
+
+Pending-request GET rows additionally project requester_display_name and
+requester_username from the same authorized SQL snapshot. Only the current leader
+can read them; no new account-directory API. Stored request/decision replies and
+mutation composition are unchanged. Missing labels retain identifier fallback in
+historical fixtures/recovery. Offline evidence: BATCH_A.md. No new live acceptance.

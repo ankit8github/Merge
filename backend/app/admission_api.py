@@ -44,8 +44,13 @@ class OwnRequest(StrictBody):
 
 class RequestPage(BaseModel):
     model_config = ConfigDict(extra='forbid', hide_input_in_errors=True)
-    items: list[RequestView]
+    items: list['ApplicantView']
     next_cursor: UUID | None
+
+
+class ApplicantView(RequestView):
+    requester_display_name: str | None = None
+    requester_username: str | None = None
 
 
 def get_admission_service(request: Request,

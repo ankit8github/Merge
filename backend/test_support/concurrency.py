@@ -24,13 +24,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--confirm-merge-test', action='store_true', required=True)
     parser.add_argument('--repetitions', type=int, choices=range(1, 11), default=3)
-    parser.add_argument('--suite', choices=('schema', 'services', 'auth', 'credentials', 'sessions', 'auth-api', 'throttles', 'idempotency', 'mutations', 'retries', 'reads', 'team-api', 'admission', 'invitations', 'lifecycle'), default='schema')
+    parser.add_argument('--suite', choices=('schema', 'services', 'auth', 'credentials', 'sessions', 'auth-api', 'throttles', 'idempotency', 'mutations', 'retries', 'reads', 'team-api', 'admission', 'invitations', 'lifecycle', 'realtime'), default='schema')
     parser.add_argument('--revision', choices=TARGET_REVISIONS, default=DOMAIN_REVISION)
     args = parser.parse_args()
     if args.suite == 'invitations' and args.revision != INVITATION_REVISION:
         parser.error('Invitations suite requires explicit --revision 0005_invitations')
     if args.suite == 'lifecycle' and args.revision != INVITATION_REVISION:
         parser.error('Lifecycle suite requires explicit --revision 0005_invitations')
+    if args.suite == 'realtime' and args.revision != INVITATION_REVISION:
+        parser.error('Realtime suite requires explicit --revision 0005_invitations')
     if args.suite in ('schema', 'services') and args.revision == INVITATION_REVISION:
         parser.error('Legacy suite is not certified at 0005_invitations')
     if args.suite == 'admission' and args.revision != ADMISSION_REVISION:
@@ -115,7 +117,8 @@ def run(args, diagnostics, parser):
                    'team-api': [root / 'team_api_tests'],
                    'admission': [root / 'admission_tests'],
                    'invitations': [root / 'invitation_tests'],
-                   'lifecycle': [root / 'lifecycle_tests']}[args.suite]
+                   'lifecycle': [root / 'lifecycle_tests'],
+                   'realtime': [root / 'realtime_tests']}[args.suite]
     # Fixed suite, fail fast, no exception/local-variable dumps or third-party autoload.
     os.environ['PYTEST_DISABLE_PLUGIN_AUTOLOAD'] = '1'
     os.environ.pop('PYTEST_ADDOPTS', None)

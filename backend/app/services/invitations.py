@@ -148,11 +148,16 @@ class InvitationService(AdmissionService):
                 cursor=cursor,h=hackathon_id,actor=actor_id).scalar_one()
             if not valid: deny(ErrorCode.INVALID_INPUT)
             rows = _query(c, f'''SELECT {','.join('i.'+k for k in FIELDS.split(','))},
+                t.name AS team_name,u.display_name AS recipient_display_name,a.username AS recipient_username,
                 (i.status='pending' AND i.expires_at>clock_timestamp() AND t.deleted_at IS NULL
                  AND t.leader_user_id=i.issued_by) AS available
                 FROM public.invitations i JOIN public.teams t ON t.id=i.team_id AND t.hackathon_id=i.hackathon_id
+                JOIN public.users u ON u.id=i.recipient_id
+                LEFT JOIN public.account_credentials a ON a.user_id=i.recipient_id
                 WHERE i.hackathon_id=:h AND i.recipient_id=:actor AND (CAST(:cursor AS uuid) IS NULL OR i.id>CAST(:cursor AS uuid))
                 ORDER BY i.id LIMIT :size''',h=hackathon_id,actor=actor_id,cursor=cursor,size=limit+1).mappings().all()
-            items = [dto(r)|{'available':r['available']} for r in rows[:limit]]
+            items = [dto(r)|{'available':r['available']}|{k:r[k] for k in
+                ('team_name','recipient_display_name','recipient_username') if k in r}
+                for r in rows[:limit]]
             return {'items':items,'next_cursor':items[-1]['id'] if len(rows)>limit else None}
         return self._execute(read)

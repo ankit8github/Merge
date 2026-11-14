@@ -1,5 +1,6 @@
 import { useCallback, useId, useRef, useState, type FormEvent } from 'react';
-import { api, ApiError, type Hackathon, type InboxInvitation, type Team } from '../api';
+import { api, ApiError, type Hackathon, type InboxInvitation, type Team, type Suggestion } from '../api';
+import Rankings from './Rankings';
 import { type Invitations, type InvitationCommand, validRecipient } from '../hooks/useInvitations';
 import { useRead } from '../hooks/useRead';
 import type { WorkspaceSignal } from '../hooks/useWorkspaceSignal';
@@ -36,11 +37,12 @@ function CommandFeedback({ command, restore }: Shared & { command: InvitationCom
   </>;
 }
 
-export function InvitationIssuer({ team, invitations, restore, workspace }: Shared & { team: Team; workspace: WorkspaceSignal }) {
+export function InvitationIssuer({ team, invitations, restore, workspace, onExpired }: Shared & { team: Team; workspace: WorkspaceSignal; onExpired: () => void }) {
   const h = team.hackathon_id, t = team.id, id = useId();
   const command = invitations.operation('issue', h, t);
   const [recipient, setRecipient] = useState(command?.target ?? '');
   const [invalid, setInvalid] = useState(false);
+  const [person, setPerson] = useState<Suggestion | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const seconds = useCooldown(command?.error ?? null);
   const pending = command?.status === 'pending', settled = command?.status === 'success';
@@ -58,13 +60,17 @@ export function InvitationIssuer({ team, invitations, restore, workspace }: Shar
   return <section className="admission invitation-issuer" aria-label="Leader invitations">
     <h3>Invite a participant</h3>
     <p className="muted">Only the current leader can issue invitations. The server checks authorization on every attempt.</p>
+    {!locked && <Rankings team={team} actor={invitations.actor} onExpired={onExpired} choose={selected => {
+      setPerson(selected); setRecipient(selected.user_id); setInvalid(false); input.current?.focus();
+    }} />}
+    {person && person.user_id === value && <p role="status">Recipient: {person.display_name} (@{person.username}). Team: {team.name}.</p>}
     <CommandFeedback invitations={invitations} command={command} restore={restore} />
     <form onSubmit={submit} noValidate aria-label="Issue invitation" aria-busy={pending}>
       <label htmlFor={`${id}-recipient`}>Recipient account UUID</label>
       <input id={`${id}-recipient`} ref={input} value={value} readOnly={locked} required autoComplete="off" spellCheck={false}
         aria-invalid={invalid} aria-describedby={`${id}-help${invalid ? ` ${id}-error` : ''}`}
-        onChange={event => { if (!locked) { setRecipient(event.target.value); setInvalid(false); } }} />
-      <small id={`${id}-help`}>UUID only. Ask an existing participant to share the account UUID shown in their Invitations inbox. Username search is not available. Invitations do not reserve a seat.</small>
+        onChange={event => { if (!locked) { setRecipient(event.target.value); setPerson(null); setInvalid(false); } }} />
+      <small id={`${id}-help`}>Choose a ranked participant above, or use the advanced UUID fallback: ask an existing participant to share their account UUID from Invitations. Username search is not available. Invitations do not reserve a seat.</small>
       {invalid && <p id={`${id}-error`} className="field-error" role="alert">Enter a complete account UUID, without surrounding spaces.</p>}
       <div className="admission-actions"><button className="button primary" type="submit" disabled={pending || settled || seconds > 0}>
         {pending ? 'Issuing invitation…' : command?.uncertain ? 'Retry original invitation' : 'Issue invitation'}</button>
@@ -91,6 +97,8 @@ function RedemptionCard({ row, command, invitations, membership, restore, open, 
   const disabled = pending || settled || seconds > 0 || (!command?.uncertain && !eligible);
   return <li className="request-card invitation-card" aria-labelledby={id} aria-busy={pending}>
     <h3 id={id}>{row ? 'Invitation ' : 'Original redemption for invitation '}{target}</h3>
+    {row?.team_name && <p>Team: <strong>{row.team_name}</strong></p>}
+    {row?.recipient_display_name && <p>Recipient: {row.recipient_display_name}{row.recipient_username ? ` (@${row.recipient_username})` : ''}</p>}
     <p>Team UUID: <span className="uuid">{t}</span></p>
     {row && <><p>Current invitation state: <strong>{row.status}</strong></p>
       <p>Expires (your local time): <time dateTime={row.expires_at}>{new Date(row.expires_at).toLocaleString()}</time></p>

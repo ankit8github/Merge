@@ -240,8 +240,14 @@ def test_openapi_has_only_scoped_domain_mutations_with_required_keys(creation):
         (base+'/{team_id}/invitations','post'),
         (base+'/{team_id}/invitations/{invitation_id}/redeem','post'),
         (base+'/{team_id}/leave','post'),
-        (base+'/{team_id}/members/{user_id}/remove','post')]
+        (base+'/{team_id}/members/{user_id}/remove','post'),
+        ('/api/me/profile','post')]
     for path,method in mutations:
+        if path == '/api/me/profile':
+            # Own-profile replacement is versioned, not a team command.
+            assert not any(p['name']=='Idempotency-Key' for p in paths[path][method].get('parameters',[]))
+            assert {'skills','timezone','discoverable','version'} <= set(schema['components']['schemas']['ProfileBody']['required'])
+            continue
         assert next(p for p in paths[path][method]['parameters'] if p['name']=='Idempotency-Key')['required']
     operation = paths[mutations[0][0]]['post']
     assert next(p for p in operation['parameters'] if p['name'] == 'Idempotency-Key')['required']

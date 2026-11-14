@@ -22,6 +22,9 @@ from app.invitation_api import router as invitation_router, invitation_error_han
 from app.services.invitations import InvitationError
 from app.lifecycle_api import router as lifecycle_router, lifecycle_error_handler
 from app.services.lifecycle import LifecycleError
+from app.realtime_api import router as realtime_router, Subscribers
+from app.profile_api import router as profile_router, profile_error_handler
+from app.services.profiles import ProfileError
 
 
 def create_app(policy: AuthSettings | None = None) -> FastAPI:
@@ -38,6 +41,7 @@ def create_app(policy: AuthSettings | None = None) -> FastAPI:
         app.state.auth_engine = None
         app.state.auth_lock = Lock()
         app.state.read_service = None
+        app.state.realtime_subscribers = Subscribers()
         try:
             yield
         finally:
@@ -57,12 +61,15 @@ def create_app(policy: AuthSettings | None = None) -> FastAPI:
     app.add_exception_handler(AdmissionError, admission_error_handler)
     app.add_exception_handler(InvitationError, invitation_error_handler)
     app.add_exception_handler(LifecycleError, lifecycle_error_handler)
+    app.add_exception_handler(ProfileError, profile_error_handler)
     app.include_router(router)
     app.include_router(read_router)
     app.include_router(team_router)
     app.include_router(admission_router)
     app.include_router(invitation_router)
     app.include_router(lifecycle_router)
+    app.include_router(realtime_router)
+    app.include_router(profile_router)
 
     @app.get('/health')
     def health() -> dict[str, str]:

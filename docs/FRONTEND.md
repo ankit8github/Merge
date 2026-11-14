@@ -1,5 +1,57 @@
 # Merge authentication, discovery, creation, admission and invitation UI
 
+## Batch A profiles, ranking and essential UX
+
+An explicit account-scoped editor loads/saves skills, IANA time zone and discovery
+opt-in through the existing same-origin session/CSRF transport. Version conflicts
+or unknown save delivery require canonical reload; there is no automatic retry or
+persistent profile cache. Account/session cleanup aborts and fences old saves.
+The panel has a distinct profile/epoch key from Discovery to preserve identities.
+
+Current leaders can explicitly load paginated teammate rankings next to the
+existing invitation form. Every row shows name/username, new skills, normalized
+components and weighted points. Select fills the existing recipient UUID field;
+advanced manual UUID entry remains available. No directory/name search is added.
+Mounted rankings inherit SSE read invalidation; stale snapshot cursors require a
+restart. Profile changes require manual ranking refresh. No command key/reply or
+workspace ownership protocol changes. Invitation/applicant GETs now include human
+labels; recovery records retain their original identifiers. Registration gives
+field-specific validation/focus, and lifecycle confirmation/status names the
+operation and consequences. Existing tests/assertions remain; new compatibility
+coverage checks SSE, confirmation/draft preservation and permission loss.
+
+These are jsdom/offline behaviors, not new browser/mobile/keyboard/HTTPS evidence.
+Old browser hosts exclude the profile/ranking router and gain no manifest scope.
+Full contract and remaining guarded work: RANKING.md and BATCH_A.md.
+
+## M-020A SSE invalidation
+
+The current authenticated hackathon workspace opens one same-origin EventSource
+at /api/hackathons/{id}/events. Server frames must match the current actor/scope
+and strict bounded schema before they can invalidate. Every reset refetches;
+duplicate invalidation IDs are ignored. Old source callbacks, session probes and
+reconnect timers are fenced/closed on workspace, identity or session changes.
+Layout cleanup stops the old owner before new layout effects can receive queued
+events; connection setup stays passive. An offline regression demonstrates why
+passive cleanup alone could expire the newly selected workspace.
+Reconnection probes the current cookie session, then reconnects with bounded
+2-to-30-second exponential backoff. Missing EventSource support falls back to
+manual refresh with nonintrusive connection status. No cross-origin URL or token
+query string, client persistence, automatic mutation retry or command replay.
+
+A read-only invalidation context refreshes mounted board, detail, membership,
+private request/invitation and roster reads. Same-loader background refresh keeps
+successful content/forms mounted; errors still clear inaccessible data, and
+changed loaders/navigation keep existing loading/abort behavior. Mutation journals,
+workspace ownership tokens, selected views and cursor histories are unchanged.
+Pagination can show existing stale-cursor recovery; SSE does not silently navigate
+to another page. Reconnect resets repair missed updates after offline/worker gaps.
+SSE does not restore mutation keys after reload/crash; that existing limit remains.
+
+Real PostgreSQL delivery, browser/mobile/keyboard, buffering/proxy/HTTPS and load
+acceptance remain pending. Legacy browser hosts explicitly exclude the new router;
+their manifests/budgets are not extended. Contract and owner proposal: REALTIME.md.
+
 ## M-019A lifecycle controls
 
 Canonical membership matching the current detail team enables Manage membership.

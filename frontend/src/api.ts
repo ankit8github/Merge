@@ -13,12 +13,19 @@ export type Decision = 'approve' | 'reject';
 export type JoinRequest = {
   id: string; hackathon_id: string; team_id: string; requester_id: string;
   status: 'pending' | 'approved' | 'rejected'; created_at: string; resolved_at: string | null;
+  requester_display_name?: string; requester_username?: string;
 };
 export type Invitation = {
   id: string; hackathon_id: string; team_id: string; recipient_id: string; issued_by: string;
   status: 'pending' | 'redeemed'; created_at: string; expires_at: string; redeemed_at: string | null;
 };
-export type InboxInvitation = Invitation & { available: boolean };
+export type InboxInvitation = Invitation & { available: boolean; team_name?: string; recipient_display_name?: string; recipient_username?: string };
+export type Profile = Identity & { display_name: string; skills: string[]; timezone: string | null; discoverable: boolean; version: number };
+export type ProfileEdit = Pick<Profile, 'skills' | 'timezone' | 'discoverable' | 'version'>;
+export type Suggestion = Identity & { display_name: string; skills: string[]; timezone: string; new_skills: string[];
+  skill_complement: number; timezone_overlap: number; skill_points: number; timezone_points: number; score: number };
+export type Rankings = { hackathon_id: string; team_id: string; user_id: string; reference_at: string;
+  team_skills: string[]; skill_weight: 0.7; timezone_weight: 0.3; items: Suggestion[]; next_cursor: string | null };
 export type Member = { user_id: string; display_name: string; joined_at: string };
 export type LifecycleReceipt = { hackathon_id: string; team_id: string; user_id: string;
   member_count: number; team_version: number; leader_user_id: string | null; deleted: boolean };
@@ -176,7 +183,58 @@ async function request<T>(path: string, parse: (value: unknown) => T,
 
 const query = (cursor: string | null) => `?limit=20${cursor ? `&cursor=${encodeURIComponent(uuid(cursor))}` : ''}`;
 const scope = (id: string) => `/api/hackathons/${uuid(id)}`;
+
+const optionalLabel = (v: unknown, max: number) => v === undefined || v === null ? undefined : string(v, max);
+function skillList(value: unknown, max = 20): string[] {
+  if (!Array.isArray(value) || value.length > max || value.some(s => typeof s !== 'string' || !/^[a-z0-9][a-z0-9+#.\-]{0,31}$/.test(s)) ||
+      new Set(value).size !== value.length) throw new ApiError(0, 'invalid_response');
+  return value as string[];
+}
+function profile(value: unknown, actor: string): Profile {
+  const v = object(value), account = identity(v);
+  if (account.user_id !== actor || typeof v.discoverable !== 'boolean' || typeof v.version !== 'number' ||
+      !Number.isSafeInteger(v.version) || v.version < 0 || (v.discoverable && v.timezone === null)) throw new ApiError(0, 'invalid_response');
+  return { ...account, display_name: string(v.display_name, 80), skills: skillList(v.skills),
+    timezone: v.timezone === null ? null : string(v.timezone, 64), discoverable: v.discoverable, version: v.version };
+}
+function rankings(value: unknown, h: string, t: string, actor: string): Rankings {
+  const v = object(value);
+  if (v.hackathon_id !== h || v.team_id !== t || v.user_id !== actor || v.skill_weight !== .7 || v.timezone_weight !== .3 ||
+      typeof v.reference_at !== 'string' || !Number.isFinite(Date.parse(v.reference_at)) || !Array.isArray(v.items) || v.items.length > 20 ||
+      (v.next_cursor !== null && (typeof v.next_cursor !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(v.next_cursor)))) throw new ApiError(0, 'invalid_response');
+  const items = v.items.map(item => {
+    const r = object(item), account = identity(r);
+    for (const [field, max] of [['skill_complement', 1], ['timezone_overlap', 1], ['skill_points', 70], ['timezone_points', 30], ['score', 100]] as const) {
+      if (typeof r[field] !== 'number' || !Number.isFinite(r[field]) || r[field] < 0 || r[field] > max) throw new ApiError(0, 'invalid_response');
+    }
+    const skill = r.skill_complement as number, overlap = r.timezone_overlap as number, score = r.score as number;
+    const skillPoints = r.skill_points as number, zonePoints = r.timezone_points as number;
+    if (account.user_id === actor || Math.abs(skillPoints - 70 * skill) > .000071 || Math.abs(zonePoints - 30 * overlap) > .000031 ||
+        Math.abs(score - skillPoints - zonePoints) > .000002) throw new ApiError(0, 'invalid_response');
+    return { ...account, display_name: string(r.display_name, 80), skills: skillList(r.skills), timezone: string(r.timezone, 64),
+      new_skills: skillList(r.new_skills), skill_complement: skill, timezone_overlap: overlap, skill_points: skillPoints, timezone_points: zonePoints, score };
+  });
+  if (new Set(items.map(r => r.user_id)).size !== items.length) throw new ApiError(0, 'invalid_response');
+  return { hackathon_id: h, team_id: t, user_id: actor, reference_at: v.reference_at, team_skills: skillList(v.team_skills, 200000),
+    skill_weight: .7, timezone_weight: .3, items, next_cursor: v.next_cursor as string | null };
+}
 export const api = {
+  profile: (actor: string, signal?: AbortSignal) => request('/api/me/profile', value => profile(value, actor), signal),
+  saveProfile: (actor: string, body: ProfileEdit, csrf: string, signal?: AbortSignal) => {
+    if (!/^[A-Za-z0-9_-]{43}$/.test(csrf)) throw new ApiError(422, 'invalid_request');
+    return request('/api/me/profile', value => {
+      const saved = profile(value, actor);
+      const normalized = [...new Set(body.skills.map(s => s.trim().toLowerCase()))].sort();
+      if (saved.version !== body.version + 1 || saved.timezone !== body.timezone || saved.discoverable !== body.discoverable ||
+          JSON.stringify(saved.skills) !== JSON.stringify(normalized)) throw new ApiError(0, 'invalid_response');
+      return saved;
+    }, signal, body, csrf);
+  },
+  suggestions: (h: string, t: string, actor: string, cursor: string | null, signal?: AbortSignal) => {
+    if (cursor !== null && !/^[A-Za-z0-9_-]{1,128}$/.test(cursor)) throw new ApiError(422, 'invalid_request');
+    return request(scope(h) + '/teams/' + uuid(t) + '/suggestions?limit=20' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''),
+      value => rankings(value, h, t, actor), signal);
+  },
   members: (h: string, t: string, cursor: string | null, signal?: AbortSignal) => request(scope(h) + '/teams/' + uuid(t) + '/members' + query(cursor), value => {
     const result = page<Member>(value, item => {
       const v = object(item);
@@ -206,7 +264,8 @@ export const api = {
     const result = page<InboxInvitation>(value, item => {
       const v = object(item), row = invitation(v, h);
       if (typeof v.available !== 'boolean' || (row.status === 'redeemed' && v.available)) throw new ApiError(0, 'invalid_response');
-      return { ...row, available: v.available };
+      return { ...row, available: v.available, team_name: optionalLabel(v.team_name, 120),
+        recipient_display_name: optionalLabel(v.recipient_display_name, 80), recipient_username: optionalLabel(v.recipient_username, 32) };
     });
     if (new Set(result.items.map(row => row.id)).size !== result.items.length ||
         (result.next_cursor !== null && result.next_cursor !== result.items.at(-1)?.id)) throw new ApiError(0, 'invalid_response');
@@ -233,7 +292,11 @@ export const api = {
     return v.request === null ? null : joinRequest(v.request, h, t);
   }, signal),
   pendingRequests: (h: string, t: string, cursor: string | null, signal?: AbortSignal) => request(requestsPath(h, t) + query(cursor), value => {
-    const result = page(value, item => joinRequest(item, h, t));
+    const result = page(value, item => {
+      const v = object(item);
+      return { ...joinRequest(item, h, t), requester_display_name: optionalLabel(v.requester_display_name, 80),
+        requester_username: optionalLabel(v.requester_username, 32) };
+    });
     if (result.items.some(item => item.status !== 'pending') || new Set(result.items.map(item => item.id)).size !== result.items.length ||
         (result.next_cursor !== null && result.next_cursor !== result.items.at(-1)?.id)) throw new ApiError(0, 'invalid_response');
     return result;
