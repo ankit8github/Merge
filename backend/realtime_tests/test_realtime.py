@@ -17,23 +17,24 @@ def path(s): return f'/api/hackathons/{s[0]}/teams/{s[1]}'
 def test_uncommitted_departure_and_rollback_are_invisible(environment,subject):
     db,s=environment,subject; before=snapshots(db,s)
     with db.connection() as c:
-        scope=command(s[0],s[1],s[2][0][0],'rollback')
-        db.lifecycle._change(c,scope,s[1],s[2][0][0],False)
-        assert snapshots(db,s)==before
-        c.rollback()
+        with c.begin() as transaction:
+            scope=command(s[0],s[1],s[2][0][0],'rollback')
+            db.lifecycle._change(c,scope,s[1],s[2][0][0],False)
+            assert snapshots(db,s)==before
+            transaction.rollback()
     assert snapshots(db,s)==before and db.roster(s[1])=={s[2][0][0]}
 
 
 def test_late_commit_after_another_team_and_exact_replay(environment,client,subject):
     db,s=environment,subject; before=snapshots(db,s)
     with db.connection() as c:
-        scope=command(s[0],s[1],s[2][0][0],'late-leave')
-        reply=db.lifecycle._change(c,scope,s[1],s[2][0][0],False)
-        assert snapshots(db,s)==before
-        other=client.post(f'/api/hackathons/{s[0]}/teams',headers=headers(s[2][1][1],'other'),json={'name':'Other'})
-        assert other.status_code==201
-        intermediate=snapshots(db,s); assert all(a!=b for a,b in zip(before,intermediate))
-        c.commit()
+        with c.begin():
+            scope=command(s[0],s[1],s[2][0][0],'late-leave')
+            reply=db.lifecycle._change(c,scope,s[1],s[2][0][0],False)
+            assert snapshots(db,s)==before
+            other=client.post(f'/api/hackathons/{s[0]}/teams',headers=headers(s[2][1][1],'other'),json={'name':'Other'})
+            assert other.status_code==201
+            intermediate=snapshots(db,s); assert all(a!=b for a,b in zip(before,intermediate))
     after=snapshots(db,s); assert all(a!=b for a,b in zip(intermediate,after))
     replay=db.lifecycle.leave(hackathon_id=s[0],team_id=s[1],actor_id=s[2][0][0],key='late-leave')
     assert replay.body()==reply.body() and snapshots(db,s)==after

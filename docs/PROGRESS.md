@@ -7,6 +7,121 @@
 
 ## Current verified context
 
+SSE exact-0005 acceptance is locally certified from the owner-provided run,
+2026-11-14T07:17:30.128204+00:00, and its existing source-bound evidence. Reviewed
+receipt realtime-6ccc61aff99049678e262cc1cc724a3f.json and matching diagnostic
+run-1004643ee27844a594a47646fb03f748.json without database access or test execution.
+Suite realtime /revision0005_invitations /repetition1 /stagepytest /statuspassed:
+4 collected,4 completed teardowns,0 failures,0 skips,active_node=null; report exit0
+and wrapper native_exit_code0. Invariant marker:
+`suite_and_fixture_checks_completed`. No incomplete case or missing teardown.
+
+Target is the unchanged guarded local127.0.0.1:5432 /merge_test /merge_app at exact
+0005_invitations. The hashed runner preflights actual identity/revision; each
+fixture connection enforces the exact0005 transaction/driver/timeouts guard.
+Successful fixture teardown checks fresh membership/capacity/leadership,
+version/idempotency/audit/outbox chains and retains fixtures. Review confirmed
+fresh random scopes and no cleanup/adoption of old fixtures; no new DB-wide
+row comparison was performed. All612 reports/receipts captured before the repair
+remain byte-identical; historical manifests and fixture source files are unchanged.
+
+SHA256 evidence (original files remain ignored and unmodified):
+
+- Receipt: `165e4a21b60a94ec4ae90d3160c703a41465a54597d16e9bef0886ef73619c73`
+- Diagnostic: `456627ef7fb3a3182a4e6f7cf6b677bf1d89721df60982f8fb49b0ea0ebfe72d`
+
+The receipt records source_unchanged=true, base HEAD
+3650e62cbde10110068385e7049456a1649f9849 and276 file hashes. Every hash/path matched
+the working tree before this certification overlay. Both repaired test files
+also match their prior offline-validated hashes (42 focused /1719 database-free
+passes,32 deselected; four collected only in the repair task). This review changes
+only documentation; it does not rerun or fabricate test evidence. The original
+receipt remains bound to its tested HEAD/bytes. This documentation update and
+subsequent authorized commit change that snapshot: the strict current-source
+receipt verifier will then reject it as stale. Do not rewrite the receipt or
+weaken the verifier. New ignored sse-acceptance-review metadata preserves the
+before-update binding and maps unchanged executable bytes to the reviewed commit.
+
+Reviewed only realtime_tests/test_realtime.py, new tests/test_realtime_harness.py
+and this progress file for the single owner-authorized local commit
+`test(realtime): repair transaction-scoped acceptance`. Both direct schedules
+explicitly own transactions; rollback remains explicit, late commit follows the
+independent team's commit/snapshots, and all original assertions/helper arguments
+are preserved. The two privacy schedules and production code are unchanged.
+No new dependency, migration, guard, timeout or certification change. Earlier
+UNCOMMITTED/pending-live entries below retain their checkpoint scope.
+
+PASS for the four guarded PostgreSQL schedules and bounded local repair review.
+This does not certify browser EventSource/proxy buffering/reconnect transport,
+HTTPS/mobile/keyboard, SSE/history-heavy load, profile0006 acceptance, public CI,
+benchmark or deployment. The first failed attempts' exact exception remains
+unattributed; a later pass cannot reconstruct it. No PostgreSQL, migration,
+acceptance rerun, service/browser, cleanup, push, remote or deployment operation
+was performed during this evidence review. Owner exercise: explain why this
+accepted historical receipt remains valid evidence for its tested snapshot even
+though the strict current-tree verifier rejects a later documentation/HEAD change.
+
+SSE test-harness repair, 2026-11-14 ? implemented and database-free tested,
+UNCOMMITTED, on base3650e62cbde10110068385e7049456a1649f9849. Owner authorized
+only test-harness changes/offline verification. The failed realtime receipt
+5edd36ee0ef1488083fd2e49d7798135 records a first-case call-phase exception;
+its sanitized category does not identify the original runtime exception/line.
+Source identifies a definite missing active transaction in both direct _change
+schedules. This repair does not retrospectively establish that run's root cause.
+
+Both schedules now enter c.begin() before the private lifecycle helper. The
+rollback schedule explicitly rolls back its transaction after asserting concurrent
+reads see the old committed state, then checks unchanged notifications/roster.
+The late-commit schedule holds its transaction through the independent-team commit
+and intermediate snapshots; successful context exit commits before final reads
+and exact replay checks. A helper/observer/independent-command exception rolls
+back before connection release; commit failure receives SQLAlchemy context cleanup
+subject to driver availability. No ambiguous database COMMIT outcome is certified.
+All guarded assertions and helper arguments are AST-identical; the two privacy/
+succession/redemption/removal schedules are unchanged. No production service,
+lock/idempotency protocol, guard, timeout, certification or dependency change.
+
+New tests/test_realtime_harness.py invokes the actual two schedule functions with
+in-memory connection/transaction/observer/client doubles. Each private helper call
+passes the real idempotency _active_transaction guard. Eight cases cover successful
+rollback and late-commit/replay ordering plus injected helper, observer, independent
+team and commit failures, requiring transaction release before connection closure.
+These tests verify control flow, not real PostgreSQL visibility or driver failure
+behavior. Live fixtures, SQL, engines, listeners and browsers are never executed.
+
+Actual commands from backend (existing Windows PowerShell/Python3.11.9 venv):
+
+| Command | Actual result |
+| --- | --- |
+| `.\.venv\Scripts\python.exe -m pytest tests/test_realtime_harness.py -q --tb=short` before repair |8 failed,5.11s, exit1; real ownership guard raises transaction_configuration with the old schedules|
+| `.\.venv\Scripts\python.exe -m pytest tests/test_realtime_harness.py tests/test_realtime.py tests/test_lifecycle_readiness.py -q --tb=short` after repair |42 passed,4.53s, exit0|
+| `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short` |1719 passed /32 deselected,55.98s, exit0|
+| `.\.venv\Scripts\python.exe -m pytest realtime_tests --collect-only -q --race-repetitions=1` |exactly4 cases collected,0.04s, exit0; no fixtures executed|
+
+Syntax/AST inspection passed for both changed Python files. Hash verification
+confirms all612 pre-existing guarded/release JSON evidence files are byte-identical.
+Logs/hash baseline are new ignored test-results/sse-harness-repair files; no old
+report, receipt, manifest or fixture was rewritten. The existing offline launcher
+unit tests created14 additional ignored guarded diagnostics with zero collected/
+completed cases and not_certified invariants; they are synthetic, not live results.
+Existing Starlette/httpx warning remains. Changed-file inventory: realtime_tests/test_realtime.py, new tests/
+test_realtime_harness.py, and this progress overlay only. Index remains empty;
+HEAD unchanged. No DB access, live rerun, migration, service/browser, cleanup,
+commit, push or remote action. The earlier frozen-checkpoint statements below
+retain their historical scope; this test-only repair is pending owner review.
+
+CONDITIONAL: a fresh four-case exact0005 guarded run is safe to propose after
+owner review/explicit approval of the repaired source and retained-write scope.
+Use release_support.realtime_acceptance --confirm-merge-test with private hidden
+credential input, a quiet validation window and new source-bound receipts; target
+remains actual127.0.0.1:5432 /merge_test /merge_app /0005_invitations. Preserve both
+failed attempts' fixtures/evidence. Do not migrate, reuse old receipts, clean or
+retry on an incomplete result. No live acceptance/pass is claimed. Separate fresh
+approval is required; the current authorization does not permit that command.
+Owner exercise: explain why c.begin() must precede _change(), and why the other
+team remains committed if the held departure transaction rolls back. The offline
+failure cases can be used to inspect that ordering without touching PostgreSQL.
+
 Final release-candidate freeze, 2026-11-14: reviewed all97 pending paths
 (31 tracked modifications /66 new), including executable source/tests, fixed
 production/local target separation, auth/CSRF/Origin/cookies/proxy, SSE privacy/
