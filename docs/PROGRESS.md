@@ -1,5 +1,23 @@
 # Current verified status
 
+## Header favicon polish - 15 November 2026
+
+Added [frontend/public/favicon.png](../frontend/public/favicon.png), a 64x64 RGBA
+capture of the existing App.tsx header mark and unmodified CSS: lowercase m,
+green #315c48, yellow #f2f6b5 and the original rounded tile. No redesign or font
+dependency added. index.html references the PNG; source and production title
+remain `Merge — Find your people`. No default Vite favicon reference exists.
+
+Offline Chromium inspection at 16/24/32 pixels on light/dark backgrounds passed.
+On Windows, Node 22.15.0/npm 10.9.2: `npm.cmd test -- --reporter=dot --maxWorkers=1`
+passed **434 tests in 18 files**, 111.75 s; `npm.cmd run build` passed TypeScript
+and Vite (50 modules, 2.83 s). Production favicon bytes match the source asset.
+`git diff --check` passed; all **1161** pre-review evidence hashes are preserved.
+Only the asset, HTML favicon link and this note changed. No backend, application
+behavior, authentication, deployment or dependency changes; no server/cloud/push
+operation or commit. Isolated asset rendering does not certify a live deployment.
+Proposed local commit: `chore(frontend): use Merge header logo as favicon`.
+
 ## Render setup input rejection diagnostics - 15 November 2026
 
 Started clean at published `96e32e154df38c8447b6a4dd85c6029dbb331d52`.
