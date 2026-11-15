@@ -1,124 +1,205 @@
 # Merge
 
-Race-proof hackathon team formation for Hack4Hack PS1. React/TypeScript, FastAPI,
-PostgreSQL, SSE and explained deterministic teammate ranking. Individual submission;
-deadline **15 November 2026, 23:59 IST**.
+### Hackathon Team Formation Platform
 
-**Status:** product and release tooling are implemented/offline tested as a local
-release candidate. Retained local PostgreSQL evidence records profiles **30/30**,
-SSE **4/4** and lifecycle **10/10**, with provenance limits documented below.
-Public CI, HTTPS deployment, browser acceptance, scale seed and measured
-performance are **pending**. No live URL/video is claimed.
-See [verified progress](docs/PROGRESS.md) and [submission gate](docs/SUBMISSION.md).
-Current UI audit, focused simplifications and offline verification:
-[product review](docs/PRODUCT_AUDIT.md).
-Current recovery, evidence limits and minimum public release checklist:
-[Batch D triage](docs/BATCH_D_RECOVERY.md). The original browser campaign is
-permanently consumed and uncertified; it must not be restarted.
-Local freeze review and exact publication/deployment handoff:
-[Batch E release](docs/BATCH_E_RELEASE.md). Public links and measured load remain
-pending; a local commit does not establish a submitted or deployed release.
+Merge helps hackathon participants find teammates and form teams without
+oversubscribing seats or assigning a participant to two teams in the same event.
+PostgreSQL transactions and constraints govern admission, while React provides
+team discovery, invitations, membership management and explained recommendations.
 
-## Product
+Built for [Hack4Hack Crew Hiring Challenge 2026, PS1](https://hack4hack.com/hackathons/hack4hack-crew-hiring-challenge-2026-tp3m).
+**Current status:** local release candidate. Public CI acceptance, integrated
+browser acceptance, measured load and public HTTPS deployment are outstanding.
 
-Register and explicitly sign in; discover paginated hackathons/teams; create a
-team; request admission; approve/decline as leader; issue recipient-bound expiring
-invitations and redeem a private inbox. Names/usernames/team labels accompany IDs.
-UUID lookup/recipient entry remain advanced fallbacks. Full-catalog name search
-and email delivery are **not implemented**.
+## Overview
 
-Members leave, leaders remove members, deterministic succession uses joined_at
-then UUID, and last departure soft-deletes while retaining history. Confirmations
-and explicit uncertain-command recovery explain outcomes. SSE refetches canonical
-state on visible committed changes/reconnect. Profiles opt in to leader discovery;
-rankings explain new skills and working-hour overlap, then select invite recipients.
+Participants register, sign in, choose a hackathon and browse teams. They can
+create a team, request admission or redeem a recipient-bound invitation. Leaders
+review requests, invite suggested teammates and manage membership. Members can
+leave; leadership transfers deterministically, and the final departure retires
+the team while preserving its audit history.
 
-## Architecture and correctness
+## Key features
 
-PostgreSQL owns membership/capacity/leadership. Membership primary key
-`(hackathon_id,user_id)`, scoped foreign keys and deferred final-state triggers
-backstop the shared transaction protocol. Reserve idempotency key/command hash,
-lock hackathon then affected users in UUID order then team/request/invitation,
-recheck authority/capacity, and commit membership/version/audit/outbox/stored reply
-together. Bounded retries preserve the original command/key; uncertain COMMIT
-requires reconciliation. Pending requests reserve no seats; rankings grant none.
+- **Authentication and profiles:** password authentication, database sessions,
+  validated skills/time zones and explicit discovery opt-in.
+- **Hackathon discovery:** paginated events and teams, capacity information and
+  exact UUID lookup.
+- **Team formation:** idempotent creation, leader-approved join requests and
+  expiring recipient-bound invitations.
+- **Membership lifecycle:** leave, leader removal, automatic succession and
+  last-member soft deletion.
+- **Explainable recommendations:** deterministic skill complementarity and time
+  zone overlap scores, visible to the current team leader.
+- **Realtime updates:** authenticated SSE invalidates affected views so clients
+  refetch canonical state after committed changes and reconnects.
 
-Argon2 has a bounded work budget. Sessions store token hashes. Production cookies
-are Secure, HttpOnly, SameSite=Lax and host-only, with exact HTTPS Origin, CSRF,
-durable throttles and one explicitly trusted proxy. Secrets/commands remain in
-memory; only public navigation hints persist. No frontend secret or CORS is needed.
+## Technology stack
 
-SSE polls committed public/private counts in short read-only transactions every2s,
-with subscriber/lease limits; no private event payload or exactly-once guarantee.
-Retained-history scan cost is unmeasured. Ranking is deterministic, not AI/ML:
-`70 * novel_skill_fraction + 30 * timezone_overlap`, assuming09:00-17:00 local.
-Exact fractions/UUID ties, bounded pool/pages and snapshot cursors preserve stable
-order. Self-reported profiles are not skill verification or actual availability.
-Contracts: [transactions](docs/TEAM_SERVICES.md), [lifecycle](docs/LIFECYCLE.md),
-[retries](docs/TRANSACTION_RETRY.md), [realtime](docs/REALTIME.md), [ranking](docs/RANKING.md).
+| Area | Implementation |
+| --- | --- |
+| Frontend | React 19, TypeScript 5.8, Vite 6 |
+| API | Python 3.11, FastAPI, Pydantic 2, Uvicorn |
+| Persistence | PostgreSQL 17, SQLAlchemy 2, psycopg 3, Alembic |
+| Security | Argon2id, opaque cookie sessions, CSRF/Origin checks, durable throttles |
+| Verification | pytest, Vitest, Testing Library, browser acceptance harnesses, k6 tooling |
+| Delivery | GitHub Actions; Docker Compose and Caddy production package |
 
-## Reproducible offline setup
+Exact versions are pinned in [backend dependencies](backend/requirements.lock)
+and the [frontend lockfile](frontend/package-lock.json).
 
-Prerequisites: Python 3.11 (local evidence: 3.11.9), Node 22.15.0, npm 10.9.2, Git.
-Existing Windows venvs need no activation/execution-policy change. Installation
-requires approved package access; PostgreSQL is unnecessary for these checks.
+## Architecture
 
-```powershell
-Set-Location I:\Merge
-python -m venv backend/.venv
-.\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements.lock
-Set-Location frontend
-npm ci
-Set-Location ../backend
-.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short
-if ($LASTEXITCODE -ne 0) { throw 'Backend failed' }
-.\.venv\Scripts\python.exe -m app.production.check
-if ($LASTEXITCODE -ne 0) { throw 'Production configuration failed' }
-Set-Location ../frontend
-npm test -- --reporter=dot --maxWorkers=1
-if ($LASTEXITCODE -ne 0) { throw 'Frontend failed' }
-npm run build
-if ($LASTEXITCODE -ne 0) { throw 'Typecheck/build failed' }
+```text
+React / TypeScript
+       | same-origin HTTPS + SSE
+       v
+Caddy: static assets + reverse proxy       (planned production entry point)
+       |
+       v
+FastAPI modular monolith
+       | short, owned transactions
+       v
+PostgreSQL: membership + sessions + idempotency + audit/outbox
 ```
 
-Linux uses `backend/.venv/bin/python`. Offline setup never migrates/starts a server.
-Do not use unrestricted DB tests, ordinary `alembic upgrade head`, retained fixture
-cleanup or benchmark startup. [Release validation](docs/RELEASE_VALIDATION.md)
-separates exact-version targets and approvals. Local profile acceptance ran at
-**0006_profiles**; production migration/readiness remains separately unverified.
+The production package uses one API worker, private database networking, persistent
+volumes and separate runtime/migration credentials. It has been checked offline;
+images, restricted database grants and HTTPS behavior require live verification.
+See [architecture](docs/ARCHITECTURE.md) and [deployment](docs/DEPLOYMENT.md).
 
-## Hosting and evidence
+## Engineering highlights
 
-Ordinary Settings/app.serve remain limited to local127.0.0.1:5432/merge_dev as
-merge_app. Development DB setup/startup needs separate reviewed authorization;
-retained merge_test is never a seed target. Vite is only a development proxy.
+- **Transaction-safe admission.** Active membership is keyed by
+  `(hackathon_id, user_id)`. Scoped foreign keys and deferred final-state checks
+  backstop capacity, leadership and membership consistency.
+- **Deterministic lock ordering.** Mutations reserve the idempotency key, lock the
+  hackathon, affected users in UUID order, then the team and request/invitation.
+  Authorization and capacity are rechecked under lock. Pending requests reserve
+  no seats.
+- **Idempotency and replay protection.** Caller/operation/key plus a command
+  fingerprint identify a mutation. Successful replies commit with the effect;
+  mismatched reuse is rejected. Bounded retries preserve the original command,
+  and an uncertain commit requires reconciliation.
+- **Consistent audit/outbox.** Membership, team version, audit record, outbox event
+  and stored reply commit or roll back together.
+- **Authorized SSE invalidation.** Short read-only polls inspect committed,
+  subscriber-visible outbox counts. Session and scope checks protect private
+  signals; frames carry no private domain payload. Reconnect refetches state.
+- **Explainable ranking.** Exact deterministic scores combine skill novelty
+  (70 points) and assumed working-hour overlap (30 points), with UUID tie breaks
+  and bounded snapshot pages. Recommendations never grant membership.
 
-[Production packaging](docs/PRODUCTION.md) proposes a Linux VPS, Caddy HTTPS/static
-React, one API worker and private PostgreSQL17/persistent volumes. Separate mounted
-runtime/migration secrets and exact merge_prod identity prevent local/test fallback;
-startup never initializes/migrates. Native images/configuration, TLS and restricted
-DB-role behavior remain unrun. Review launch/backup/rollback gates before deployment.
+Detailed contracts: [transactions](docs/TEAM_MUTATIONS.md),
+[retries](docs/TRANSACTION_RETRY.md), [SSE](docs/REALTIME.md),
+[matching](docs/RANKING.md).
 
-Prior owner-run local invitation evidence records39 cases (13 x3), including three
-50-distinct-authenticated-caller last-seat races:1 success/49 safe rejections.
-[G1 evidence](docs/G1_ACCEPTANCE.md) documents aggregate/provenance limits. This is
-not public CI or production proof. Retained SSE4/profile30 reports passed on
-their historical sources; lifecycle10 has an aggregate report and owner-confirmed
-native exit. They do not certify the changed source or browser/HTTPS transport.
-Actions isolates PostgreSQL16 jobs at0003/0004/0005/0006 and includes the race;
-no public run exists. New disposable merge_bench tooling seeds10000/2000 and k6
-measures100 VUs, p95<200ms, optionally32 SSE clients. No measured result exists.
-Never benchmark retained test or production databases.
+## Getting started
 
-- [Current freeze results](docs/PROGRESS.md) / [combined 97-file inventory](docs/BATCH_C.md)
-- [One-page design](docs/DESIGN_ONE_PAGE.md)
-- [Five-minute demo script](docs/DEMO.md), no video recorded
-- [Submission links/checklist](docs/SUBMISSION.md)
-- [Batch A](docs/BATCH_A.md) / [Batch B](docs/BATCH_B.md)
-- [Requirements](docs/REQUIREMENTS.md), [architecture](docs/ARCHITECTURE.md), [decisions](docs/DECISIONS.md)
+Prerequisites: Git, Python **3.11**, Node **22.15.0**, npm **10.9.2**.
+PostgreSQL **17** is needed for application use and database acceptance, but not
+for the default offline suite. Commands below use PowerShell from the repository
+root; replace the Python path with `backend/.venv/bin/python` on Linux.
 
-Source review covers labels/native controls, skip link, focus/status handling,
-responsive stacking and long labels. Current real browser/mobile/keyboard proof
-is pending; jsdom is not a browser certificate. Owner exercise: explain why
-/health differs from readiness and why a lost response reuses the original key.
-Local freeze approval does not authorize publication or live actions.
+```powershell
+git clone https://github.com/ankit8github/Merge.git
+Set-Location Merge
+python -m venv backend/.venv
+.\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements.lock
+npm.cmd --prefix frontend ci
+```
+
+Then follow [local setup](docs/SETUP.md) for the separate steps:
+
+1. Provision a fresh local database and migrate to an explicit revision.
+2. Configure the ignored backend environment and authentication settings.
+3. Start the controlled API launcher and the Vite frontend in separate terminals.
+
+Database setup changes local state and is deliberately separate from dependency
+installation. Retained acceptance databases must never be reused as development
+or benchmark targets. Production uses the separate [deployment runbook](docs/DEPLOYMENT.md).
+
+## Testing and verification
+
+Run the database-free checks with existing dependencies:
+
+```powershell
+Set-Location backend
+.\.venv\Scripts\python.exe -B -m pytest -q -m 'not database' --tb=short
+.\.venv\Scripts\python.exe -B -m app.production.check
+Set-Location ../frontend
+npm.cmd test -- --reporter=dot --maxWorkers=1
+npm.cmd run build
+```
+
+Latest local verification on Windows: **1,975 backend tests passed** (32 database
+cases deselected), **434 frontend tests passed** across 18 files with one worker,
+and the **TypeScript/production build passed**. These checks used existing locked
+dependencies. Exact commands, timings and warnings are recorded in
+[testing](docs/TESTING.md). Offline results do not establish PostgreSQL race,
+public CI, browser or performance certification.
+
+| Verification scope | Evidence / status |
+| --- | --- |
+| Local PostgreSQL profiles | 30/30 on historical exact `0006_profiles` sources |
+| Local PostgreSQL SSE | 4/4 on historical exact `0005_invitations` sources |
+| Local PostgreSQL lifecycle | 10/10; aggregate report and owner-confirmed exit |
+| Local authenticated last-seat race | Prior invitation acceptance: 13 cases x 3; three 50-caller races, each 1 success / 49 safe rejections |
+| Public GitHub Actions | Reported service initialization failure; configuration corrected locally, new passing run required |
+| Full integrated browser acceptance | Incomplete; original consumed campaign is uncertified |
+| Scale seed and load | Tooling exists for 10,000 users / 2,000 teams / 100 clients; not executed, no measured p95 |
+| Public HTTPS deployment | Not verified; no live URL claimed |
+
+Historical reports retain their original source/provenance limits. This polish
+does not recertify them. See [progress](docs/PROGRESS.md),
+[G1 evidence](docs/G1_ACCEPTANCE.md) and [testing scope](docs/TESTING.md).
+
+## Deployment
+
+The proposed Linux deployment serves React and proxies the API/SSE through Caddy
+on HTTPS, with FastAPI and PostgreSQL on private Docker networks. Startup does
+not run migrations. Secrets are mounted from ignored private files.
+[Deployment preparation](docs/DEPLOYMENT.md) links the full launch, backup and
+rollback runbook.
+
+## Project structure
+
+```text
+backend/
+  app/                 API, domain services, security, production entry point
+  alembic/             Versioned PostgreSQL migrations
+  tests/               Default offline tests; database tests explicitly marked
+  *_tests/             Guarded PostgreSQL acceptance suites
+  test_support/        Exact-version test and browser guards
+  release_support/     CI, seed, load and evidence tooling
+frontend/
+  src/                 React views, hooks, API client and component tests
+  test_support/        Browser campaign and evidence tooling
+acceptance/            Versioned browser campaign specification
+deploy/                Dockerfiles, Compose and Caddy template
+load/                  k6 board scenario and environment template
+scripts/               Provisioning, inspection and local configuration tools
+docs/                  Setup, design, testing, deployment and component contracts
+```
+
+## Design documentation
+
+- [One-page technical design](docs/DESIGN_ONE_PAGE.md)
+- [Architecture](docs/ARCHITECTURE.md) and [decision records](docs/DECISIONS.md)
+- [Documentation index](docs/README.md)
+- [Requirements](docs/REQUIREMENTS.md), [submission checklist](docs/SUBMISSION.md)
+  and [walkthrough script](docs/DEMO.md)
+- [Historical review catalog](docs/archive/README.md)
+
+## Limitations and current status
+
+Full-catalog name search and email delivery are absent; exact UUID entry remains
+available. Profiles are self-reported, and time zone overlap assumes 09:00-17:00
+local working hours. SSE scans retained history; its cost and ranking performance
+need measurement. Ordered/exactly-once delivery and multi-instance capacity are
+not claimed. Parallel frontend runs have shown timing intermittency; the repeatable
+verification command uses one worker.
+
+Public CI, browser/mobile/keyboard acceptance, native production rehearsal,
+HTTPS, the required load report, design export and walkthrough video remain
+release gates. The submission deadline is **15 November 2026, 23:59 IST**.

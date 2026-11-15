@@ -25,10 +25,10 @@
       "strategy": {"fail-fast": false, "matrix": {"revision": ["0003_auth", "0004_admission", "0005_invitations", "0006_profiles"]}},
       "services": {
         "postgres": {
-          "image": "postgres:16",
+          "image": "postgres:17",
           "env": {"POSTGRES_PASSWORD": "${{ github.run_id }}-${{ github.run_attempt }}"},
           "ports": ["127.0.0.1:5432:5432"],
-          "options": "--health-cmd 'pg_isready -U postgres -d postgres' --health-interval 5s --health-timeout 5s --health-retries 10"
+          "options": "--health-cmd=pg_isready --health-interval=5s --health-timeout=5s --health-retries=10"
         }
       },
       "steps": [

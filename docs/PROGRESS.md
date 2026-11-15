@@ -1,5 +1,66 @@
 # Merge — Verified Progress, Risks & Next Actions
 
+## Repository polish and CI configuration correction - 2026-11-15
+
+Started clean on main at published `0d4c536cca83b42f2f572c429eb783e02d9885ac`.
+Bounded scope: workflow health/image, offline regression coverage and public
+documentation/navigation. No application, dependencies, migration, transaction,
+authentication/session, fixture or deployment-topology change.
+
+Changed PostgreSQL CI image 16 -> 17 and replaced the quoted multiword health
+command with the requested four equals-form flags. Retained JSON/YAML-subset
+encoding for existing standard-library validators. Preserved the four exact
+revision jobs, authenticated suites, 50-caller invitation race, network-namespace
+execution, strict receipt checks and artifact failure policy. New offline tests
+pin those contracts. **This is a configuration correction, not a verified public
+CI fix: no new Actions run was triggered or observed.**
+
+Rewrote README for evaluators/contributors and added focused setup/testing/
+deployment guides, documentation index and historical review catalog. Added a
+current architecture overview ahead of the retained historical blueprint. All
+303 baseline paths are retained; zero physical moves/removals. Historical reports
+stay at stable paths/bytes; archive navigation groups them without rewriting
+provenance. Full classification: [repository audit](archive/REPOSITORY_AUDIT.md).
+No baseline broken Markdown file links were found. No license terms invented.
+Suggested GitHub description/topics are prepared in the audit, not applied.
+
+Actual Windows PowerShell/Python 3.11.9/Node 22.15.0/npm 10.9.2 checks, existing
+locked dependencies (no install):
+
+| Directory / exact command | Actual outcome |
+| --- | --- |
+| backend: `.\.venv\Scripts\python.exe -B -m pytest -q -m 'not database' --tb=short` | 1975 passed, 32 deselected, 97.06 s, exit 0 |
+| backend: `.\.venv\Scripts\python.exe -B -m pytest -q tests/test_ci_configuration.py tests/test_release_support.py tests/test_production.py --tb=short` | 159 passed, 10.46 s, exit 0 |
+| frontend: `npm.cmd test -- --reporter=dot --maxWorkers=1` | 434 passed / 18 files, 147.91 s, exit 0 |
+| frontend: `npm.cmd run build` | TypeScript/Vite passed, 50 modules, Vite 3.48 s, exit 0 |
+| backend: `.\.venv\Scripts\python.exe -B -m app.production.check` | Offline contracts passed, exit 0; native runtime unverified |
+| backend: `.\.venv\Scripts\python.exe -m pip check` | No broken requirements, exit 0 |
+| root: `node --check <file>` for load/board.js and all six frontend/test_support JS/MJS files | Seven passed; no browser/k6 execution |
+| root: `git diff --check` and local static/hash/reference review | Passed; exact scope/reproduction in TESTING.md |
+
+Existing Starlette/httpx and Git line-ending warnings remain. The targeted secret
+scan's three existing synthetic Origin/DSN/redaction fixture matches were inspected
+and bound to unchanged baseline hashes; no unreviewed match remains. Initial scan
+and reviewed report are both retained. Local hash baseline covers 958 preexisting
+evidence files, all byte-identical and ignored. New validation summaries/helper
+are under ignored backend/test-results/repo-polish-e61161879e0a416784e2bc8ff3e44e00/.
+Historical acceptance is not recertified or rewritten.
+The first local helper ignore comparison failed because Windows text-mode stdin
+added carriage returns to Git path arguments. NUL-delimited byte input corrected
+the helper; evidence bytes and ignore rules were not changed.
+
+No PostgreSQL access, migration, fixture cleanup, service/browser startup,
+benchmark, remote push/rerun/settings change or deployment. Public CI remains
+pending a new owner-approved push/run; public HTTPS, native packaging/grants,
+full integrated browser/mobile/keyboard, seed/load, design export and video remain
+outstanding. Owner authorizes one local commit only after complete review;
+commit identity/status are reported after creation, without claiming remote proof.
+
+Owner exercise: explain why bare pg_isready checks server availability while the
+wrapper checks authenticated identity; then reintroduce the old quote pattern in
+a temporary copy and show the offline token regression rejects it.
+
+
 **Last updated:** 2026-11-15
 **Competition:** Hack4Hack Crew Hiring Challenge 2026, PS1.
 **Official deadline:** 2026-11-15 23:59 IST.

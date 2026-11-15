@@ -1,3 +1,42 @@
+# Merge - Architecture
+
+## Current implementation overview
+
+Merge is a React/TypeScript frontend and FastAPI modular monolith backed by
+PostgreSQL 17. The database owns membership, capacity, leadership, sessions,
+idempotency and audit/outbox state. A successful mutation commits its domain
+effect, version, audit, outbox and stored reply together. Active membership uses
+`(hackathon_id, user_id)` as its primary key; scoped foreign keys and deferred
+final-state triggers enforce cross-row invariants.
+
+Mutation services acquire idempotency ownership, then hackathon, sorted affected
+user, team and auxiliary request/invitation locks. Eligibility and current
+authority are rechecked under those locks. Bounded retries retain the original
+command/key; uncertain commit outcomes require reconciliation. See the concrete
+[mutation contract](TEAM_MUTATIONS.md), [lifecycle](LIFECYCLE.md) and
+[retry protocol](TRANSACTION_RETRY.md).
+
+Authenticated SSE polls committed subscriber-visible outbox counts in short
+read-only transactions and asks clients to refetch. It carries no private domain
+payload, holds no transaction across network waits and offers no ordered or
+exactly-once delivery guarantee. [Realtime](REALTIME.md) documents bounds and
+unmeasured retained-history cost. [Ranking](RANKING.md) uses deterministic 70/30
+skill-novelty/time-zone scores with opt-in and leader authorization.
+
+The proposed production topology is Caddy HTTPS/static React, one API worker and
+private PostgreSQL with separate runtime/migration roles. Native packaging,
+restricted grants, HTTPS/browser behavior and load remain unverified. Start with
+[deployment](DEPLOYMENT.md), [testing](TESTING.md) and the
+[one-page design](DESIGN_ONE_PAGE.md).
+
+## Design evolution and historical blueprint
+
+The dated overlays and original proposal below are retained as design history.
+Their checkpoint status and future-tense API sketches apply to the dates recorded;
+they are not the current feature inventory. Later refinements and concrete
+component contracts describe implementation. [DECISIONS.md](DECISIONS.md) retains
+the rationale and [PROGRESS.md](PROGRESS.md) records evidence.
+
 # Merge — Architecture Blueprint (Proposed v1.0)
 
 Batch C proposes a separate production-only entry point and single-host HTTPS
