@@ -4,6 +4,24 @@ Deadline: **2026-11-15 23:59 IST**. Prepared only; nothing published/submitted.
 Replace PENDING only after approval/verification. No secrets, fixture dumps or
 invented measurements. Check organizer workspace requirements before delivery.
 
+**Batch E local freeze, 2026-11-15:** the owner authorized exactly one reviewed
+local commit, `chore(release): finalize application acceptance tooling`, after
+offline/staged checks. This supersedes earlier local-commit approval limits only.
+No remote, PostgreSQL, host/browser, benchmark, provisioning, deployment or form
+interaction is authorized. Current review, exact future command sequences,
+authentication/hosting prerequisites and missing links:
+[BATCH_E_RELEASE.md](BATCH_E_RELEASE.md). No live link or CI/load/browser pass is
+claimed by the local freeze; preserve the consumed campaign and old receipts.
+
+**2026-11-15 triage:** retained local profile30/SSE4/lifecycle10 evidence exists;
+do not repeat those live suites automatically. The integrated browser campaign
+is permanently consumed with0/13 checkpoints and0 POSTs; readiness/drain and
+database-wide preservation remain uncertified. The diagnostic-only correction
+does not prove live startup or repair that historical run. Current evidence,
+source eligibility and prioritized next steps: [BATCH_D_RECOVERY.md](BATCH_D_RECOVERY.md).
+The older approval command blocks below are historical proposals, not authority
+to rerun preparation, migrations, acceptance or the consumed campaign.
+
 | Required item | Link-ready location | State |
 | --- | --- | --- |
 |Public repository|PENDING: verified repository URL|Local A/B/C release candidate; no remote publication.|

@@ -118,6 +118,78 @@ Require profiles / exact0006 / repetition1 / collected30 / teardown30 / skip0 /
 failures[] / exit0 / completed invariant checks plus30 unique successful node IDs.
 No admission/G1 certification is inferred from the two-writer profile CAS case.
 
+### Profile 0005 read-only inspection: interactive authentication repair
+
+The first independent inspection stopped at connection setup: one attempt, no
+inspection SELECTs, native1. Its launcher used environment passwords or libpq's
+password file without a hidden-input prompt. The recorded local preflight found
+neither an environment password nor a matching profile password-file entry. The
+suppressed connection exception does not establish its precise transport/auth
+cause. The successful preparation runner supports hidden `getpass` input.
+
+`release_support.profile_inspection` preserves the historical collector and adds
+the missing hidden-input path: existing `MERGE_RELEASE_DB_PASSWORD`, otherwise
+existing `PGPASSWORD`, otherwise `getpass`. Empty input, EOF, cancellation or an
+unavailable hidden console stops before connecting; `GetPassWarning` is fatal
+before echoed fallback input. The password stays in process memory and is passed
+directly to psycopg, never written into environment variables, reports or command
+arguments. Exception reports retain only class, SQLSTATE and stage.
+
+Only `127.0.0.1:5432 / merge_profile_test / merge_app` is allowed. The explicit
+loopback `hostaddr` also prevents inherited `PGHOSTADDR` redirection. Confirmation,
+non-autocommit, read-only REPEATABLE READ snapshot, 5s connect/lock and 15s statement
+bounds, role/identity/revision guards and rollback are retained. This launcher
+collects a snapshot; even native0 means `snapshot_complete_requires_definition_review`,
+not certification. Constraints/indexes/triggers/functions still require the full
+independent definition review. Existing migration `verify` expects0006 and cannot
+substitute for this inspection. No migration authorization follows automatically.
+
+The stdout-only worker previously relied on an optional multi-line owner block
+for persistence. The shorter module command bypassed that block: native0 and
+printed JSON alone did not create reviewable evidence. Direct module invocation
+now enters `profile_inspection_capture`; only its supervised child calls the
+unchanged inspection function. The child inherits the console for hidden input;
+no password is sent in arguments, environment changes or saved diagnostics.
+
+After separate owner approval of ONE new read-only inspection, run this ONE
+command in a native PowerShell console, without output redirection or Tee-Object:
+
+```powershell
+& 'I:\Merge\scripts\inspect_merge_profile_0005.ps1'
+```
+
+The script anchors the repository/backend/interpreter regardless of the current
+directory. The supervisor creates a fresh ignored
+`backend/test-results/profile-0005-readonly-<uuid>/` directory and retains:
+
+- `source-manifest.json`: HEAD and tracked/nonignored source SHA256 values.
+- `started.json`: an incomplete, uncertified start marker binding source and
+  worker/supervisor hashes before launching exactly one child process.
+- `database-snapshot.json`: the approved worker JSON, including sanitized partial
+  results on ordinary inspection failure; raw/unparseable output is discarded.
+- `process-receipt.json`: the independently observed child return code, source
+  stability, interruption state and SHA256 bindings to the three other files.
+
+Files are UTF8, exclusively created and never overwritten. Failed/unknown worker
+exits, timeout/cancellation, source drift, invalid JSON, failed persistence, missing
+conditions or missing definition inventories return nonzero and preserve evidence.
+No child retry or fixture cleanup follows failure. Raw stderr, exception messages,
+password fields and DSNs are never retained in the capture reports.
+
+The offline `profile_inspection_capture.validate_capture` gate checks all four
+files, source bindings, SHA256 consistency, actual native0 and all19 exact-true
+conditions. Even a complete capture is only
+`capture_complete_requires_definition_review`, with `final_certified=false`.
+Independent identity/grants/definition review remains mandatory before a separate
+0006 approval. A snapshot alone, a start marker or native0 alone cannot certify.
+The supervisor prints the unique evidence directory and child exit. This is local
+integrity evidence, not signed independent provenance. Freeze source before the
+approved run; retain failed/incomplete artifacts unchanged.
+
+Source hashes will differ from earlier preparation receipts after this repair;
+retain those original receipts unchanged. The fresh inspection binds the current
+source tree and does not rewrite or extend the historical preparation evidence.
+
 ## 4. Approve isolated public CI separately
 
 Publishing/committing/pushing/dispatching Actions needs separate owner approval.

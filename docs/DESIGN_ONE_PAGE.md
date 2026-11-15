@@ -41,8 +41,9 @@ proxies, not AI or actual availability.
 
 **Evidence/trade-offs.** Prior local G1:13 invitation cases x3, including three
 50-caller last-seat races (1 success/49 safe rejections); local lifecycle acceptance
-also exists. Public CI, current SSE/profile PostgreSQL,10k/2k seed,100-VU p95<200ms
-and deployed HTTPS/browser evidence remain pending. Offline tests cannot certify
+records10/10; retained SSE4/4 and profile30/30 also passed on historical sources.
+Public CI,10k/2k seed,100-VU p95<200ms and deployed HTTPS/browser evidence remain
+pending. The consumed browser campaign is uncertified. Offline tests cannot certify
 races/TLS/load. History-growing SSE COUNT and10k candidate ranking need measurement;
 one VPS is a failure domain. No broker or full-catalog name search.
 

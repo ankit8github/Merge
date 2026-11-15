@@ -5,9 +5,19 @@ PostgreSQL, SSE and explained deterministic teammate ranking. Individual submiss
 deadline **15 November 2026, 23:59 IST**.
 
 **Status:** product and release tooling are implemented/offline tested as a local
-release candidate. Public CI, deployment, current SSE/ranking live acceptance,
-scale seed and measured performance are **pending**. No live URL/video is claimed.
+release candidate. Retained local PostgreSQL evidence records profiles **30/30**,
+SSE **4/4** and lifecycle **10/10**, with provenance limits documented below.
+Public CI, HTTPS deployment, browser acceptance, scale seed and measured
+performance are **pending**. No live URL/video is claimed.
 See [verified progress](docs/PROGRESS.md) and [submission gate](docs/SUBMISSION.md).
+Current UI audit, focused simplifications and offline verification:
+[product review](docs/PRODUCT_AUDIT.md).
+Current recovery, evidence limits and minimum public release checklist:
+[Batch D triage](docs/BATCH_D_RECOVERY.md). The original browser campaign is
+permanently consumed and uncertified; it must not be restarted.
+Local freeze review and exact publication/deployment handoff:
+[Batch E release](docs/BATCH_E_RELEASE.md). Public links and measured load remain
+pending; a local commit does not establish a submitted or deployed release.
 
 ## Product
 
@@ -74,7 +84,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Typecheck/build failed' }
 Linux uses `backend/.venv/bin/python`. Offline setup never migrates/starts a server.
 Do not use unrestricted DB tests, ordinary `alembic upgrade head`, retained fixture
 cleanup or benchmark startup. [Release validation](docs/RELEASE_VALIDATION.md)
-separates exact-version targets and approvals. **0006_profiles remains unapplied.**
+separates exact-version targets and approvals. Local profile acceptance ran at
+**0006_profiles**; production migration/readiness remains separately unverified.
 
 ## Hosting and evidence
 
@@ -91,7 +102,9 @@ DB-role behavior remain unrun. Review launch/backup/rollback gates before deploy
 Prior owner-run local invitation evidence records39 cases (13 x3), including three
 50-distinct-authenticated-caller last-seat races:1 success/49 safe rejections.
 [G1 evidence](docs/G1_ACCEPTANCE.md) documents aggregate/provenance limits. This is
-not public CI or production proof. New SSE4/profile30 acceptance remains pending.
+not public CI or production proof. Retained SSE4/profile30 reports passed on
+their historical sources; lifecycle10 has an aggregate report and owner-confirmed
+native exit. They do not certify the changed source or browser/HTTPS transport.
 Actions isolates PostgreSQL16 jobs at0003/0004/0005/0006 and includes the race;
 no public run exists. New disposable merge_bench tooling seeds10000/2000 and k6
 measures100 VUs, p95<200ms, optionally32 SSE clients. No measured result exists.

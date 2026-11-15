@@ -352,7 +352,12 @@ export function errorMessage(error: ApiError): string {
   if (error.status === 401) return error.code === 'invalid_credentials' ? 'Username or password is incorrect.' : 'Your session has ended. Sign in again.';
   if (error.status === 403) return 'This request was denied. Check the application origin or restore your session before trying again.';
   if (error.status === 404) return 'This hackathon or team is no longer available. Refresh the list.';
-  if (error.status === 409) return 'That username is unavailable. Choose another.';
+  if (error.status === 409) {
+    if (error.code === 'username_unavailable') return 'That username is unavailable. Choose another.';
+    if (error.code === 'profile_changed') return 'Your profile changed. Reload it before editing again.';
+    if (error.code === 'ranking_changed') return 'Teammate rankings changed. Restart from the first page.';
+    return 'This action conflicts with the current state. Refresh and check before trying again.';
+  }
   if (error.status === 422) return 'The request is invalid. Check the form or restart pagination.';
   if (error.status === 429) return 'Too many attempts. Please wait before trying again.';
   if (error.status === 503) return error.retryable ? 'The service is busy. You can try again shortly.' : 'The service is unavailable. Try again later.';

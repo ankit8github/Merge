@@ -20,11 +20,11 @@ export default function HealthStatus() {
     })();
     return () => { active = false; window.clearTimeout(timeout); controller.abort(); };
   }, [attempt]);
-  return <section className="health" aria-label="Backend status">
+  return <section className="health" aria-label="Service connection">
     <div role="status" aria-live="polite">
-      {state === 'loading' && <p>Checking backend…</p>}
-      {state === 'success' && <p><span className="status-dot" />Backend is healthy.</p>}
-      {state === 'error' && <p>Backend unavailable. Start the API and try again.</p>}
+      {state === 'loading' && <p>Checking service…</p>}
+      {state === 'success' && <p><span className="status-dot" aria-hidden="true" />Service is responding. This check does not verify team or account access.</p>}
+      {state === 'error' && <p>We could not check the service. Try again shortly.</p>}
     </div>
     <button className="text-button" disabled={state === 'loading'} onClick={() => setAttempt(value => value + 1)}>Check again</button>
   </section>;

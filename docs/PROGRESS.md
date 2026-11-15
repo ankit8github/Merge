@@ -1,9 +1,469 @@
 # Merge — Verified Progress, Risks & Next Actions
 
-**Last updated:** 2026-11-14
+**Last updated:** 2026-11-15
 **Competition:** Hack4Hack Crew Hiring Challenge 2026, PS1.
 **Official deadline:** 2026-11-15 23:59 IST.
 **Status policy:** Mark DONE only with recorded evidence. 'Planned', 'in progress', 'implemented', 'tested' and 'verified' are not interchangeable.
+
+## Batch E final local release freeze — 2026-11-15
+
+**Local freeze gates passed; exactly one local commit authorized by the owner.**
+The approved message is `chore(release): finalize application acceptance tooling`.
+The actual commit hash/native result and clean status are recorded after creation
+in the final response and ignored freeze receipt; this source entry does not invent
+a self-referential commit hash. Public delivery/submission remains incomplete.
+Current exact publication/hosting/performance/export steps and prerequisites:
+[BATCH_E_RELEASE.md](BATCH_E_RELEASE.md).
+
+Verified starting main HEAD db17f3ef2c2934d2d4cc7db06499a291949a3d16, exactly
+39 pending paths, none staged; all reviewed by category/path. Batch E changes
+documentation only: README/PROGRESS/SUBMISSION status, finalized DEMO.md and new
+BATCH_E_RELEASE.md. Those two added inventory paths yield 41 reviewed paths for
+the single freeze commit. No runtime, dependency, schema or migration change.
+The existing approved UI, integrated host/diagnostics/ledger/observer/certifier,
+public plan and profile inspection/capture tests/tooling are included as reviewed.
+
+Auth/session/CSRF/Origin/throttle checks and PostgreSQL invariants/transaction locks
+remain intact. Production source imports no new integrated/inspection module;
+Dockerfile.api excludes those modules/test_support, retaining only existing
+migration helpers. Old browser hosts, plan, consumed marker and receipts are
+preserved. Original campaign remains 0/13 browser checkpoints/0 POSTs with unknown
+readiness/exact failed drain check and no final observer. Zero POSTs is not a
+database-wide preservation certificate. Historical profile30/SSE4/lifecycle10
+evidence retains its scope and provenance; no PostgreSQL rerun or receipt rewrite.
+
+GitHub workflow source reviewed: isolated PostgreSQL16 matrix at exact0003/0004/
+0005/0006, auth-api18/team-api35/admission35/invitations13/lifecycle10/realtime4/
+profiles30; invitations includes the actual distinct-authenticated-50-caller case
+and PostgreSQL overlap/invariant/replay assertions. No Actions execution occurred.
+Local author identity is configured; only sample hooks exist; no remote is set.
+GitHub authentication is unverified. gh, Docker, Caddy and k6 are absent locally;
+no installation, credential inspection, native container validation or remote call.
+
+Reviewed Caddy/React -> single FastAPI worker -> private PostgreSQL17 topology,
+fixed runtime/migrator roles/exact0006/origin/proxy boundary and secret-file/volume
+handling. The existing architecture remains viable as a proposal; actual restricted
+grants, images, migrations, HTTPS and smoke still require owner-approved execution.
+Seed/100-VU scripts are ready for separately approved isolated benchmark execution;
+no counts/latency/CI/TLS/browser/deployment result was fabricated. One-page export
+instructions and <=5-minute, credential-free demo script are prepared; no PDF/video
+was rendered or recorded. No organizer form was opened/interacted with. Checklist
+uses the repository-captured official requirements and leaves missing links pending.
+
+Actual validation, existing Windows PowerShell/Python3.11.9/Node22.15.0/npm10.9.2:
+
+| Directory / exact command | Actual result |
+| --- | --- |
+|backend: `.\.venv\Scripts\python.exe -B -m pytest -q -m 'not database' --tb=short`|1972 passed, 32 deselected, 74.71s, native0.|
+|frontend: `npm.cmd test -- --reporter=dot --maxWorkers=1`|434 passed / 18 files, 126.11s, native0.|
+|frontend: `npm.cmd run build`|TypeScript/Vite passed, 50 modules, Vite3.65s, native0.|
+|backend: `.\.venv\Scripts\python.exe -B -m app.production.check`|Offline JSON/topology/security contracts passed, native0.|
+|root: `node --check` individually on load/board.js and all four integratedCampaign/integratedEvidence JS/MJS source/test files|All five passed, native0; no k6/browser execution.|
+|root: PowerShell Parser.ParseInput on both new handoff proposal blocks and inspect_merge_profile_0005.ps1|All parsed, no execution.|
+|root: `git -c safe.directory=I:/Merge diff --check` plus staged/AST/whitespace/secret/artifact inventory|Clean; existing LF/CRLF and Starlette/httpx deprecation warnings remain.|
+
+New ignored evidence directory:
+`backend/test-results/batch-e-freeze-8cd3dd0d101942f29f3ee99a9ecaf1d9/`.
+The preservation baseline contains 928 existing evidence files, including the
+retained failed first inventory attempt in this task; all must remain byte-identical.
+The first helper used strip() on porcelain output, losing the first status space
+and deriving EADME.md; corrected to rstrip(newlines) and retained that attempt.
+It did not stage/modify source or historical evidence. Source/history scan covered
+302 starting source files and603 reachable historical Git blobs with no high-signal
+secret/private-key matches, sensitive artifact paths or oversized unscanned blobs.
+Final staged source/inventory checks follow after documentation is frozen; scan
+results are targeted local review, not a guarantee against unknown secret formats.
+
+Local commit approval is independent of public release completeness. Remaining
+blockers: approved public repo/authentication/push and actual Actions; approved
+VPS/domain/DNS/secrets/native runtime/HTTPS smoke; mandatory seed/load report;
+actual reviewed one-page PDF/video/public links and organizer submission before
+23:59 IST. No network publication, PostgreSQL/migration/fixture, server/browser,
+benchmark, provisioning/deployment or form operation occurred in this freeze.
+Next protected action requires owner authentication and explicit public GitHub
+repository/remote/push approval. Owner exercise: trace the 50-caller test through
+the 0005 CI plan and explain why the commit cannot refresh historical receipts.
+
+## Batch D diagnostic recovery and release triage — 2026-11-15
+
+**Implemented/offline tested; CONDITIONAL for owner review. No live startup fix
+or deployment is certified.** Started main at
+`db17f3ef2c2934d2d4cc7db06499a291949a3d16` with 36 pending paths and 299 source
+files. Preserved existing uncommitted Batch D/product work. Full recovery,
+historical evidence and prioritized public release checklist:
+[BATCH_D_RECOVERY.md](BATCH_D_RECOVERY.md).
+
+Added fixed lifecycle instrumentation in integrated_diagnostics.py and wired it
+only into the independent integrated host/run supervisor. Startup entry, Uvicorn
+readiness, shutdown request/completion, run return/interruption and sanitized
+lifecycle failures now survive in reports. A fixed ready banner follows Uvicorn
+startup, without an HTTP request. Each false original drain predicate is named;
+ledger completion has its own stage before the observer. An undrained server's
+forced guard latch is distinguished from a DB rejection. Aggregate GET/auth-route/
+session-validation counters retain no request material and spend no mutation
+budget. Shutdown completion cannot hide lifespan errors.
+
+Mutation ledger, create-once marker, original plan/certifier, both old browser
+hosts, application services, migrations/dependencies and production app bytes
+are unchanged. No completion requirement was weakened. New regression doubles
+prove a ready/drained zero-POST host still fails at ledger_complete; tests cover
+every original drain predicate, startup/shutdown exceptions, forced exit, lifespan
+errors, guest/authenticated GET counts and secret-free diagnostics.
+
+Original campaign `17ff1152-1ac0-4ace-a887-13436dd2963f` is permanently consumed.
+Its original report records stage drain, native child 1, zero attempted/completed
+POSTs and zero domain attempts; owner reports 0/13 browser checkpoints. Readiness,
+exact failed predicate, graceful drain and authenticated GET traffic remain unknown;
+no final observer ran. Zero POSTs is not database-wide preservation certification.
+The separate existing later attempt failed scope_already_started. No retry,
+fixture adoption or new campaign occurred. Original report/marker hashes remain
+unchanged; new flags cannot be reconstructed into old reports.
+
+Reviewed saved PostgreSQL evidence without connection: profile 30/30 at exact
+0006 (source/native-bound receipt); SSE 4/4 at exact 0005 (historical source/native
+receipt); lifecycle 10/10 at exact 0005 (aggregate report and owner-confirmed
+native exit, without an independent source/native receipt). Historical provenance
+limits remain. Changed sources are not eligible under the old profile receipt's
+strict full-source gate for a NEW integrated start; no receipt was rewritten or
+guard relaxed, and no PostgreSQL rerun is authorized by this entry.
+
+Reviewed pending UI diffs and existing regressions; no confirmed production P0
+code defect was found. Production uses a separate entry point, not the campaign
+host. Updated README/design/submission status to reflect historical local profile/
+SSE/lifecycle evidence and the uncertified browser campaign. Public repository,
+Actions race/API evidence, native production packaging/roles/migrations, HTTPS
+smoke, scale seed/load report and actual design/video/submission links still need
+owner-approved execution. Local Git has no configured remote. Prioritize public
+source/HTTPS delivery and mandatory artifacts over optional harness repetition.
+
+Actual offline validation, Windows PowerShell / Python 3.11.9 / Node 22.15.0 /
+npm 10.9.2, existing locked dependencies, no install or live operation:
+
+| Directory / exact command | Final result |
+| --- | --- |
+|backend: `.\.venv\Scripts\python.exe -B -m pytest tests/test_integrated_diagnostics.py tests/test_integrated_host.py tests/test_integrated_evidence.py tests/test_integrated_plan.py -q --tb=short`|195 passed, 14.32s, native 0.|
+|backend: `.\.venv\Scripts\python.exe -B -m pytest -q -m 'not database' --tb=short`|1972 passed, 32 database cases deselected, 115.34s, native 0.|
+|frontend: `npm.cmd test -- --reporter=dot --maxWorkers=1`|434 passed / 18 files, 213.64s, native 0; jsdom/helper tests only.|
+|frontend: `npm.cmd run build`|TypeScript and Vite passed, 50 modules, Vite 3.93s, native 0.|
+|backend: `.\.venv\Scripts\python.exe -B -m app.production.check`|Offline JSON/topology/security contracts passed, native 0; no native Docker/Caddy validation.|
+|root: `git -c safe.directory=I:/Merge diff --check`; isolated standard-library AST/hash/whitespace/secret-pattern inventory|Passed; targeted scan found no high-signal tokens/private keys. Not a complete security audit.|
+
+Logs/baseline are newly retained under
+`backend/test-results/batch-d-recovery-7c70f6fc2a594620985d11c9f0f54307/`.
+All 885 preexisting evidence files (including all 15 integrated JSON files) remain
+present and byte-identical. Existing Starlette/httpx deprecation and Git line-ending
+warnings remain. Initial focused helper failures (8 failed/186 passed, then 7 failed/
+187 passed) and corrected 194-pass log are preserved. Windows asyncio's internal
+socketpair was blocked by the bind trap; synchronous lifecycle doubles now avoid
+the event loop while keeping the trap. The first full 1971-pass run preceded the
+final lifespan-error case; the final 1972-pass result includes it. No assertion,
+timeout, guard or completion condition was weakened.
+
+Final Git inventory: 39 pending paths (13 tracked modifications / 26 untracked),
+all unstaged; no deletion, stage, commit, push or deployment. This task changed
+eight existing source/document files and added three; other starting pending
+paths are preserved. No secrets, SQL connection, server/browser startup, new
+fixtures, reset/cleanup or historical evidence modification. No dependency or
+migration added. A fresh campaign is justified only after separate source/new-scope
+and live approvals; the old namespace remains BLOCKED permanently.
+
+Owner exercise: predict why the synthetic ready/drained host with no POSTs fails
+at ledger_complete, then flip one fake shutdown predicate and check its recorded
+name. STOP for owner review; no live execution is implied by the offline pass.
+
+## Profile inspection evidence capture repair — 2026-11-14
+
+The previously supplied short module command ran the stdout-only worker; retaining
+its JSON/native exit required a separate optional owner block. A printed successful
+snapshot therefore left no saved evidence. Direct module execution now delegates
+to `release_support.profile_inspection_capture`, which supervises exactly one
+interactive child and preserves its independent process return code alongside a
+sanitized snapshot, source manifest and incomplete start marker in a fresh UUID
+directory. `scripts/inspect_merge_profile_0005.ps1` is the single anchored owner
+command. RELEASE_VALIDATION.md replaces the optional manual persistence block.
+
+Exclusive UTF8 writes, SHA256 bindings, source stability and a strict offline gate
+reject missing/altered files, failed/unknown native exits, source drift, incomplete
+conditions and missing definition inventories. Raw child diagnostics, exception
+messages, password fields and DSNs are not persisted. All19 inspection conditions,
+read-only target/role/timeouts and SQL remain unchanged. A complete capture stays
+`capture_complete_requires_definition_review`, `final_certified=false`; the owner
+must independently review definitions/identity/grants before separately approving0006.
+
+Backend offline command:
+`.\.venv\Scripts\python.exe -B -m pytest tests/test_profile_inspection_capture.py tests/test_profile_inspection_auth.py tests/test_release_support.py tests/test_integrated_plan.py -q --tb=short`:
+initial175 passed,18.39s,native0; FINAL **180 passed,19.59s,native0**, one existing
+Starlette/httpx deprecation warning. Capture tests fake child processes; no worker
+inspection is rerun and socket/DB traps remain in place. Tests cover successful/
+failed persistence, unknown exits, missing artifacts, tampering, source drift,
+interruption, secret-output rejection, no overwrite and all19 required conditions.
+Python AST/new-file whitespace, PowerShell script/owner-command parsing (neither
+executed) and `git diff --check` passed,native0. Evidence/logs are newly retained in
+`backend/test-results/profile-capture-offline-19d371f221f94bbb93e1e247681561cb/`.
+
+No new dependency, PostgreSQL connection, inspection rerun, migration, database
+fixture cleanup, service/browser startup, commit or push. Authentication/capture
+infrastructure is tested offline; actual successful capture and database/schema
+readiness remain pending owner approval. Existing source-bound receipts retain
+their historical scope and must not be rewritten after these source changes.
+Owner exercise: explain why native0 plus printed JSON is insufficient, then use
+the offline missing-artifact test to see the integrity gate reject a partial run.
+
+## Profile inspection authentication repair — 2026-11-14
+
+Added `backend/release_support/profile_inspection.py`, preserving the failed
+inspection's ignored collector/receipts byte-for-byte. The old collector had no
+hidden-input path; recorded preflight found no applicable environment password or
+profile password-file entry. Its precise connection failure remains suppressed.
+The versioned launcher uses an existing process password or hidden `getpass`,
+rejects empty/EOF/cancel/echo fallback before connection, sanitizes failures and
+never writes the password into environment variables, arguments or reports.
+Fixed profile DB/role/address (including hostaddr), read-only repeatable-read
+snapshot, timeouts, role/revision checks and no-retry rules remain intact. All21
+historical SELECT statement literals are unchanged. A successful snapshot still
+requires independent schema-definition review before certification or0006.
+
+Focused offline command from backend:
+`.\.venv\Scripts\python.exe -B -m pytest tests/test_profile_inspection_auth.py tests/test_release_support.py tests/test_integrated_plan.py -q --tb=short`:
+**146 passed,19.72s,native0**, one existing Starlette/httpx deprecation warning.
+Final authentication-only run after tightening test-output privacy:
+`.\.venv\Scripts\python.exe -B -m pytest tests/test_profile_inspection_auth.py -q --tb=short`:
+**24 passed,1.34s,native0**. Python AST/new-file whitespace checks, PowerShell
+runbook parsing (no execution), and `git diff --check` passed, native0.
+New authentication tests use synthetic passwords, fake connectors and socket
+traps; the separate-process echo-fallback check invokes only the credential
+helper. No PostgreSQL connection, inspection rerun, migration or service startup.
+Runbook and exact interactive/native-exit evidence command: RELEASE_VALIDATION.md,
+section "Profile 0005 read-only inspection: interactive authentication repair".
+Offline log/baseline: `backend/test-results/profile-auth-offline-c8e2971889584019a860b51dfb3e913f/`.
+
+This records tested authentication infrastructure only. Actual profile DB
+identity/schema/revision and migration readiness remain BLOCKED pending separately
+approved inspection. Earlier preparation receipt source snapshots become stale
+relative to this repair; preserve them unchanged as historical evidence. No new
+dependency, migration, application-authentication model or historical evidence edit.
+Owner exercise: explain why `GetPassWarning` must stop before fallback reads input,
+then use the offline tests to check that an empty password never reaches connect.
+
+## Independent integrated acceptance host — 2026-11-14
+
+Started main/db17f3ef2c2934d2d4cc7db06499a291949a3d16 with all18 reported pending
+paths, all unstaged. Implemented the separate exact0006 host/ledger/observer and
+native-exit/source-bound evidence review tools in [INTEGRATED_HOST.md](INTEGRATED_HOST.md).
+The original public campaign remains byte-identical: four accounts, two hackathons,
+two teams, two requests/two invitations,38 POSTs and14 expected domain effects.
+No application, schema, migration, dependency, domain transaction/lock, session or
+production topology change. Both old browser hosts/support, all migrations and
+application bytes match the starting tracked inventory. No old guard was widened.
+
+New host has23 closed method/path/endpoint entries plus health and nine guarded
+service overrides, covering all seven previously absent lifecycle/profile/SSE
+entries. Effective/original endpoint identities and full dependency graph are
+audited at startup/every request/shutdown. Only fixed merge_profile_test/merge_app/
+actual127.0.0.1:5432/exact0006 is allowed; profile30 source-bound evidence and
+separate explicit live/write flags precede credentials/connection. No Settings
+fallback. Current Origin/session/CSRF/real authentication/throttles remain intact.
+
+The ledger charges all POSTs before durable writes/throttles, admits one at a
+time, binds server-issued IDs, freezes exact actor/scope/body/key and rejects
+uncertain results/retries. Its sole planned replay requires known stored201 and
+complete server response before client-only acknowledgement loss. Exact denial
+codes prevent a CSRF403 masking an Origin defect. A CreateNew per-run start
+marker prevents restart budget reset even before account creation; never delete
+or adopt it. Failed reports preserve sanitized stages/attempt counters/statuses,
+not raw payloads/auth/exception data. No automatic cleanup/reset/resume exists.
+
+After successful drain, a separate fixed-target native read-only observer checks
+all13 tables, immutable prior rows, exact scoped additions, profile/session/
+membership/request/grant/tombstone state,14 linked stored replies/audits/outbox
+rows, version/subject/state chains and19 exact throttle charges across ten pairs.
+Private snapshots/fingerprints pass only through stdin; no raw secret dump.
+Native worker/observer exits and source hashes are independent of claimed report
+status. Final review hashes the worker/observer/start-marker chain plus all13
+owner-observed browser checkpoint artifacts, source/environment/time/viewport
+metadata and a fixed native Node verifier result. This verifier does not operate
+a browser; browser_engine_exit is explicitly not_captured. No browser-native0 or
+actual UI/keyboard/mobile/SSE transport evidence was fabricated.
+
+Actual offline commands/results (existing Windows PowerShell/Python3.11.9 venv,
+Node22.15.0/npm10.9.2; reviewed outside-sandbox execution after helper setup
+failed; no global Git configuration change):
+
+- Backend `.\.venv\Scripts\python.exe -m pytest tests/test_integrated_host.py
+  tests/test_integrated_evidence.py tests/test_integrated_plan.py
+  tests/test_release_support.py tests/test_browser_full_harness.py
+  tests/test_browser_harness.py -q --tb=short`: FINAL459 passed,14.75s,native0.
+  Includes121 new cases; fake services/engines/in-process HTTP only, with live
+  engine/socket/Popen traps. No SQL/HTTP listener/browser was started.
+- Backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  FINAL1895 passed,32 deselected,61.57s,native0 after all hardening.
+- Frontend `npm.cmd test -- --reporter=dot --maxWorkers=1`: FINAL434 passed,
+  18 files,122.31s,native0. `npm.cmd run build`: FINAL TypeScript/Vite pass,
+  50 modules,1.75s,native0. No dependency install or runtime source change.
+- Backend `.\.venv\Scripts\python.exe -m pytest profile_tests --collect-only -q
+  --confirm-profile-test`:30 collected,0.07s,native0; no fixtures executed.
+- `python -m release_support.integrated_run readiness`: native0/CONDITIONAL,
+  24 routes/nine overrides, live_operations_performed=false. Existing plan validate
+  native0; plan readiness reports new infrastructure/CONDITIONAL but retains
+  native2 for unverified live prerequisites. This is not a live acceptance pass.
+- Node --check passed for the four campaign/evidence JS files. Eight PowerShell
+  proposal blocks parsed without execution. Python AST, Git diff --check/new-file
+  whitespace and targeted secret/artifact checks clean; index remains empty.
+
+Starting evidence inventory was754 files, not the reported733: original733 plus
+16 existing JSON files/five logs. All754 remain byte-identical. New ignored logs/
+baselines are under backend/test-results/integrated-host-offline-
+cde8edda82dd44d1a5195433c28f4d93. Failure history is retained in the new runbook:
+initial66 passed; expanded135 passed/2 failed/3 teardown errors exposed original-
+route identity drift and shared test mutation; restored test state and stronger
+audits yielded139. Subsequent452/1888 and hardened457/1893 passes precede the
+final459/1895 results. No failing condition/assertion/timeout was weakened.
+Existing Starlette/httpx and Git CRLF warnings remain.
+
+Full final inventory:28 paths (ten tracked modifications/18 untracked), all
+unstaged, no deletion. This task adds ten files and changes only the previously
+pending readiness helper/test and additive INTEGRATED_ACCEPTANCE/PROGRESS entries.
+The other14 starting pending paths and original historical doc content remain
+preserved; complete path list and exact owner commands are in INTEGRATED_HOST.md.
+
+Recommendation CONDITIONAL for owner review/approval of bounded live stages.
+Actual database/privileges/revision remain unknown;0006 is reported unapplied
+and profile30 is still collection-only. Real PostgreSQL observer SQL, host/signal/
+drain, full owner browser/keyboard/mobile/SSE transport, HTTPS, CI/load/deployment
+and submission gates remain unverified. Existing G1/SSE4/lifecycle10 evidence
+retains its scope and was not rerun. No live PostgreSQL, migration/provisioning,
+server/browser startup, fixture cleanup/adoption, historical evidence edit,
+commit/push or deployment. STOP before all live operations.
+Owner exercise: alter a synthetic prior-row hash or change403 origin_rejected
+to invalid_csrf; explain why counts/status alone cannot certify the campaign.
+
+## Final integrated acceptance preparation — 2026-11-14
+
+Started main/db17f3ef2c2934d2d4cc7db06499a291949a3d16 with exactly the reported
+twelve unstaged product-audit paths. HEAD/tree match the supplied baseline.
+Prepared [INTEGRATED_ACCEPTANCE.md](INTEGRATED_ACCEPTANCE.md), a fresh public
+acceptance/integrated-campaign.json, offline release_support.integrated_plan and
+its adversarial tests, and test-only JavaScript command/ranking/final-state
+assertions. No application, dependency, migration or old guard change. The six
+new files plus this additive progress entry are the complete scope of this task.
+
+Profile preflight is CONDITIONAL for separate owner approval: reviewed fixed
+merge_profile_test/merge_app provisioning, exact empty->0005 preparation,
+transaction-owned0005->0006 with all12 prior-table preservation checks, verify,
+and the30-case runner. Actual target/privileges/revision remain unknown; no DB
+operation was performed. Provisioning is create-only but not wholly atomic;
+failure stops without adoption/deletion. Owner proposals retain fatal
+GetPassWarning flags and record native exits separately from wrapper reports.
+
+Browser execution is BLOCKED: old exact0005 host excludes seven required
+profile/ranking/lifecycle/SSE method/path entries. Offline tests preserve its
+closed audit; no old manifest/revision/budget is broadened. A separate exact0006
+integrated host, server ledger and independent final observer still require
+implementation/review. This preparation is not an automated E2E runner or live
+certificate. Its readiness command intentionally exits2/BLOCKED.
+
+New planned run17ff1152-1ac0-4ace-a887-13436dd2963f covers all13 requested journey
+areas using4 accounts,2 hackathons,2 teams,2 requests and2 invitations. Ceiling38
+POSTs:10 auth/7 profile/18 domain/3 security;14 successful domain effects. Final
+expected state is A tombstone/version13 and B live/version1 with q as sole member
+and leader. No DB freshness, browser/mobile/SSE transport or final state is
+claimed. Existing G1/SSE4/lifecycle10 certificates retain their historical scope
+and are not rerun. Canonical plan digest and exact owner commands are in the
+new runbook; public identifiers grant no mutation authority.
+
+Actual offline evidence (Windows PowerShell/existing Python3.11.9,Node22.15.0,
+npm10.9.2; reviewed outside-sandbox execution after sandbox setup failure):
+
+- Backend `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short`:
+  1773 passed,32 deselected,93.28s,native0. This preceded the final404 plan
+  correction/additional mapping test; no final1774 full-suite result is claimed.
+- Backend `.\.venv\Scripts\python.exe -m pytest tests/test_integrated_plan.py
+  tests/test_release_support.py tests/test_browser_full_harness.py
+  tests/test_browser_harness.py -q --tb=short`: FINAL338 passed,26.31s,native0,
+  including55 new campaign cases and actual fatal-warning subprocess coverage.
+- Backend `.\.venv\Scripts\python.exe -m pytest profile_tests --collect-only -q
+  --confirm-profile-test`: FINAL30 collected,0.07s,native0; no fixtures executed.
+- Frontend `npm.cmd test -- --reporter=dot --maxWorkers=1`: FINAL418 passed,
+  17 files,154.00s,native0 (408 prior +10 new). Node --check passed for both new
+  test-support JS files. No production build needed/run for this task.
+- `python -m release_support.integrated_plan validate`: native0/plan_valid_only;
+  `readiness`: expected native2/BLOCKED, not execution acceptance. Four PowerShell
+  proposal blocks parsed without execution. Git diff --check/new-file whitespace
+  clean. Existing Starlette/httpx warning and Git CRLF warnings remain.
+
+Initial static-test/environment/command-quoting failures and their actual outcomes
+are retained in the runbook; no failing test/assertion/timeout was weakened.
+Source review corrected the draft foreign-recipient denial to the actual404
+privacy contract. New ignored logs/hash inventories live under backend/
+test-results/integrated-preparation-7b891b737d99440eb9c9f091d98907f0. Verified733
+preexisting evidence files byte-identical. All12 original pending paths matched
+their initial hashes before this additive progress entry; eleven remain unchanged
+and the original progress text is preserved. Full inventory is18 pending paths,
+10 tracked/8 new, all unstaged. No deletion, commit or push.
+
+Remaining release prerequisites: owner-approved isolated profile provisioning/
+0006/profile30; integrated host/ledger/observer and full browser execution;
+public CI50-way race, seed/load, HTTPS/deployment and submission artifacts.
+No live PostgreSQL, migration/provisioning, server/browser startup, fixture
+deletion/adoption/resume, historical evidence edit, dependency install, remote or
+deployment operation occurred. STOP for owner review.
+Owner exercise: change the synthetic create_a retry key or effect count and
+explain why a second team/audit effect must be rejected; the plan alone cannot
+enforce a live mutation budget.
+
+## Final product review checkpoint — 2026-11-14
+
+Started clean main at db17f3ef2c2934d2d4cc7db06499a291949a3d16. Completed a
+source/component audit of all React views/components/hooks and existing API
+entrypoints. [PRODUCT_AUDIT.md](PRODUCT_AUDIT.md) holds the P0/P1/P2 table, bounded
+component contracts, complete twelve-file inventory, removals, static keyboard/
+responsive review, failed intermediate results and remaining live gates.
+
+Implemented focused UI fixes: correct profile/ranking conflict messages; retained
+editable profile draft only after exact pre-write 422/invalid_request, with
+field-error alerts; named invitation/approval accessible controls and secondary
+reference IDs; single redemption confirmation; safe membership confirmation
+focus/Cancel return and clearing an unsubmitted removal after leadership loss;
+participant-facing liveness wording. Backend/API/schema/dependencies and all
+command journals/locks/audit/outbox/guards are unchanged. No deleted test or module.
+
+Actual Windows PowerShell commands/results, existing Python 3.11.9, Node22.15.0,
+npm10.9.2, existing installed dependencies:
+
+| Working directory / command | Result |
+| --- | --- |
+| backend: `.\.venv\Scripts\python.exe -m pytest -q -m 'not database' --tb=short` | 1719 passed,32 deselected,81.30s,exit0; existing Starlette/httpx deprecation warning |
+| frontend: `npm.cmd test -- --reporter=dot --maxWorkers=1` FINAL | 408 passed,16 files,122.18s,exit0 |
+| frontend: `npm.cmd run build` FINAL | TypeScript passed;Vite50 modules,3.18s,exit0 |
+
+Before fixes, new regressions demonstrated10 failures/1 passing control. Focused
+checkpoint189 passed. First full run407 passed/1 failed: the existing restored-
+inbox test asserted an effect-owned GET after only awaiting a static heading.
+Strengthened it with a deferred response, actual GET/loading/returned-state and
+no-mutation assertions. A diagnostic run then caught an incorrect new assertion
+that excluded the liveness fetch's implicit GET (56 passed/1 failed); corrected
+that test assumption. Final408 includes14 added cases; original liveness cases
+are retained with changed wording. No timeout/assertion disabling, production
+navigation change or claim that the intermediate runs passed.
+
+Static import traversal reached all24 production TS/TSX/CSS files; no unused
+module was established. Targeted changed-file private-key/provider-token/
+credential-URL scan found no matches. Build/cache output remains ignored. Final
+whitespace/inventory review is recorded in PRODUCT_AUDIT.md. Execution used
+reviewed outside-sandbox commands after sandbox setup failed before process
+startup; command-scoped safe.directory avoided any global Git configuration edit.
+
+CONDITIONAL for owner review, not release certification. The known unapplied
+0006 profile prerequisite, profile PostgreSQL acceptance, full browser/mobile/
+keyboard/HTTPS/SSE-proxy validation, public CI/load/seed/deployment/submission
+gates remain open. Prior owner SSE4/4 and lifecycle10/10 evidence retains its old
+scope; no old receipt/report/manifest or fixture was edited/adopted/cleaned. No
+PostgreSQL access, migration, live browser/API/server startup, dependency install,
+staging/commit/push or deployment. STOP for owner review.
+
+Owner exercise: change a named invitation label in ProductAudit.test.tsx and
+explain why the UUID command target is unchanged; contrast exact validation
+rejection with unknown profile delivery and the required reload/CAS behavior.
 
 ## Current verified context
 

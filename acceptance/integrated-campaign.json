@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "kind": "integrated-browser-plan",
+  "status": "planned",
+  "run_id": "17ff1152-1ac0-4ace-a887-13436dd2963f",
+  "target": {
+    "database": "merge_profile_test",
+    "role": "merge_app",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "revision": "0006_profiles"
+  },
+  "origin": "http://127.0.0.1:5173",
+  "api_origin": "http://127.0.0.1:8000",
+  "min_team_size": 2,
+  "max_team_size": 3,
+  "accounts": [
+    {
+      "role": "l",
+      "username": "ia_17ff11521ac04acea8871343_l",
+      "register_attempts": 1,
+      "login_attempts": 2,
+      "logout_attempts": 0
+    },
+    {
+      "role": "q",
+      "username": "ia_17ff11521ac04acea8871343_q",
+      "register_attempts": 1,
+      "login_attempts": 1,
+      "logout_attempts": 0
+    },
+    {
+      "role": "r",
+      "username": "ia_17ff11521ac04acea8871343_r",
+      "register_attempts": 1,
+      "login_attempts": 1,
+      "logout_attempts": 0
+    },
+    {
+      "role": "x",
+      "username": "ia_17ff11521ac04acea8871343_x",
+      "register_attempts": 1,
+      "login_attempts": 1,
+      "logout_attempts": 1
+    }
+  ],
+  "hackathons": [
+    {
+      "id": "69ec4040-6fc3-4d10-a3ab-92094b8affa4",
+      "name": "ia_17ff11521ac04acea8871343_event_1"
+    },
+    {
+      "id": "71b4fa24-4b3c-4d96-ab36-f2cfed8c6aeb",
+      "name": "ia_17ff11521ac04acea8871343_event_2"
+    }
+  ],
+  "teams": {
+    "a": "ia_17ff11521ac04acea8871343_team_a",
+    "b": "ia_17ff11521ac04acea8871343_team_b"
+  },
+  "commands": [
+    {
+      "tag": "create_a",
+      "actor": "l",
+      "attempts": 2,
+      "effects": 1,
+      "status": 201
+    },
+    {
+      "tag": "create_b",
+      "actor": "q",
+      "attempts": 1,
+      "effects": 1,
+      "status": 201
+    },
+    {
+      "tag": "request_q",
+      "actor": "q",
+      "attempts": 1,
+      "effects": 1,
+      "status": 201
+    },
+    {
+      "tag": "request_r",
+      "actor": "r",
+      "attempts": 1,
+      "effects": 1,
+      "status": 201
+    },
+    {
+      "tag": "deny_decision",
+      "actor": "q",
+      "attempts": 1,
+      "effects": 0,
+      "status": 403
+    },
+    {
+      "tag": "reject_r",
+      "actor": "l",
+      "attempts": 1,
+      "effects": 1,
+      "status": 200
+    },
+    {
+      "tag": "approve_q",
+      "actor": "l",
+      "attempts": 1,
+      "effects": 1,
+      "status": 200
+    },
+    {
+      "tag": "issue_r",
+      "actor": "l",
+      "attempts": 1,
+      "effects": 1,
+      "status": 201
+    },
+    {
+      "tag": "deny_redeem",
+      "actor": "x",
+      "attempts": 1,
+      "effects": 0,
+      "status": 404
+    },
+    {
+      "tag": "redeem_r",
+      "actor": "r",
+      "attempts": 1,
+      "effects": 1,
+      "status": 200
+    },
+    {
+      "tag": "deny_remove",
+      "actor": "q",
+      "attempts": 1,
+      "effects": 0,
+      "status": 403
+    },
+    {
+      "tag": "remove_r",
+      "actor": "l",
+      "attempts": 1,
+      "effects": 1,
+      "status": 200
+    },
+    {
+      "tag": "leave_q",
+      "actor": "q",
+      "attempts": 1,
+      "effects": 1,
+      "status": 200
+    },
+    {
+      "tag": "issue_q",
+      "actor": "l",
+      "attempts": 1,
+      "effects": 1,
+      "status": 201
+    },
+    {
+      "tag": "redeem_q",
+      "actor": "q",
+      "attempts": 1,
+      "effects": 1,
+      "status": 200
+    },
+    {
+      "tag": "leave_l",
+      "actor": "l",
+      "attempts": 1,
+      "effects": 1,
+      "status": 200
+    },
+    {
+      "tag": "final_q",
+      "actor": "q",
+      "attempts": 1,
+      "effects": 1,
+      "status": 200
+    }
+  ],
+  "profiles": [
+    {
+      "tag": "profile_l",
+      "actor": "l",
+      "attempts": 1,
+      "status": 200
+    },
+    {
+      "tag": "profile_q",
+      "actor": "q",
+      "attempts": 1,
+      "status": 200
+    },
+    {
+      "tag": "profile_r",
+      "actor": "r",
+      "attempts": 1,
+      "status": 200
+    },
+    {
+      "tag": "profile_x",
+      "actor": "x",
+      "attempts": 1,
+      "status": 200
+    },
+    {
+      "tag": "profile_invalid",
+      "actor": "l",
+      "attempts": 1,
+      "status": 422
+    },
+    {
+      "tag": "profile_edit",
+      "actor": "l",
+      "attempts": 1,
+      "status": 200
+    },
+    {
+      "tag": "profile_stale",
+      "actor": "l",
+      "attempts": 1,
+      "status": 409
+    }
+  ],
+  "profile_values": {
+    "l": {
+      "skills": [
+        "python"
+      ],
+      "timezone": "UTC",
+      "discoverable": false,
+      "version": 0
+    },
+    "q": {
+      "skills": [
+        "sql"
+      ],
+      "timezone": "UTC",
+      "discoverable": true,
+      "version": 0
+    },
+    "r": {
+      "skills": [
+        "python",
+        "sql"
+      ],
+      "timezone": "Asia/Kolkata",
+      "discoverable": true,
+      "version": 0
+    },
+    "x": {
+      "skills": [],
+      "timezone": "UTC",
+      "discoverable": false,
+      "version": 0
+    }
+  },
+  "security": [
+    {
+      "tag": "missing_session",
+      "attempts": 1,
+      "status": 401
+    },
+    {
+      "tag": "missing_csrf",
+      "attempts": 1,
+      "status": 403
+    },
+    {
+      "tag": "foreign_origin",
+      "attempts": 1,
+      "status": 403
+    }
+  ],
+  "counts": {
+    "accounts": 4,
+    "hackathons": 2,
+    "teams": 2,
+    "requests": 2,
+    "invitations": 2,
+    "profiles": 4,
+    "profile_successes": 5,
+    "auth_posts": 10,
+    "profile_posts": 7,
+    "domain_posts": 18,
+    "security_posts": 3,
+    "total_posts": 38,
+    "domain_effects": 14,
+    "final_memberships": 1,
+    "tombstones": 1
+  },
+  "coverage": [
+    "auth",
+    "profiles",
+    "discovery_creation",
+    "ranking_eligibility",
+    "requests_decisions",
+    "invitations",
+    "leave_remove",
+    "succession",
+    "soft_delete",
+    "two_client_sse",
+    "account_workspace_isolation",
+    "retry_navigation",
+    "keyboard_mobile"
+  ],
+  "viewports": [
+    {
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "forbidden": [
+    "merge_dev",
+    "merge_test",
+    "merge_bench",
+    "merge_prod",
+    "cleanup",
+    "adopt",
+    "resume",
+    "automatic_retry",
+    "old_manifest"
+  ]
+}

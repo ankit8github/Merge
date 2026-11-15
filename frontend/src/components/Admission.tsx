@@ -71,9 +71,11 @@ function DecisionActions({ row, command, team, admission, restore, workspace }: 
 }) {
   const id = useId(), seconds = useCooldown(command?.error ?? null);
   const pending = command?.status === 'pending', settled = command?.status === 'success';
+  const applicant = row.requester_display_name
+    ? `${row.requester_display_name}${row.requester_username ? ` (@${row.requester_username})` : ''}` : row.requester_id;
   return <li className="request-card" aria-labelledby={id} aria-busy={pending}>
-    <h4 id={id}>{row.requester_display_name ? `${row.requester_display_name}${row.requester_username ? ` (@${row.requester_username})` : ''}` : row.requester_id ? 'Applicant ' + row.requester_id : 'Original decision for request ' + row.id}</h4>
-    {row.requester_display_name && <p className="uuid">Applicant account: {row.requester_id}</p>}
+    <h4 id={id}>{row.requester_display_name ? applicant : row.requester_id ? 'Applicant ' + row.requester_id : 'Original decision for request ' + row.id}</h4>
+    {row.requester_display_name && <details><summary>Reference IDs</summary><p className="uuid">Applicant account: {row.requester_id}</p><p className="uuid">Request ID: {row.id}</p></details>}
     <CommandFeedback command={command} restore={restore} />
     <div className="admission-actions">
       {command?.uncertain ? <button className="button primary" disabled={pending || seconds > 0}
@@ -81,9 +83,9 @@ function DecisionActions({ row, command, team, admission, restore, workspace }: 
         Retry original {command.decision === 'approve' ? 'approval' : 'rejection'}
       </button> : <>
         <button className="button primary" disabled={pending || settled || seconds > 0}
-          onClick={() => admission.submit(team.hackathon_id, team.id, workspace(), row.id, 'approve')} aria-label={`Approve applicant ${row.requester_id}`}>Approve</button>
+          onClick={() => admission.submit(team.hackathon_id, team.id, workspace(), row.id, 'approve')} aria-label={`Approve applicant ${applicant}`}>Approve</button>
         <button className="button secondary" disabled={pending || settled || seconds > 0}
-          onClick={() => admission.submit(team.hackathon_id, team.id, workspace(), row.id, 'reject')} aria-label={`Reject applicant ${row.requester_id}`}>Reject</button>
+          onClick={() => admission.submit(team.hackathon_id, team.id, workspace(), row.id, 'reject')} aria-label={`Reject applicant ${applicant}`}>Reject</button>
       </>}
     </div>
     {seconds > 0 && <p role="status">Try again in {seconds} seconds.</p>}

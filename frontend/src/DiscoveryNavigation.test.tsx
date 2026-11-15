@@ -71,9 +71,18 @@ it.each(['focus', 'pageshow', 'reload'])('preserves catalog/team pages and view 
 });
 it('restores Invitations view using fresh canonical reads', async () => {
   seed({ ...emptyNavigation(), hackathon: H1, view: 'invitations' });
-  const { fetch } = server(); render(<App />);
+  let finish!: (response: Response) => void;
+  const { fetch } = server(url => url.endsWith('/invitations/mine?limit=20')
+    ? new Promise<Response>(resolve => { finish = resolve; }) : undefined);
+  render(<App />);
   await screen.findByRole('heading', { name: 'Your invitations' });
-  expect(fetch.mock.calls.some(([url]) => url.endsWith('/invitations/mine?limit=20'))).toBe(true);
+  // The heading exists before the read effect; wait for the actual transport.
+  await waitFor(() => expect(fetch.mock.calls.some(([url]) => url.endsWith('/invitations/mine?limit=20'))).toBe(true));
+  expect(screen.getByText('Loading your invitations…')).toBeTruthy();
+  expect(screen.queryByText('No invitations on this page.')).toBeNull();
+  await act(async () => finish(json({ items: [], next_cursor: null })));
+  await screen.findByText('No invitations on this page.');
+  expect(fetch.mock.calls.every(([, options]) => !options.method || options.method === 'GET')).toBe(true);
 });
 it('uses browser Back/Forward history while revalidating the session and ignores former-account entries', async () => {
   const { fetch, model } = server(); render(<App />); await choose();

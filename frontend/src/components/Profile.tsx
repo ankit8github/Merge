@@ -43,7 +43,12 @@ function Editor({ initial, session, signal, onExpired, reload }: { initial: Prof
       if (!owned.current || signal.aborted) return;
       const e = failure instanceof ApiError ? failure : new ApiError();
       if (e.status === 401) onExpired();
-      else { setError(e); setState('reload'); }
+      else {
+        setError(e);
+        // An exact validation rejection precedes the write. Other failures can
+        // conceal a committed save, so still require canonical reload/CAS.
+        setState(e.status === 422 && e.code === 'invalid_request' ? 'editing' : 'reload');
+      }
     } finally { signal.removeEventListener('abort', abort); pending.current = null; }
   }
   return <form onSubmit={event => void submit(event)} noValidate aria-label="Edit matching profile" aria-busy={state === 'saving'}>
@@ -54,16 +59,18 @@ function Editor({ initial, session, signal, onExpired, reload }: { initial: Prof
       <label htmlFor="profile-skills">Skills</label>
       <input id="profile-skills" name="skills" value={skills} onChange={e => { setSkills(e.target.value); setState('editing'); }} aria-invalid={!!fields.skills} aria-describedby="profile-skills-help profile-skills-error" />
       <small id="profile-skills-help">Up to 20 comma-separated labels, e.g. python, react, design. Empty is allowed.</small>
-      <p id="profile-skills-error" className="field-error">{fields.skills}</p>
+      <p id="profile-skills-error" className="field-error" role={fields.skills ? 'alert' : undefined}>{fields.skills}</p>
       <label htmlFor="profile-zone">Time zone</label>
       <input id="profile-zone" name="timezone" value={zone} onChange={e => { setZone(e.target.value); setState('editing'); }} placeholder="Asia/Kolkata" aria-invalid={!!fields.timezone} aria-describedby="profile-zone-help profile-zone-error" />
       <small id="profile-zone-help">IANA name, e.g. Asia/Kolkata, Europe/London, America/New_York or UTC. Required when discoverable.</small>
-      <p id="profile-zone-error" className="field-error">{fields.timezone}</p>
+      <p id="profile-zone-error" className="field-error" role={fields.timezone ? 'alert' : undefined}>{fields.timezone}</p>
       <label className="checkbox-label"><input type="checkbox" checked={discoverable} onChange={e => { setDiscoverable(e.target.checked); setState('editing'); }} />Show me in teammate rankings</label>
       <button className="button primary" type="submit">{state === 'saving' ? 'Saving profile…' : 'Save profile'}</button>
     </fieldset>
     {state === 'saved' && <p role="status">Profile saved. Refresh teammate rankings to use the current profile.</p>}
-    {error && <><ErrorNotice error={error} /><p role="status">{error.code === 'profile_changed' ? 'A newer edit exists.' : 'The save outcome needs checking.'} Reload your profile before editing again.</p></>}
+    {error && <><ErrorNotice error={error} />{state === 'reload'
+      ? <p role="status">{error.code === 'profile_changed' ? 'A newer edit exists.' : 'The save outcome needs checking.'} Reload your profile before editing again.</p>
+      : <p role="status">Check your skills and time zone, including exact IANA spelling. The server rejected this edit; your draft is kept.</p>}</>}
     <button className="button secondary" type="button" disabled={state === 'saving'} onClick={reload}>Reload profile</button>
   </form>;
 }

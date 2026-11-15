@@ -4,14 +4,14 @@ import App from './components/HealthStatus';
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
-it('shows loading and then a healthy backend', async () => {
+it('shows loading and then process liveness without claiming account or team readiness', async () => {
   let resolve!: (value: Response) => void;
   const fetchMock = vi.fn(() => new Promise<Response>(done => { resolve = done; }));
   vi.stubGlobal('fetch', fetchMock);
   render(<App />);
-  expect(screen.getByRole('status').textContent).toContain('Checking backend');
+  expect(screen.getByRole('status').textContent).toContain('Checking service');
   resolve(new Response(JSON.stringify({ status: 'ok' })));
-  await screen.findByText('Backend is healthy.');
+  await screen.findByText('Service is responding. This check does not verify team or account access.');
   expect(fetchMock).toHaveBeenCalledWith('/health', expect.objectContaining({ signal: expect.any(AbortSignal) }));
 });
 
@@ -24,9 +24,9 @@ it.each(['network', 'http', 'payload', 'json'])('handles %s failure and recovers
   fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ status: 'ok' })));
   vi.stubGlobal('fetch', fetchMock);
   render(<App />);
-  await screen.findByText('Backend unavailable. Start the API and try again.');
+  await screen.findByText('We could not check the service. Try again shortly.');
   fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
-  await screen.findByText('Backend is healthy.');
+  await screen.findByText('Service is responding. This check does not verify team or account access.');
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 
@@ -38,5 +38,5 @@ it('aborts a slow request and reports an error', async () => {
   render(<App />);
   await vi.advanceTimersByTimeAsync(5000);
   vi.useRealTimers();
-  await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Backend unavailable'));
+  await waitFor(() => expect(screen.getByRole('status').textContent).toContain('We could not check the service'));
 });

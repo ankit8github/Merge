@@ -95,20 +95,20 @@ function RedemptionCard({ row, command, invitations, membership, restore, open, 
   const eligible = !!row && row.status === 'pending' && row.available &&
     membership.state.status === 'success' && membership.state.data === null;
   const disabled = pending || settled || seconds > 0 || (!command?.uncertain && !eligible);
+  const label = row?.team_name ? `to ${row.team_name}` : target;
   return <li className="request-card invitation-card" aria-labelledby={id} aria-busy={pending}>
-    <h3 id={id}>{row ? 'Invitation ' : 'Original redemption for invitation '}{target}</h3>
-    {row?.team_name && <p>Team: <strong>{row.team_name}</strong></p>}
+    <h3 id={id}>{row ? 'Invitation ' : 'Original redemption for invitation '}{label}</h3>
     {row?.recipient_display_name && <p>Recipient: {row.recipient_display_name}{row.recipient_username ? ` (@${row.recipient_username})` : ''}</p>}
-    <p>Team UUID: <span className="uuid">{t}</span></p>
+    <details><summary>Reference IDs</summary><p className="uuid">Invitation ID: {target}</p><p>Team UUID: <span className="uuid">{t}</span></p></details>
     {row && <><p>Current invitation state: <strong>{row.status}</strong></p>
       <p>Expires (your local time): <time dateTime={row.expires_at}>{new Date(row.expires_at).toLocaleString()}</time></p>
       {row.redeemed_at && <p>Redeemed (your local time): <time dateTime={row.redeemed_at}>{new Date(row.redeemed_at).toLocaleString()}</time></p>}
       {row.status === 'pending' && !row.available && <p className="notice">Not currently available. It may be expired or its issuing leader may have changed. Refresh to check again.</p>}</>}
     <CommandFeedback invitations={invitations} command={command} restore={restore} />
     <div className="admission-actions"><button className="button primary" disabled={disabled}
-      onClick={() => { if (!disabled) invitations.submit('redeem', h, t, target, workspace()); }} aria-label={command?.uncertain ? `Retry original redemption ${target}` : `Redeem invitation ${target}`}>
+      onClick={() => { if (!disabled) invitations.submit('redeem', h, t, target, workspace()); }} aria-label={command?.uncertain ? `Retry original redemption ${label}` : `Redeem invitation ${label}`}>
       {pending ? 'Redeeming…' : command?.uncertain ? 'Retry original redemption' : 'Redeem invitation'}</button>
-      <button className="button secondary" onClick={() => open(t)} aria-label={`View invited team ${t}`}>View invited team</button>
+      <button className="button secondary" onClick={() => open(t)} aria-label={`View invited team ${row?.team_name ?? t}`}>View invited team</button>
     </div>
     {seconds > 0 && <p role="status">Try again in {seconds} seconds.</p>}
   </li>;
@@ -154,6 +154,7 @@ export function InvitationInbox({ hackathon, invitations, membership, restore, o
     </>}
     {recovery.length > 0 && <><h3>Original redemption commands</h3><p className="muted">These commands are retained independently of inbox pages. A missing row does not establish rollback.</p>
       <ul className="request-list">{recovery.map(command => <RedemptionCard key={command.target} command={command} invitations={invitations} membership={membership} restore={restore} open={open} workspace={workspace} />)}</ul></>}
-    {invitations.redemptions(h).some(c => c.status === 'success') && <p className="notice success" role="status">A redemption command was confirmed. Use the canonical inbox and My team for current state.</p>}
+    {invitations.redemptions(h).some(c => c.status === 'success' && !rows.some(row => row.id === c.target && row.team_id === c.team)) &&
+      <p className="notice success" role="status">A redemption command was confirmed. Use the canonical inbox and My team for current state.</p>}
   </section>;
 }
