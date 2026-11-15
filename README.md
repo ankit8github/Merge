@@ -8,8 +8,10 @@ PostgreSQL transactions and constraints govern admission, while React provides
 team discovery, invitations, membership management and explained recommendations.
 
 Built for [Hack4Hack Crew Hiring Challenge 2026, PS1](https://hack4hack.com/hackathons/hack4hack-crew-hiring-challenge-2026-tp3m).
-**Current status:** local release candidate. Public CI acceptance, integrated
-browser acceptance, measured load and public HTTPS deployment are outstanding.
+**Current status:** local release candidate. Integrated browser acceptance,
+measured load and public HTTPS deployment are outstanding. The owner reports all
+five Actions jobs passed for `bb60ab3`; the pending Render and Railway adapters await publication
+and a new CI run.
 
 ## Overview
 
@@ -63,8 +65,9 @@ FastAPI modular monolith
 PostgreSQL: membership + sessions + idempotency + audit/outbox
 ```
 
-The production package uses one API worker, private database networking, persistent
-volumes and separate runtime/migration credentials. It has been checked offline;
+Production adapters use one API worker, private database networking and separate
+runtime/migration credentials. The VPS package uses persistent volumes; Render
+uses managed PostgreSQL and an ephemeral web filesystem. It has been checked offline;
 images, restricted database grants and HTTPS behavior require live verification.
 See [architecture](docs/ARCHITECTURE.md) and [deployment](docs/DEPLOYMENT.md).
 
@@ -132,7 +135,7 @@ npm.cmd test -- --reporter=dot --maxWorkers=1
 npm.cmd run build
 ```
 
-Latest local verification on Windows: **1,975 backend tests passed** (32 database
+Latest local verification on Windows: **2,163 backend tests passed** (32 database
 cases deselected), **434 frontend tests passed** across 18 files with one worker,
 and the **TypeScript/production build passed**. These checks used existing locked
 dependencies. Exact commands, timings and warnings are recorded in
@@ -145,7 +148,7 @@ public CI, browser or performance certification.
 | Local PostgreSQL SSE | 4/4 on historical exact `0005_invitations` sources |
 | Local PostgreSQL lifecycle | 10/10; aggregate report and owner-confirmed exit |
 | Local authenticated last-seat race | Prior invitation acceptance: 13 cases x 3; three 50-caller races, each 1 success / 49 safe rejections |
-| Public GitHub Actions | Reported service initialization failure; configuration corrected locally, new passing run required |
+| Public GitHub Actions | Owner reports 5/5 jobs passed at bb60ab3; pending adapters have not run in public CI |
 | Full integrated browser acceptance | Incomplete; original consumed campaign is uncertified |
 | Scale seed and load | Tooling exists for 10,000 users / 2,000 teams / 100 clients; not executed, no measured p95 |
 | Public HTTPS deployment | Not verified; no live URL claimed |
@@ -156,7 +159,13 @@ does not recertify them. See [progress](docs/PROGRESS.md),
 
 ## Deployment
 
-The proposed Linux deployment serves React and proxies the API/SSE through Caddy
+[Render Free preparation](docs/RENDER.md) is the owner-selected hosting target:
+one public Caddy/React service, loopback FastAPI and private PostgreSQL 17, using
+a Render HTTPS domain. Free idle sleep and 30-day database expiry make this a
+temporary demonstration target. The adapter is prepared locally; no live deployment
+is claimed. [Railway preparation](docs/RAILWAY.md) is retained as an alternative.
+
+The existing VPS package serves React and proxies the API/SSE through Caddy
 on HTTPS, with FastAPI and PostgreSQL on private Docker networks. Startup does
 not run migrations. Secrets are mounted from ignored private files.
 [Deployment preparation](docs/DEPLOYMENT.md) links the full launch, backup and
@@ -200,6 +209,6 @@ need measurement. Ordered/exactly-once delivery and multi-instance capacity are
 not claimed. Parallel frontend runs have shown timing intermittency; the repeatable
 verification command uses one worker.
 
-Public CI, browser/mobile/keyboard acceptance, native production rehearsal,
+Adapter CI, browser/mobile/keyboard acceptance, native production rehearsal,
 HTTPS, the required load report, design export and walkthrough video remain
 release gates. The submission deadline is **15 November 2026, 23:59 IST**.

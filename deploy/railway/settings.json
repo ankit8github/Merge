@@ -1,0 +1,35 @@
+{
+  "purpose": "Dashboard settings contract; NOT an auto-discovered Railway config file",
+  "application": {
+    "rootDirectory": "/",
+    "dockerfilePath": "deploy/Dockerfile.railway",
+    "startCommand": "python -m app.railway.serve",
+    "preDeployCommand": null,
+    "healthcheckPath": "/ready",
+    "healthcheckTimeout": 180,
+    "numReplicas": 1,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3,
+    "sleepApplication": false,
+    "drainingSeconds": 40,
+    "publicTargetPort": "$PORT"
+  },
+  "operations": {
+    "rootDirectory": "/",
+    "dockerfilePath": "deploy/Dockerfile.railway",
+    "startCommand": "python -m app.railway.operations --confirm-merge-prod",
+    "preDeployCommand": null,
+    "healthcheckPath": null,
+    "numReplicas": 1,
+    "restartPolicyType": "NEVER",
+    "publicDomain": null,
+    "tcpProxy": false
+  },
+  "database": {
+    "serviceName": "postgres",
+    "majorVersion": 17,
+    "publicDomain": null,
+    "tcpProxy": false,
+    "persistentVolumeRequired": true
+  }
+}

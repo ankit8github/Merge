@@ -571,7 +571,7 @@ supported by these browser commands; separate HTTP test instructions are in
 **M-011A-R4: shutdown defect corrected offline; stop for owner review.** The R3
 regression now passes. Timeout/incomplete drains remain unsuccessful independently
 of later snapshots; final success is printed only after Engine/listener cleanup.
-[BROWSER_HOST_AUDIT.md](BROWSER_HOST_AUDIT.md) records the minimal source diff and
+[BROWSER_HOST_AUDIT.md](archive/ENGINEERING_HISTORY.md#browser-host-audit) records the minimal source diff and
 R3/R4 evidence. Live reads, scoped auth writes and all account/fixture prerequisites
 still require separate owner approval; no live startup is authorized by this fix.
 

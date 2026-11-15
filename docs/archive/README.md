@@ -1,23 +1,22 @@
-# Historical engineering review catalog
+# Engineering history
 
-This catalog groups useful development history away from the homepage. Original
-files remain at stable paths so scripts, older cross-links and source/evidence
-provenance remain interpretable. No historical receipt is rewritten or recertified.
-The archive is a navigation boundary; no original file has been moved or deleted.
+Useful dated records are retained here for rationale, failure analysis and evidence
+provenance. Their commands and old permissions are historical, not current action
+approval. Use the [current documentation index](../README.md) for operation.
 
-| Historical record | Retained purpose |
+| Record | Retained purpose |
 | --- | --- |
-| [Batch A](../BATCH_A.md) | Profile/ranking and frontend implementation review |
-| [Batch B](../BATCH_B.md) | CI, exact-version targets, seed/load and receipt contracts |
-| [Batch C](../BATCH_C.md) | Production/submission packaging and combined source inventory |
-| [Batch D recovery](../BATCH_D_RECOVERY.md) | Consumed campaign, diagnostic repair and provenance limits |
-| [Batch E release](../BATCH_E_RELEASE.md) | Published baseline's local freeze and handoff history |
-| [Product audit](../PRODUCT_AUDIT.md) | Route/journey audit and prior UI simplification rationale |
-| [Browser host audit](../BROWSER_HOST_AUDIT.md) | Historical drain/guard findings and corrections |
-| [Progress journal](../PROGRESS.md) | Dated commands, actual results, hashes and limitations |
-| [Repository audit](REPOSITORY_AUDIT.md) | This polish's complete tracked-file classification |
+| [Engineering reviews](ENGINEERING_HISTORY.md) | Consolidated A-E reviews, product/browser audits and Render-preparation handoff |
+| [Progress journal](PROGRESS_HISTORY.md) | Dated commands, actual results, source hashes and limitations through adapter preparation |
+| [Architecture proposal](ARCHITECTURE_HISTORY.md) | Superseded blueprint/API sketches and earlier design evolution |
+| [Documentation audit](DOCUMENTATION_AUDIT.md) | Complete before/after classification, removal/reference checks and release inventory |
+| [Earlier repository audit](REPOSITORY_AUDIT.md) | Original polish decisions and tracked-file inventory at that date |
 
-These records are historical context, not a replacement for [setup](../SETUP.md),
-[testing](../TESTING.md), [deployment](../DEPLOYMENT.md) or the current source.
-Private diagnostics, generated datasets, manifests, reports and credentials are
-not copied into this archive. Existing ignored local evidence is preserved in place.
+Original document hashes are recorded in the documentation audit. Consolidation
+preserves substantive history and code blocks; relative links were rebased. No
+historical receipt is rewritten or recertified. Historical source inventories
+inside code blocks intentionally retain their names at the recorded date.
+
+Private diagnostics, generated datasets, database dumps, manifests, credentials
+and certification files were not copied into public history. Existing ignored
+local evidence remains in place and is checked by hash before the release commit.

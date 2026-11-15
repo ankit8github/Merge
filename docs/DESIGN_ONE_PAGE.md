@@ -6,8 +6,8 @@ code. Deadline:15 November2026,23:59 IST.
 
 **Topology.** React/TypeScript -> same-origin HTTPS Caddy -> one FastAPI worker ->
 private PostgreSQL. PostgreSQL is authoritative; process memory never grants a
-seat. Proposed VPS packaging separates runtime/migration roles and persistent
-DB/certificate volumes. Public hosting is not verified.
+seat. Render Free packages React/Caddy and one loopback API worker in one service,
+with private PG17 and separate explicit setup/runtime roles. Hosting is unverified.
 
 **Data.** Users/credentials/sessions; hackathons with min/max size; versioned teams
 with leader/tombstone; memberships keyed by `(hackathon_id,user_id)`; requests/
@@ -42,15 +42,17 @@ proxies, not AI or actual availability.
 **Evidence/trade-offs.** Prior local G1:13 invitation cases x3, including three
 50-caller last-seat races (1 success/49 safe rejections); local lifecycle acceptance
 records10/10; retained SSE4/4 and profile30/30 also passed on historical sources.
-Public CI,10k/2k seed,100-VU p95<200ms and deployed HTTPS/browser evidence remain
-pending. The consumed browser campaign is uncertified. Offline tests cannot certify
+The owner reports five CI jobs passed at baseline bb60ab3; this release needs
+new CI. 10k/2k seed,100-VU p95<200ms and HTTPS/browser evidence remain pending.
+The consumed browser campaign is uncertified. Offline tests cannot certify
 races/TLS/load. History-growing SSE COUNT and10k candidate ranking need measurement;
-one VPS is a failure domain. No broker or full-catalog name search.
+Free cold starts/30-day DB expiry limit availability. No broker or full-catalog name search.
 
 **One more week.** Complete browser/accessibility and backup restore drills;
 measure history-heavy SSE/ranking/board queries; fix worker-test flakiness; add
 alerts and measured retention policy; review dependencies/images and automate
 reproducible release evidence.
 
-Details: README.md, PRODUCTION.md, G1_ACCEPTANCE.md, RELEASE_VALIDATION.md.
+Details: [README](../README.md), [Render](RENDER.md),
+[race evidence](G1_ACCEPTANCE.md), [load tooling](RELEASE_VALIDATION.md).
 One-page text source; exported pagination needs checking before submission.

@@ -1,0 +1,23 @@
+FROM node:22.15.0-bookworm-slim AS frontend
+WORKDIR /build
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+FROM caddy:2-alpine AS caddy
+
+FROM python:3.11-slim-bookworm
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /srv/merge/backend
+COPY backend/requirements.lock ./requirements.lock
+RUN pip install --no-cache-dir -r requirements.lock
+COPY --from=caddy /usr/bin/caddy /usr/local/bin/caddy
+COPY --from=frontend /build/dist /srv/merge/web
+COPY backend/app ./app
+COPY backend/alembic/versions ./alembic/versions
+COPY backend/railway_alembic ./railway_alembic
+COPY backend/release_support/__init__.py backend/release_support/migrations.py backend/release_support/targets.py backend/release_support/evidence.py ./release_support/
+COPY deploy/railway/caddy.template.json /srv/merge/railway/caddy.template.json
+USER 10001:10001
+CMD ["python", "-m", "app.railway.serve"]

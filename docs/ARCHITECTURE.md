@@ -1,429 +1,98 @@
-# Merge - Architecture
+# Architecture
 
-## Current implementation overview
+Merge is a modular monolith: React/TypeScript, FastAPI/Pydantic and PostgreSQL 17.
+The database owns membership, capacity, leadership, sessions, idempotency and
+committed audit/outbox state. No process-local mutex or browser state grants a seat.
+Current evidence and remaining gates are in [PROGRESS.md](PROGRESS.md).
 
-Merge is a React/TypeScript frontend and FastAPI modular monolith backed by
-PostgreSQL 17. The database owns membership, capacity, leadership, sessions,
-idempotency and audit/outbox state. A successful mutation commits its domain
-effect, version, audit, outbox and stored reply together. Active membership uses
-`(hackathon_id, user_id)` as its primary key; scoped foreign keys and deferred
-final-state triggers enforce cross-row invariants.
+## Deployment boundary
 
-Mutation services acquire idempotency ownership, then hackathon, sorted affected
-user, team and auxiliary request/invitation locks. Eligibility and current
-authority are rechecked under those locks. Bounded retries retain the original
-command/key; uncertain commit outcomes require reconciliation. See the concrete
-[mutation contract](TEAM_MUTATIONS.md), [lifecycle](LIFECYCLE.md) and
-[retry protocol](TRANSACTION_RETRY.md).
-
-Authenticated SSE polls committed subscriber-visible outbox counts in short
-read-only transactions and asks clients to refetch. It carries no private domain
-payload, holds no transaction across network waits and offers no ordered or
-exactly-once delivery guarantee. [Realtime](REALTIME.md) documents bounds and
-unmeasured retained-history cost. [Ranking](RANKING.md) uses deterministic 70/30
-skill-novelty/time-zone scores with opt-in and leader authorization.
-
-The proposed production topology is Caddy HTTPS/static React, one API worker and
-private PostgreSQL with separate runtime/migration roles. Native packaging,
-restricted grants, HTTPS/browser behavior and load remain unverified. Start with
-[deployment](DEPLOYMENT.md), [testing](TESTING.md) and the
-[one-page design](DESIGN_ONE_PAGE.md).
-
-## Design evolution and historical blueprint
-
-The dated overlays and original proposal below are retained as design history.
-Their checkpoint status and future-tense API sketches apply to the dates recorded;
-they are not the current feature inventory. Later refinements and concrete
-component contracts describe implementation. [DECISIONS.md](DECISIONS.md) retains
-the rationale and [PROGRESS.md](PROGRESS.md) records evidence.
-
-# Merge — Architecture Blueprint (Proposed v1.0)
-
-Batch C proposes a separate production-only entry point and single-host HTTPS
-package (Caddy/static React, one FastAPI worker, private PostgreSQL17). Production
-uses fixed merge_prod with separate runtime/migration roles, mounted secrets,
-preflight/readiness and explicit owned migration transactions. Ordinary Settings,
-test/release guards and domain/auth/SSE/frontend services remain unchanged.
-Production role/volume/proxy/TLS behavior is NOT live verified. Exact design,
-configuration, launch/rollback and gaps: PRODUCTION.md. This overlays earlier
-local-only/hosting-out-of-scope checkpoint statements, without extending old
-acceptance evidence or authorizing a live operation.
-
-Batch B adds isolated release tooling only: new fixed exact-0006 profile and
-benchmark targets, caller-owned additive migration transactions, version-specific
-ephemeral CI jobs, deterministic scale seed and authenticated board/SSE benchmark.
-Production authentication, lifecycle locks, SSE and ranking remain unchanged.
-No new runtime dependency or production deployment topology is introduced.
-Owner execution order and outstanding live evidence: RELEASE_VALIDATION.md.
-Implementation/review/offline results: BATCH_B.md. All live commands remain
-unexecuted; old exact-0005 evidence/manifests retain their original scope.
-
-Batch A adds own-account validated profiles and current-leader deterministic
-teammate rankings, keeping the documented 70/30 skill/time-zone weights. A single
-bounded SQL snapshot supplies permissions and eligibility; its connection closes
-before exact scoring and sorting. Optional profile rows require the unapplied
-0006_profiles migration. No membership/authentication/transaction or SSE change.
-Read-only applicant/inbox labels are additive; stored mutation replies stay fixed.
-Contract, formula, privacy, cursor and live-verification limits: RANKING.md.
-
-M-020A implements authenticated SSE invalidation through bounded independent
-read-only polling of committed, subscriber-visible outbox records. Separate public/
-private count fingerprints avoid commit-order cursor gaps; every reconnect resets
-canonical reads. Session/Origin guards, mutation transactions and outbox retention
-remain unchanged. React closes old subscriptions and refreshes reads without
-remounting command forms. No broker, migration or dependency. Offline evidence,
-privacy contract, resource bounds and pending live/deployment checks: REALTIME.md.
-
-M-019A implements the owner-requested lifecycle slice using the existing schema:
-member leave, deterministic automatic succession, current-leader removal and
-last-member soft deletion. All reuse reservation-first transaction ownership,
-sorted affected-user locks before the team lock, atomic version/audit/outbox/reply
-and bounded retry/reconciliation. New member-only roster reads and React
-confirmation/recovery controls are additive. See [LIFECYCLE.md](LIFECYCLE.md).
-No migration or new dependency. Old guarded browser hosts exclude these routes;
-new PostgreSQL lifecycle schedules are not live-verified until separately approved.
-
-M-016 adds owner-authorized public navigation hints in per-tab sessionStorage and
-history.state, plus exact UUID lookup through the existing catalog cursor API.
-Only public UUIDs/cursors/view choice persist; authentication and mutation journals
-retain their existing authority and memory-only recovery model. Hints are gated
-by the current server-validated identity and fresh scoped reads before restoring
-command views; account changes fence older history entries. No backend/API/schema/
-transaction/dependency/deployment change. FRONTEND.md defines the precise storage
-exception, remount diagnosis and unverified live-browser limits; PROGRESS.md holds
-offline evidence. Neither interrupted browser run gains certification or resume.
-
-M-015B adds separate test-only full-stack browser tooling at exact 0005: fixed
-loopback/guarded merge_test engine, all five real service dependency overrides,
-bounded fresh registration/domain command scopes, separate retained-hackathon
-preparation and before/after fingerprint/invariant certification. The legacy
-0003 harness, production services/transactions/authentication and deployment
-topology are unchanged. A manually installed response gate lives outside the
-production frontend bundle. This is offline implementation, not browser/live/
-HTTPS acceptance or an authorization to connect. Operational contract and gates:
-[BROWSER_ACCEPTANCE.md](BROWSER_ACCEPTANCE.md). G1's prior local-only scope remains.
-
-M-014C-R1 adds committed-workspace display tokens to mutation response handling.
-Session generation still owns transport/account isolation; a separate token owns
-global expiry and automatic canonical refresh. Navigation invalidates that token
-without erasing the exact command journal. Creation scopes it to the hackathon;
-admission/invitations scope it to the selected view/team. Read refreshes do not
-rotate it. Five reproduced old-hackathon 401 defects are repaired, with 261
-frontend tests passing. Backend authorization/session architecture is unchanged.
-See FRONTEND.md and PROGRESS.md for scope, evidence and memory-only limitations.
-
-M-014C adds React recipient-UUID issuance, private paginated inbox and redemption
-against the existing invitation API. A separate App-lifetime account-scoped
-command journal retains exact payload/key under uncertainty and uses current
-session CSRF on explicit retries. Canonical reads supply inbox/team/membership;
-the existing backend authority and transaction protocol are unchanged. No
-dependency, persistence, backend/schema or browser-host change. UI map, recovery
-and unverified browser/HTTPS limits: [FRONTEND.md](FRONTEND.md). Older no-invitation-
-UI statements below retain M-014B checkpoint scope; local G1 scope is unchanged.
-
-M-014B adds owner-authorized recipient-bound, expiring invitations with current-
-leader issuance and intended-recipient redemption. The unchanged transaction
-owner and user-before-team-before-invitation lock order protect grant consumption,
-membership, version, audit/outbox and stored reply atomically. The owner reports
-0005 already applied and completed the guarded invitation run: 39 total cases
-across three repetitions. R2's report/source audit closes original Phase 1 G1
-within local owner-run PostgreSQL acceptance; no production HTTPS, browser, CI,
-load or frontend invitation UI claim. [G1_ACCEPTANCE.md](G1_ACCEPTANCE.md) records
-precise proof and provenance limits. Do not rerun migration/live tests. Earlier
-G1-open/no-live statements below retain their historical checkpoint scope.
-Contract, lock trace, rate limits and compatibility: [INVITATIONS.md](INVITATIONS.md).
-
-M-013B adds React join-request/status and leader approve/reject controls using the
-existing admission HTTP contract. A separate App-lifetime admission journal uses
-the existing account/session-generation model, scopes commands to hackathon/team/
-request, freezes exact commands/keys under uncertainty and uses current CSRF on
-explicit retries. Canonical reads supply status/membership; backend authority and
-lock protocol are unchanged. No persistence/dependency/backend/browser-host scope
-change. Offline implementation and pending browser acceptance: FRONTEND.md and
-PROGRESS.md. G1 remains open for the distinct authenticated caller race.
-
-M-013A adds the owner-scoped leader-approved request workflow described in
-[ADMISSION.md](ADMISSION.md). Additive 0004_admission and one shared
-already-locked membership helper keep authorization, resolution, membership,
-version/audit/outbox and stored outcome under TeamService._execute. Owner verified
-merge_test at 0004 and 105 admission executions across successful one- and
-two-repetition runs (35 + 70), both exit 0 with completed fixture checks. Migration
-is already applied; do not rerun it manually. No React admission UI or unrestricted
-join. The race uses one leader's decision session; distinct-caller G1 remains open.
-Older milestone statements below retain their checkpoint scope.
-
-M-012B adds React team creation through the existing M-012A POST only. An App-
-lifetime account/hackathon in-memory journal preserves exact command/key after
-uncertain delivery or session/view changes. The existing session generation now
-exposes its invalidation signal; confirmed 201 refreshes canonical discovery.
-No persistence/dependency/backend/transaction/authentication model or browser-host
-scope change. FRONTEND.md and PROGRESS.md record offline evidence and reload/
-browser/HTTPS limits. G1 stays open.
-
-M-012A adds only POST /api/hackathons/{hackathon_id}/teams using the validated
-session actor, session-bound CSRF and existing composed idempotent create service.
-It returns the stored 201 result and explicitly handles outcome_uncertain without
-adding transactions, schema, dependencies or join authorization. The owner verified
-105 guarded HTTP cases in 140.81s at 0003_auth; Codex did not rerun PostgreSQL.
-Contract and final offline evidence: [TEAM_API.md](TEAM_API.md) and PROGRESS.md. Earlier no-team-HTTP statements retain historical scope; G1 is open.
-
-**Status:** PHASE 0 VERIFIED / M-006A DOMAIN SCHEMA IMPLEMENTED; M-007A internal create/join services and R1 AUTOCOMMIT rejection implemented. Owner verified 48 expanded PostgreSQL cases in 37.23s; Codex verified 94 database-free checks. No domain APIs; G1 remains open for later acceptance work. Concrete schema and database guards: `docs/SCHEMA.md`; bounded service contract: `docs/TEAM_SERVICES.md`. Source requirements: `docs/REQUIREMENTS.md`. Decisions: `docs/DECISIONS.md`. Verification: `docs/PROGRESS.md`.
-
-## 1. Goals and constraints
-
-Current team-core overlay: M-008D composed idempotent mutation/version/audit/outbox
-is committed; owner verified 198 live cases (suite-time sum 201.63s) at 0003_auth.
-M-008E bounded retries and same-key ambiguous-COMMIT reconciliation are implemented;
-owner verified 54 retry / 81 mutation / 57 service / 60 idempotency cases, 252
-passes with suite-time sum 200.05s at guarded 0003_auth, three repetitions
-requested per suite and fresh committed invariants verified. Codex did not
-execute PostgreSQL tests. Only composed operations
-participate, maximum three total attempts, monotonic budget and bounded jitter;
-`_execute` remains sole transaction owner and lock order/schema remain unchanged.
-See [TRANSACTION_RETRY.md](TRANSACTION_RETRY.md) and PROGRESS.md. Older milestone
-statements below describe their original scope. M-010A now implements authenticated
-GET-only discovery; owner verified 87 reads in 73.35s and 54 auth API regressions
-in 28.28s at 0003_auth: 141 passed, suite-time sum 101.63s, three repetitions
-requested and one existing warning. Codex did not execute PostgreSQL tests. See
-[READ_API.md](READ_API.md) for scope, typed DTOs, single-statement read-only
-snapshots and bounded keyset pages on existing indexes. No HTTP team mutation,
-G1 closure. M-011A now adds the existing React app's authentication and discovery
-frontend for review: same-origin typed API client, memory-only CSRF/session
-bootstrap, cancellable view reads and bounded cursor pages. No dependency,
-backend runtime or schema change. Component/build evidence and the separate
-guarded browser-environment prerequisite are in [FRONTEND.md](FRONTEND.md).
-- Solve PS1 with a **correct-by-design membership core**, not an application-server mutex.
-- Support 10k seeded users, 2k teams, board p95 < 200ms under 100 concurrent clients in the measured environment.
-- Deliver an end-to-end React UI, secure API, realtime team/board notifications, verified tests and deployment by challenge deadline.
-- Keep solution understandable for a 45-minute technical interview with live modification.
-- Non-goals before submission: microservices, LLM matching, multi-region deployments, enterprise SSO, speculative high-scale queues.
-
-## 2. Topology
-```
-React + TypeScript (Vite)  -- HTTPS -->  FastAPI modular monolith
-       |                                      |-- Auth / sessions
-       |                                      |-- Hackathons + team lifecycle
-       +<-- SSE (committed change signal) --  |-- Membership transaction service
-                                              |-- Invites + join requests
-                                              |-- Suggestions + board queries
-                                              |-- Audit + outbox dispatcher
-                                              |
-                                              +-- PostgreSQL (source of truth)
-                                                  users, hackathons, teams, memberships,
-                                                  invitations, join_requests,
-                                                  idempotency, audit, outbox
-
-CI: GitHub Actions → pytest/API/real Postgres race tests → UI build
-Performance: k6 → deployed/staging board with fixed seed and test environment
-Browser verification: Playwright → accessible mobile/keyboard flows
+```text
+Browser -- Render-managed HTTPS --> Caddy on $PORT
+                                     | React production assets
+                                     | same-origin /auth, /api and SSE
+                                     v
+                              FastAPI 127.0.0.1:8000
+                              one worker; pool 2, no overflow
+                                     | private same-region TLS
+                                     v
+                              PostgreSQL 17 / merge_prod
 ```
 
-**Deployment assumption:** Start with a single backend instance. No domain
-correctness rule depends on one instance; PostgreSQL remains authority. M-020A's
-independent polls of the shared primary avoid process-local delivery gaps across
-workers, without ordered/exactly-once fanout. Multi-instance capacity, polling cost
-and proxy behavior remain unverified; measure before scaling horizontally.
+[Render Free](RENDER.md) is the selected demonstration target, prepared but not
+live verified. Caddy is the only public application listener. Render owns HTTPS;
+Caddy matches the assigned hostname, replaces forwarding headers and preserves
+stream flushing. The existing authentication boundary trusts only loopback,
+requires the exact HTTPS Origin, and retains secure host-only cookies and CSRF.
 
-## 3. Modules (one codebase, clear ownership)
-- `identity`: accounts, safe sessions, password hashing, profiles/skills/timezone.
-- `hackathons`: event configuration and min/max sizes.
-- `teams`: create, rename (if supported), soft-delete, leadership.
-- `memberships`: join/leave/remove, atomic capacity and uniqueness.
-- `invitations`: generate hashed, expiring, revocable invite codes; redeem through memberships.
-- `join_requests`: create/cancel, approve/decline, enforce leader authorization; approve via same membership service.
-- `board`: team discovery, filters, pagination and indexed queries.
-- `matching`: deterministic skill/timezone ranking and rationale.
-- `audit`: durable actor/action/time record within mutation transaction.
-- `events`: transactional outbox, SSE stream, reconnect reconciliation.
-- `reliability`: idempotency records, structured errors and diagnostics.
+Runtime credentials cannot migrate. Default startup validates configuration,
+private database identity, least privileges, exact `0006_profiles` revision and
+schema readiness. A separate, explicitly selected fresh setup command owns DDL.
+Its private attempt/SHA claim blocks unattended retry after interruption. It has
+no HTTP command endpoint. Exact setup, status meanings and rollback: [RENDER.md](RENDER.md).
 
-**Critical rule:** Every route that changes member count or assignments enters one authoritative membership/domain service, never copies SQL business rules into handlers.
+The Render adapter reuses Railway's connection guard and process helpers, plus
+production constants, grants and readiness. Those sources are dependencies, not
+cleanup candidates. [Railway](RAILWAY.md) and the [VPS package](PRODUCTION.md) are
+retained alternatives, superseded only as the immediate hosting choice. Their
+network/credential models must not be mixed. No deployment is certified.
 
-## 4. Data model proposal
-- `users(id, display_name, created_at, ...)` remains the principal table. Approved
-  M-007B.1 storage is separate: account_credentials, opaque auth_sessions and
-  auth_throttle_buckets. Owner verified additive 0003_auth/repeat on merge_test,
-  preserved domain rows and 78 live auth schema cases in 11.75s (three repetitions
-  requested); checkpoint database-free regressions: 116 passed.
-  See AUTH_SCHEMA.md. M-007B.2A adds internal credential services with bounded
-  Argon2id work and owned transactions; owner verified 51 guarded live cases in
-  28.76s, three repetitions requested and fresh credential committed-state checks.
-  Codex checkpoint regressions: 175 database-free tests. See
-  CREDENTIAL_SERVICES.md. M-007B.2B adds internal PostgreSQL session lifecycle:
-  credential-verified login with a locked snapshot recheck, digest-only bearer
-  storage, eight-hour absolute expiry, session-bound CSRF and terminal revocation.
-  Owner verified 63 guarded session cases passed in 51.63s against merge_test /
-  0003_auth, three repetitions requested; fresh session invariants verified and
-  fixtures retained. Codex checkpoint: 222 database-free tests; no PostgreSQL
-  rerun. See SESSION_SERVICES.md for the trusted handoff, transaction
-  authority and remaining limitations. M-007B.3A-R1 adds owner-approved
-  validate_with_csrf plus four HTTP auth endpoints, strict JSON bodies, exact
-  Origin/custom-header/Fetch Metadata checks, session-bound logout CSRF and
-  separate production/development cookies. No lifecycle transaction changes.
-  Owner verified 78 expanded session cases in 72.48s and 54 guarded API cases in
-  40.90s against merge_test / 0003_auth (head), with fresh committed-state
-  invariants. M-007B.3B now implements durable PostgreSQL fixed-window HTTP auth
-  admission for review, with independent short transactions before KDF, HMAC
-  identifiers and explicit actual-peer/single-hop proxy trust. Owner verified
-  33 throttle cases in 31.42s, 54 updated API cases in 30.94s and 78 session
-  cases in 48.33s: 165 passes in 110.69s, three repetitions requested and fresh
-  committed-state invariants verified. Codex did not rerun PostgreSQL.
-  See AUTH_THROTTLING.md and HTTP_AUTH.md.
-  Browser/deployed HTTPS remains unverified; no team API or production-readiness claim.
-- `hackathons(id, name, min_team_size, max_team_size, ...)` with `min>=1`, `max>=min`.
-- `teams(id, hackathon_id, leader_user_id, min_team_size, max_team_size, version, deleted_at, ...)`. Member count is derived from rows; readiness is derived from count/minimum/deletion, with neither stored.
-- Active-only `memberships(hackathon_id, user_id, team_id, joined_at)` with **PRIMARY KEY `(hackathon_id,user_id)`**, composite team/hackathon FK and unique `(team_id,user_id)` for the deferred leader FK. History belongs in audit.
-- `invitations(id, team_id, token_hash UNIQUE, expires_at, revoked_at, created_by, ...)`.
-- `join_requests(id, team_id, user_id, state, created_at, decided_at, decided_by, ...)` with sensible pending uniqueness.
-- `idempotency_records(id, actor_id, hackathon_id, operation, key, request_hash, state, http_status, response_body, response_headers, created_at, completed_at)` with unique `(actor_id,operation,key)`. M-008C adds private success-only reservation/replay helpers on this unchanged schema. Owner verified 60 guarded merge_test cases in 40.82s at 0003_auth, three repetitions requested, fresh invariants verified; public mutation composition remains pending. See IDEMPOTENCY.md.
-- `audit_events(id, actor_id, hackathon_id, team_id, action, old_state?, new_state?, occurred_at, ...)`.
-- `outbox_events(id, aggregate_type, aggregate_id, event_type, payload, occurred_at, published_at?)`.
+## Data and transaction invariants
 
-**Integrity details requiring migration-level design:**
-- Ensure membership `hackathon_id` is consistent with its `team.hackathon_id` (composite foreign key or equivalent validated transactional rule).
-- Ensure leader is a current member, including initial team creation and succession. If circular FKs complicate creation, use a controlled deferred constraint/transactional design; document concrete implementation.
-- Capacity is a cross-row invariant and cannot be guaranteed by a naive CHECK. Parent-team locks and deferred final-state validation enforce capacity using actual membership rows; no stored counter exists.
-- M-005B chose active-only membership storage; audit preserves history. M-006A provides database-enforced capacity/final-state checks, with the exact table/function definitions documented in `SCHEMA.md`.
-- Soft deletion retains audit references but user-facing APIs and board must hide deleted teams.
+Membership is keyed by `(hackathon_id, user_id)`. Scoped foreign keys and deferred
+final-state checks protect capacity, live-team membership and valid leadership.
+Pending requests reserve no seats. A final departure retires the team while
+preserving audit history. [Schema](SCHEMA.md) defines the database constraints.
 
-## 5. Canonical transaction protocol (to finalize in first implementation PR)
-All membership-changing operations must acquire locks in **one consistent order**. Proposed:
-1. Authenticate/authorize and perform syntax validation before transaction.
-2. Begin database transaction; establish idempotency ownership for operation (unique key, fingerprint, safe replay semantics).
-3. Lock hackathon FOR SHARE, then serialize affected membership subjects with user-row **FOR NO KEY UPDATE** locks in sorted user-ID order. No new user lock may be acquired after a team lock.
-4. Lock target `teams` row with **FOR NO KEY UPDATE** (if multiple teams, sorted team IDs), then future auxiliary request/invite rows. Leadership changes use the team lock; selecting a successor does not change its membership or acquire its user lock afterward.
-5. Under lock, re-read team state and current membership; verify action permission, capacity, membership uniqueness, invite expiry, request state and leader rules.
-6. Write membership/team updates, corresponding audit event, idempotency outcome and outbox record in the **same transaction**.
-7. Commit; event dispatcher may publish committed outbox signal. Any rolled-back transaction produces no durable domain mutation or event.
+Mutations reserve the caller/operation/idempotency key and command fingerprint,
+then lock the hackathon, affected users in UUID order, team and auxiliary request
+or invitation. They recheck authorization, eligibility and actual membership
+under lock. Domain changes, team version, audit/outbox and canonical stored reply
+commit or roll back together. Duplicate commands replay the stored outcome;
+mismatched reuse is rejected. Bounded retries retain ownership and command data;
+uncertain COMMIT needs reconciliation. See [mutations](TEAM_MUTATIONS.md),
+[idempotency](IDEMPOTENCY.md), [retries](TRANSACTION_RETRY.md),
+[admission](ADMISSION.md), [invitations](INVITATIONS.md) and [lifecycle](LIFECYCLE.md).
 
-**Lock-order warning:** User-before-team ordering is a proposal and must be checked against team creation, join approval, leader departure, and multi-member operations for deadlocks. Avoid reverse-order locks in any endpoint. Record final invariant proof and lock protocol in an ADR before scaling feature work.
+## Authentication and application boundary
 
-### Last-seat race proof
-- Team has exactly one free seat.
-- Fire 50 independently authenticated requests concurrently against the same real PostgreSQL database.
-- Locking serializes capacity mutation for that team; only the first eligible mutation can fill the seat.
-- Remaining requests observe full capacity and return an explicit conflict response.
-- Assertions: one newly inserted active membership, zero over-capacity, no duplicates, member-count matches rows, valid leader, correct audit/outbox count, no 500s. Repeat multiple runs.
+Argon2id protects passwords. Opaque database sessions use token hashes, absolute
+expiry and server-side authorization. Secure HttpOnly host-only cookies, exact
+Origin/transport checks, CSRF and durable account/IP throttles protect browser
+commands. Client selectors never create authority. Credential/session transactions
+remain separate from domain mutations. [HTTP authentication](HTTP_AUTH.md),
+[sessions](SESSION_SERVICES.md) and [throttling](AUTH_THROTTLING.md) specify the rules.
 
-### Cross-team race proof
-- Same user submits two concurrent joins targeting different teams.
-- Per-user lock (if used) and active membership UNIQUE constraint ensure at most one succeeds.
-- Verify state in DB, not only HTTP responses.
+React provides discovery, profiles, team creation, requests, invitations,
+membership lifecycle and explained recommendations. Account/scope changes fence
+stale responses and close streams. Unknown mutation delivery requires recovery;
+UI refresh never silently replays a command. [Frontend](FRONTEND.md) retains the
+component contracts and failure cases.
 
-### Idempotency
-- M-008D adds internal create_team_idempotent/join_team_idempotent composition
-  under TeamService._execute, with one audit/outbox pair and version per success.
-  Owner verified 81 composed + 57 service + 60 idempotency cases on guarded
-  0003_auth: 198 passed, corrected suite-time sum 201.63s, three repetitions
-  requested per suite, fresh invariants verified. Public HTTP integration remains
-  pending; see TEAM_MUTATIONS.md. Codex did not rerun PostgreSQL.
-  Legacy methods remain internal compatibility facades, excluded from future HTTP.
-- M-008C implements private primitives only: exact printable-ASCII keys, versioned
-  canonical SHA-256 command hashes, ON CONFLICT reservation, separate fresh
-  READ COMMITTED replay lookup and transaction-local successful completion.
-  Pending cannot commit; failed mutations retain no record. The existing
-  TeamService transaction owner and public methods are unchanged. The bullets
-  below describe the future public integration, not a verified endpoint.
-- Client sends `Idempotency-Key` on creation/join mutations.
-- Atomic record uniqueness scoped to actor+operation+key; immutable fingerprint of meaningful request payload.
-- Same key+same payload returns one recorded result; same key+different payload returns conflict.
-- Concurrent same-key requests cannot each perform the operation; use locked or unique reservation semantics.
-- Commit record and domain effect together; define behavior for a request crashing before commit (rollback allows retry) and after commit/before HTTP response (replay returns stored result).
+## Realtime and deterministic matching
 
-## 6. Business-state policies (proposed)
-- Team states: `forming`, `ready`, `deleted`. A team may have one founding member even if `min_team_size > 1`; readiness requires min members.
-- Pending join requests never reserve capacity; leader acceptance invokes standard safe join.
-- Invitation redeems to a join attempt, no guarantee of seat availability.
-- Leader departure: deterministically select valid successor (e.g. earliest joined remaining member) within same transaction; if no members remain, soft-delete team.
-- Team-deleted means absent from discovery and API mutations; history retained in audit.
-- Team changes have actor/action/timestamp and old/new state where relevant.
+Authenticated SSE reads committed subscriber-visible outbox counts in short
+read-only transactions; no transaction spans a network wait. Frames invalidate
+views without private domain payload. Reconnect refetches canonical state.
+Session/scope checks, subscriber caps, leases and send deadlines bound resources.
+This provides neither ordered nor exactly-once delivery. [Realtime](REALTIME.md)
+records the protocol and unmeasured retained-history cost.
 
-## 7. API sketch (to be refined, not yet implemented)
-```
-POST /auth/register          POST /auth/login          POST /auth/logout
-GET  /me                     GET  /hackathons/{id}/teams
-POST /hackathons/{id}/teams  GET  /teams/{team_id}
-POST /teams/{id}/invitations POST /invitations/redeem
-POST /teams/{id}/requests    POST /requests/{id}/accept
-POST /requests/{id}/decline POST /teams/{id}/leave
-DELETE /teams/{id}/members/{user_id}
-GET  /hackathons/{id}/suggestions
-GET  /teams/{id}/audit       GET  /events
-```
-- Validate every payload and enforce authorization for read/write operations.
-- Use consistent error mapping: `400/422` bad request, `401` unauthenticated, `403` forbidden, `404` absent/private, `409` capacity/membership/conflict, `429` rate limit.
-- Use pagination and server-side filters for board endpoints.
+Ranking uses exact deterministic fractions: 70 points for candidate skill novelty
+and 30 for average time-zone working-hour overlap, with UUID tie breaks. Candidates
+must be opted in and eligible in scope; only current leaders may read suggestions.
+A suggestion never grants admission. [Ranking](RANKING.md) specifies pagination,
+privacy, assumptions and limits.
 
-## 8. Authentication, invites and security
-- Prefer HttpOnly, Secure, SameSite cookies and server-revocable sessions. If using cookies, include CSRF protection on state-changing requests (SameSite alone may not be sufficient).
-- Password hashes with a maintained password KDF (e.g. Argon2id); never log passwords or raw invite tokens.
-- Invitation tokens generated with cryptographic RNG, sufficient entropy (e.g. >=128 random bits), stored as hashes, expiration and revocation checked server-side, rate-limited per identity/IP.
-- Team leader verification always server-side within transaction.
-- Bound pagination, normalize and validate skills/timezone strings, escape user-provided content at render, and configure CORS narrowly.
-- Test unauthorized access and IDOR cases.
+## Verification and design history
 
-## 9. Realtime strategy
-- Server writes an outbox event in the same transaction as the relevant team mutation.
-- M-020A samples committed visible outbox/audit rows in short read-only snapshots;
-  it does not claim publication or update published_at/attempt_count.
-- Authenticated hackathon streams expose only invalidation plus own identity/scope;
-  private request/issuance signals obey current requester/leader/recipient bounds.
-- Every connection resets/refetches canonical reads. Fingerprints bind actor/scope
-  to separate public/private counts, not UUID/timestamp order. Duplicates/gaps are
-  repaired by refetch; event history and exactly-once delivery are not promised.
-- Fixed subscriber/lease/poll/backoff limits bound resource use. Existing React
-  useRead and command journals remain separate; no automatic mutation replay.
-- Independent shared-primary polling can observe other workers' commits. This is
-  eventual invalidation; real multi-instance/proxy/load acceptance remains pending.
+Offline tests cover contracts and refusal paths. Real PostgreSQL race/grant tests,
+public HTTPS, integrated browser behavior and measured load need their own evidence.
+Render Free's cold starts, small resources and expiring database limit availability;
+512 MB fit is unmeasured. [Testing](TESTING.md) separates current checks from prior
+certificates. [Requirements](REQUIREMENTS.md), [decisions](DECISIONS.md) and the
+[one-page design](DESIGN_ONE_PAGE.md) explain the submission scope.
 
-## 10. Teammate recommendations
-- Filter to eligible, discoverable, currently unassigned users for given hackathon.
-- Score skills complementary to team's existing coverage and timezone overlap. Initial documented formula suggestion: `0.7 * skill_complement + 0.3 * timezone_overlap` (both normalized to [0,1]).
-- Score ties deterministically. Publish explanation in endpoint/README; add positive and negative cases in unit tests.
-- This is deterministic matching, not a requirement to use ML/LLMs.
-
-## 11. Performance and observability
-- For the board query: indexed hackathon/team status and paging, avoid N+1, bounded result sets, inspect `EXPLAIN ANALYZE` before tuning.
-- Seed script creates 10k users and 2k teams, ideally deterministically with an idempotent/resettable mode that requires confirmation before destructive changes.
-- k6: 100 concurrent VUs, enough duration for warm and sustained periods; report p50/p95/p99, request rate, error %, actual dataset, server hardware/region and test script. Fail target if p95 >=200ms or errors are significant.
-- Structured logs, request IDs, errors and slow SQL timings. Optional tracing only after must-haves.
-
-## 12. Repo layout (incremental)
-```
-merge/
-├── AGENTS.md
-├── backend/
-│   ├── app/{api,core,db,models,schemas,services,realtime}/
-│   ├── tests/
-│   ├── alembic/
-│   └── pyproject.toml
-├── frontend/src/{components,features,pages,hooks,lib}/
-├── docs/{REQUIREMENTS,ARCHITECTURE,DECISIONS,PROGRESS}.md
-├── scripts/
-├── load-tests/
-├── .github/workflows/
-├── compose.yaml
-├── .env.example
-└── README.md
-```
-Folders beyond `docs/` are **proposed**; create only as tasks need them.
-
-## 13. Build sequence / gates
-- **G0:** Docs, repo, local Postgres backend/frontend minimal smoke tests.
-- **G1:** Schema + join service; repeated 50-way race and cross-team join tests pass with real PostgreSQL.
-- **G2:** All lifecycle paths, idempotency, authZ, invite security, audit pass.
-- **G3:** Full React flow, SSE, matching, mobile/keyboard E2E pass.
-- **G4:** CI >=20 API tests, seed verified, k6 board p95 <200ms in declared environment.
-- **G5:** Working public deployment, one-page design, benchmark report, <=5-min demo, submitted links.
-
-## 14. Known limitations / decision gates
-- M-006B provides a separate opt-in local merge_test target and dedicated online
-  migration runner using unchanged versions. Owner verified 45 database-level
-  adversarial cases in 39.72s (three repetitions); see TEST_DATABASE.md/PROGRESS.md.
-  Ordinary backend configuration remains merge_dev. Service/API races remain open.
-- M-006A adds concrete schema, deferred leadership/final-state integrity and immutability guards. APIs, full service lock protocol, auth, idempotency replay, audit generation and dispatch remain future work. Schema tests do not prove 50-way service races.
-- Phase 0 uses the owner's existing local PostgreSQL 17 server, dedicated `merge_dev` database and non-administrative `merge_app` role; manual provisioning is required when credentials are unavailable. Docker is optional and unverified. See the dated setup clarification in `DECISIONS.md`.
-- Deployment provider and database hosting must be chosen after checking availability and cold-start constraints.
-- SSE scaling across multiple instances is not solved merely by adding a transactional outbox.
-- Counts/readiness are derived; future services must count in a fresh statement after taking the team lock, not use stale loaded ORM values.
-- Browser-only or SQLite tests cannot prove cross-process PostgreSQL race correctness.
+The superseded proposal/API sketches are preserved in
+[architecture history](archive/ARCHITECTURE_HISTORY.md). Historical commands do not
+authorize database access or recertify an old campaign.

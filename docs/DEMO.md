@@ -45,5 +45,5 @@ access, approves publication and then fills actual video URL/duration in SUBMISS
 Final check: media duration <=300 seconds, including titles. Label the old
 integrated browser campaign incomplete; a recording cannot retroactively certify
 it. If CI/load/HTTPS proof is absent, say pending and show tooling/source only.
-No live race or benchmark is required during recording. BATCH_E_RELEASE.md lists
+No live race or benchmark is required during recording. [historical batch e release review](archive/ENGINEERING_HISTORY.md#batch-e-release) lists
 the official artifacts and separate approvals needed before recording/publication.

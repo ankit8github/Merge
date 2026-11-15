@@ -22,7 +22,7 @@ coverage checks SSE, confirmation/draft preservation and permission loss.
 
 These are jsdom/offline behaviors, not new browser/mobile/keyboard/HTTPS evidence.
 Old browser hosts exclude the profile/ranking router and gain no manifest scope.
-Full contract and remaining guarded work: RANKING.md and BATCH_A.md.
+Full contract and remaining guarded work: RANKING.md and [historical batch a review](archive/ENGINEERING_HISTORY.md#batch-a).
 
 ## M-020A SSE invalidation
 
@@ -560,7 +560,7 @@ below describe earlier M-011A behavior/counts, not new M-012B live evidence.
 **M-011A-R4: shutdown defect corrected offline; stop for owner review.** The R3
 regression now passes. Timeout/incomplete drains remain unsuccessful independently
 of later snapshots; final success is printed only after Engine/listener cleanup.
-[BROWSER_HOST_AUDIT.md](BROWSER_HOST_AUDIT.md) records the minimal source diff and
+[BROWSER_HOST_AUDIT.md](archive/ENGINEERING_HISTORY.md#browser-host-audit) records the minimal source diff and
 R3/R4 evidence. Live reads, scoped auth writes and all account/fixture prerequisites
 still require separate owner approval; no live startup is authorized by this fix.
 

@@ -1,0 +1,56 @@
+{
+  "services": [
+    {
+      "type": "web",
+      "name": "merge-demo",
+      "runtime": "docker",
+      "plan": "free",
+      "region": "singapore",
+      "repo": "https://github.com/ankit8github/Merge",
+      "branch": "main",
+      "dockerfilePath": "./deploy/Dockerfile.render",
+      "dockerContext": ".",
+      "dockerCommand": "python -m app.render.serve",
+      "healthCheckPath": "/ready",
+      "autoDeployTrigger": "off",
+      "numInstances": 1,
+      "maxShutdownDelaySeconds": 40,
+      "envVars": [
+        {
+          "key": "PORT",
+          "value": "10000"
+        },
+        {
+          "key": "MERGE_RENDER_ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "key": "MERGE_RENDER_DB_HOST",
+          "fromDatabase": {
+            "name": "merge-postgres",
+            "property": "host"
+          }
+        },
+        {
+          "key": "MERGE_RENDER_RUNTIME_PASSWORD",
+          "sync": false
+        },
+        {
+          "key": "MERGE_RENDER_THROTTLE_KEY",
+          "sync": false
+        }
+      ]
+    }
+  ],
+  "databases": [
+    {
+      "name": "merge-postgres",
+      "databaseName": "merge_prod",
+      "user": "merge_migrator",
+      "plan": "free",
+      "region": "singapore",
+      "postgresMajorVersion": "17",
+      "ipAllowList": []
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 **2026-11-15 recovery overlay:** the original run is permanently consumed and
 uncertified. Its saved drain-stage failure cannot distinguish readiness, drain
-predicates or incomplete ledger. See [BATCH_D_RECOVERY.md](BATCH_D_RECOVERY.md)
+predicates or incomplete ledger. See [BATCH_D_RECOVERY.md](archive/ENGINEERING_HISTORY.md#batch-d-recovery)
 for the immutable receipt identities, diagnostic-only correction, offline results
 and release priorities. No old command below authorizes a restart of that scope.
 New instrumentation records startup/readiness/shutdown flags, aggregate GET/auth

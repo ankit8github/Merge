@@ -27,7 +27,7 @@ Old browser hosts exclude the new profile/ranking router before closed audits.
 Review/rerun the four exact-0005 SSE cases before any separately approved 0006
 migration. New profile CAS/eligibility/SQL/integrity acceptance requires its own
 reviewed exact-0006 harness/migration permissions, not a broadened old scope.
-Detailed outstanding plan and offline evidence: BATCH_A.md and RANKING.md.
+Detailed outstanding plan and offline evidence: [historical batch a review](archive/ENGINEERING_HISTORY.md#batch-a) and RANKING.md.
 
 ## M-020A realtime suite - offline collected, live NOT RUN
 
@@ -266,7 +266,7 @@ PostgreSQL. Reproduction commands and exact writes are in
 **M-011A-R4: shutdown defect corrected offline; stop for owner review.** The R3
 regression now passes. Timeout/incomplete drains remain unsuccessful independently
 of later snapshots; final success is printed only after Engine/listener cleanup.
-[BROWSER_HOST_AUDIT.md](BROWSER_HOST_AUDIT.md) records the minimal source diff and
+[BROWSER_HOST_AUDIT.md](archive/ENGINEERING_HISTORY.md#browser-host-audit) records the minimal source diff and
 R3/R4 evidence. Live reads, scoped auth writes and all account/fixture prerequisites
 still require separate owner approval; no live startup is authorized by this fix.
 

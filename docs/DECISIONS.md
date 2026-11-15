@@ -1,5 +1,120 @@
 # Merge — Architecture Decision Records (ADRs)
 
+### Documentation release review - 2026-11-15
+
+The owner authorizes documentation consolidation, a complete Render adapter review,
+offline regression checks and exactly one reviewed local release commit. This
+supersedes prior preparation-only commit stops for this task; push, database,
+startup, migration, cloud and paid actions remain outside scope. No architecture,
+API, authentication, locking, dependency or schema revision is changed. Dated
+reviews/proposal/progress move to the labeled archive; current guides retain
+contracts and link the preserved history. Render remains the selected target.
+
+
+### Render Free adapter - owner-selected hosting, 2026-11-15
+
+The owner selects Render Free: one 512 MB/0.1 CPU public web service, private
+PostgreSQL 17 on the confirmed 256 MB/0.1 CPU free plan. This supersedes Railway
+as the immediate hosting target; pending Railway work is retained and reviewed.
+Prepare only: no cloud resource, DB connection, migration, startup, paid upgrade,
+commit, push or deployment is authorized by this task.
+
+One bounded component: a Render-specific production adapter and setup runbook.
+Use the same Caddy/React + one loopback FastAPI worker topology and existing
+services/authentication/session/CSRF/Origin/SSE/migration invariants. Reuse pending
+Railway's strict runtime connection Guard, readiness, private address policy,
+secret/port helpers and child shutdown/readiness functions where compatible.
+Do not weaken VPS/CI/local/test/Railway guards or modify schema revisions.
+
+Render-specific inputs: exact onrender.com hostname; PORT (default 10000, rejecting
+private/reserved ports); exact short dpg-* private DB hostname, merge_prod,
+merge_runtime credentials; TLS required; 0006 startup check. Only loopback is a
+trusted API proxy. Caddy consumes Render's documented CF-Connecting-IP, captures
+it before removing inbound variants, and supplies one validated IP/HTTPS scheme.
+Do not select an untrusted leftmost XFF. Live spoof/streaming checks remain gates.
+Runtime pool is bounded to two connections, no overflow, with one API worker and
+64 ASGI concurrency limit. Existing hash/security and SSE bounds stay unchanged.
+No claimed Linux peak RSS or capacity result without actual runtime measurement.
+
+Render Free has no shell, one-off job, or paid pre-deploy hook. Provide a separate
+explicit setup-only Docker command, never imported by ordinary startup. On a fresh
+Render-created empty merge_prod owned by merge_migrator, one owned transaction
+checks a setup advisory lock/fresh schema/absent runtime role, creates only the new
+restricted runtime role, runs existing revisions to exact 0006, applies the same
+grants and one explicit catalog entry. No create/drop database, reset, adoption,
+role password replacement or downgrade. A failed application DDL transaction rolls back its changes. A private auxiliary
+schema, merge_deployment, stores one committed setup claim
+before business DDL. The claim binds explicit attempt UUID and reviewed Git SHA.
+A failed/interrupted claim cannot be retried automatically or reset through this
+adapter; a completed identical claim may only be verified without DDL. Completion
+updates the claim in the same transaction as schema/grants/catalog. This addresses
+Free's arbitrary process restarts and lack of persistent local files; it is not a
+new public business table or a change to revision 0006. A session advisory lock
+serializes the claim and owned DDL phases; runtime membership locking is untouched.
+No generic admin HTTP endpoint is added.
+A setup-only health listener remains after the single action so Free web-service
+port/health requirements do not force repeated initialization. It serves status
+only, never executes HTTP commands or serves the application. The owner must
+replace the Docker command with ordinary serve and remove migrator/setup inputs
+before publishing application traffic. Privileged inputs never reach runtime.
+
+This explicitly selected setup deployment is separate from application startup;
+no migration runs in the default Docker CMD. It uses private runtime connectivity,
+not build-time SQL or an opened external DB allowlist. Render-created owner's
+CREATE ROLE/grant authority, SQL log privacy and actual managed defaults require
+live confirmation; failure stops and does not relax runtime privileges.
+
+Render's free idle spin-down, ephemeral filesystem, 30-day DB expiry, 1 GB storage,
+no managed backups and quota limits make this a time-limited demonstration, not a
+production availability or portfolio persistence claim. No load test against the
+free production service. Preserve evidence and plan an approved export/hosting
+transition before expiry; do not auto-upgrade or add keepalive bots.
+Exact configuration, cited provider facts and missing checks: RENDER.md.
+
+
+### Railway deployment adapter - owner-requested preparation, 2026-11-15
+
+The owner selects Railway for evaluation because no VPS/domain is available.
+Prepare one public application service (Caddy with compiled React plus one
+loopback-only FastAPI worker), Railway TLS/domain/PORT and a private PostgreSQL 17
+service. This is an additive platform adapter; existing VPS/local/test targets,
+authentication/session/CSRF/Origin model, migrations and mutation locks stay fixed.
+No live deployment, database action, commit or push is authorized by this record.
+
+Use exact Railway hostname/origin and private postgres.railway.internal DNS;
+require merge_prod, distinct restricted runtime/migrator roles and exact 0006.
+Check resolved private server addresses, PostgreSQL major version and role/grant/
+transaction/revision invariants. No DATABASE_URL or development target fallback.
+Credentials are explicit platform secrets, never build inputs or frontend values.
+Bootstrap/migrations/catalog are explicit temporary private operations deployments;
+ordinary startup only verifies runtime readiness and never applies DDL.
+
+Caddy terminates the platform's internal HTTP hop, strips inbound forwarding
+variants and supplies one validated client-IP convention to the API. Uvicorn
+trusts no forwarding middleware; application policy trusts only loopback Caddy.
+Railway documents X-Real-IP and HTTPS X-Forwarded-Proto at its public edge. There
+is no application-level proof that a private same-environment caller is the edge.
+The dedicated production environment (application, database, temporary trusted
+operations only) is therefore an explicit trusted ingress boundary. Do not add
+untrusted services, TCP proxies, extra public ports, CDN or a second proxy.
+Validate edge overwrite/spoof resistance during owner-run HTTPS smoke before
+claiming acceptance. Missing/malformed proxy identity or wrong Origin fails closed.
+
+Caddy preserves no-buffer SSE flushing and the existing lease/reconnect protocol.
+A bounded Python supervisor owns both child processes, forwards shutdown and
+fails the container if either child exits. No new Python/npm dependency. Reusing
+Caddy preserves current static caching/security headers; a new public ASGI static/
+proxy implementation was rejected as more application/security change. Existing
+VPS entry points stay untouched so the two platform trust models cannot mix.
+
+Railway's standard database template/version/maintenance scope must be verified
+in the owner's dashboard. Pin a fresh 17 image before first use; a template is not
+a promise of HA, backups, unlimited usage or PostgreSQL 17 by default. Native
+Docker/Caddy, platform ingress, private DNS/TLS/grants and shutdown are unverified
+until an approved rehearsal. Current documentation and exact requirements will
+be retained in RAILWAY.md.
+
+
 ### Batch C — proposed production isolation and same-origin HTTPS, 2026-11-14
 
 Prepare a single Linux VPS: Caddy serves compiled React and terminates HTTPS,
@@ -11,7 +126,7 @@ and migrations. Existing local/test/release guards and domain services remain
 unchanged. Preserve the exact Origin/CSRF/Secure __Host cookie and transport-peer
 policy; disable Uvicorn forwarded-header processing. Reuse Batch B row-preservation
 snapshots without broadening its target guard. This is an owner-review proposal,
-not deployment acceptance or a provider price/availability claim. BATCH_C.md
+not deployment acceptance or a provider price/availability claim. [historical batch c review](archive/ENGINEERING_HISTORY.md#batch-c)
 records the bounded contract; PRODUCTION.md will hold execution/rollback details.
 
 ### Batch B — proposed isolated release validation targets, 2026-11-14
@@ -20,7 +135,7 @@ Prepare separate exact-version profile and benchmark targets, source-bound test
 receipts and ephemeral per-revision CI containers. Preserve all legacy guards,
 fixtures and evidence. Fixed benchmark-only generation/load tools cannot address
 merge_dev or retained merge_test. No production topology/auth/lock/SSE change.
-Contract and acceptance boundaries recorded before coding: BATCH_B.md.
+Contract and acceptance boundaries recorded before coding: [historical batch b review](archive/ENGINEERING_HISTORY.md#batch-b).
 
 ### Batch A — proposed ADR-009 profile/ranking refinement, 2026-11-14
 

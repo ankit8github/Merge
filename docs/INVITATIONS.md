@@ -273,4 +273,4 @@ Issuance/redemption stored replies, lock order and capacity checks are unchanged
 Current leaders can select a named, opted-in ranked candidate into the existing
 recipient UUID form; UUID entry remains an advanced fallback. Ranking grants no
 membership or seat reservation. RANKING.md defines that separate read contract.
-Offline evidence and remaining live scope: BATCH_A.md; old manifests stay fixed.
+Offline evidence and remaining live scope: [historical batch a review](archive/ENGINEERING_HISTORY.md#batch-a); old manifests stay fixed.

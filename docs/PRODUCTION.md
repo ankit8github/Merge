@@ -1,5 +1,9 @@
 # Production proposal and owner runbook — NOT DEPLOYED
 
+**Retained VPS alternative:** [Render](RENDER.md) is the current demonstration
+target. This separate network/volume/TLS runbook is not the Render setup path.
+Its source, grants and safeguards remain unchanged. No deployment is verified.
+
 This is preparation, not permission to execute. No live PostgreSQL, migration,
 service/browser, load, remote, publication or deployment action ran in Batch C.
 Use [SUBMISSION.md](SUBMISSION.md) for dependency order and approval boundaries;

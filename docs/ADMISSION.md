@@ -505,4 +505,4 @@ Pending-request GET rows additionally project requester_display_name and
 requester_username from the same authorized SQL snapshot. Only the current leader
 can read them; no new account-directory API. Stored request/decision replies and
 mutation composition are unchanged. Missing labels retain identifier fallback in
-historical fixtures/recovery. Offline evidence: BATCH_A.md. No new live acceptance.
+historical fixtures/recovery. Offline evidence: [historical batch a review](archive/ENGINEERING_HISTORY.md#batch-a). No new live acceptance.
