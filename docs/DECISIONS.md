@@ -1,5 +1,27 @@
 # Merge — Architecture Decision Records (ADRs)
 
+### Routine session revalidation without workspace replacement - 2026-11-16
+
+The owner authorizes preserving mounted authenticated UI during routine session
+checks. This supersedes M-016's foreground unmount requirement, not its navigation
+allowlist or any server authentication policy. A pre-fix DOM regression proves
+that focus calls restore(), enters checking and disconnects the workspace before
+the session reply. No document reload or HMR is needed to reproduce that reset.
+
+Separate session-check cancellation from the authenticated scope. Focus, visible
+visibilitychange, pageshow and history traversal run a background GET. Same user,
+CSRF and absolute expiry preserve epoch/signal and mounted state. Replacement
+credentials/account rotate the scope; 401, 403 and other check failures hide it.
+Initial bootstrap and explicit Restore session retain blocking verification.
+Logout/expiry cancel every check, and stale results cannot revive prior identity.
+One lifecycle check is active; events during it invalidate its successful result
+and queue one trailing check, so a newer cookie observation wins without overlapping
+GETs. A current-scope 401/403 still fails closed immediately despite queued events;
+only a replaced scope/ticket may fence such a denial as genuinely stale.
+Existing transport timeout bounds the wait. No automatic mutation replay, extra
+storage, API/schema/transaction/dependency/deployment or backend security change.
+SSE retains its independent probe/reconnect and canonical invalidation behavior.
+
 ### Render-provided setup owner compatibility - 2026-11-15
 
 The owner reports a fresh Render PostgreSQL 17 database merge_prod in Oregon,

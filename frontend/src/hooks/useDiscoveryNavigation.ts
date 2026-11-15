@@ -44,8 +44,8 @@ function save(record: Record, push = false) {
   } catch { /* History can be unavailable or rate-limited. */ }
 }
 
-// undefined = identity being checked; null = signed out/signing out. Auth still
-// unmounts all private views on every foreground/session check.
+// undefined = blocking identity check; null = signed out/signing out. Routine
+// background checks retain the currently validated owner until their result.
 export function useDiscoveryNavigation(owner: string | null | undefined) {
   const [record, setRecord] = useState<Record | null>(read);
   const current = useRef(record); current.current = record;

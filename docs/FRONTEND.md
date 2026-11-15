@@ -1,5 +1,41 @@
 # Merge authentication, discovery, creation, admission and invitation UI
 
+## Routine session checks preserve mounted UI - 2026-11-16
+
+The pre-fix regression reproduces an unnecessary React unmount: focus/pageshow/
+history called restore(), set checking and aborted the authenticated scope; App
+removed Discovery/Profile and subsequently remounted both under a new epoch. The
+saved public navigation hint recovered only part of that state. No actual document
+reload or HMR was needed. No new live browser/network attribution is claimed.
+
+Routine focus, visible visibilitychange, pageshow and popstate now check the cookie
+in the background. An unexpired reply matching user UUID, CSRF and absolute expiry
+keeps the authenticated epoch/signal and component instances. Selected hackathon,
+view, public and private pagination, open editors and drafts remain in memory.
+Blur/hidden events alone do not revalidate. No check navigates home on valid
+same-session success. Genuine reload/bootstrap and explicit Restore session still
+hide private UI and require fresh identity and scoped navigation restoration.
+
+Session-check controllers are separate from the authenticated scope. One lifecycle
+GET runs at a time; further events mark that observation obsolete and queue one
+trailing GET. An obsolete reply cannot replace identity; explicit restore/login/
+logout/expiry invalidate tickets and ignore even transports that disregard abort.
+Queued events cannot conceal a 401/403 from the current scope: denial hides it
+immediately and cancels the queue. Only a genuinely replaced scope fences old denials.
+The existing 20-second request timeout remains. Latest valid identity replacement
+rotates the scope; different-account navigation is cleared before private views
+commit. Same-account replacement credentials also rotate/cancel old transports.
+401 goes to sign-in; 403, network and service failures hide the workspace with
+explicit recovery. Absolute expiry is enforced by the timer and synchronously
+on return from a suspended tab. This does not add instant cross-tab revocation.
+
+SSE keeps its existing independent reconnect probe and canonical read invalidation.
+A healthy background session check does not restart it. Journals and mutation
+transports remain intact for the same validated session; no POST/retry occurs
+automatically. No new storage, persistence fields, API/security/dependency or
+deployment changes. Only existing public navigation hints are serialized.
+Offline verification and owner-approved live follow-up: [TESTING.md](TESTING.md).
+
 ## Batch A profiles, ranking and essential UX
 
 An explicit account-scoped editor loads/saves skills, IANA time zone and discovery
@@ -96,7 +132,7 @@ network failures have accessible feedback; retries are explicit. A separate
 neither selection nor either pagination history and sends no mutation. This is
 exact-ID lookup across the catalog, with no name-search feature or backend change.
 
-Source diagnosis proves a React remount path: focus/pageshow calls useSession.restore,
+The original source diagnosis proved a React remount path: focus/pageshow called useSession.restore,
 which enters checking, unmounts Discovery, then accepts a new session epoch. Its
 former local selection/view/cursors were discarded. No document reload is needed.
 There was no router, application location.reload call or component error-boundary
@@ -106,7 +142,8 @@ hook signatures; Vite's client can perform a full reload. Those are possible
 development causes, not proof of the owner's historical events. No browser
 navigation timing, document request or sanitized HMR-event evidence was available
 to classify the reported resets as actual reloads. GET failures remain inline;
-401/session checks still hide private views immediately.
+401 and blocking session checks hide private views. The 16 November correction
+above supersedes routine foreground unmounts while retaining all failure handling.
 
 The sole persistence exception is **public navigation hints** in per-tab
 sessionStorage key `merge.discovery.v1` and namespaced history.state. The versioned
@@ -118,9 +155,11 @@ tokens. Nothing is put in URLs or localStorage. Earlier blanket no-storage
 statements describe the previous implementation; credential and command
 non-persistence remains unchanged. Private inbox/request pagination is still local.
 
-Hints never supply identity or permission. Bootstrap/foreground/history traversal
-first validates the cookie through /auth/session and hides private views while
-checking. Only hints matching that server-returned account can be considered.
+Hints never supply identity or permission. Bootstrap/explicit restoration first
+validates the cookie through /auth/session and hides private views while checking.
+Routine foreground/history checks retain already authenticated UI while pending;
+only a matching validated session preserves it after the reply. Only hints matching
+the server-returned account can be considered during full restoration.
 Restoring a selection fetches its canonical metadata through exact catalog lookup
 and successfully reads scoped /me/team before mounting command forms; membership
 null is valid. Detail/list/inbox then use their unchanged canonical scoped reads.
@@ -130,11 +169,11 @@ existing error and **Restart from first page** action; no cursor is authority.
 
 Logout/expiry/identity replacement clears navigation and advances its generation.
 Back/Forward entries from an older account/generation cannot revive it, even after
-switching back to that account. Same-account session checks retain hints while
-still discarding private fetched data and cancelling stale transports. History
-traversal also rechecks the session. M-016A corrected reproduced rapid-history and
-foreground races: Back/Forward, focus or pageshow during checking now supersedes
-the prior session GET; rapid history retains the latest public destination.
+switching back to that account. Matching-session checks now keep mounted private
+state and transports; blocking recovery or replacement still discards them. History
+traversal also rechecks the session. M-016A originally superseded pending GETs with
+overlapping replacements; the 16 November correction coalesces those intents into
+one trailing observation while retaining the latest public history destination.
 A newly validated different identity discards that hint; late older auth replies
 cannot win. Guest, failed-check and signing-out states do not automatically
 recheck the session on these events. Public history hints remain invisible until
@@ -648,12 +687,12 @@ recovery screen that explicitly says the server session may remain active. Retry
 sign-out or check session manually. It never reports false logout success.
 
 Each read owns an AbortController and an active flag. Navigation, refresh,
-session checks and logout abort and ignore stale responses, including late 401s
+blocking session checks, scope replacement and logout abort and ignore stale responses, including late 401s
 from a previous login. GET 401 unmounts the workspace and requests sign-in. The
 advertised absolute expiry clears the in-memory session; the server is still the
-authority. Window focus/pageshow while authenticated revalidate the cookie and
-discard old workspace state, covering session replacement/revocation in other
-tabs when foregrounded. This is not immediate cross-tab revocation notification.
+authority. Window focus/pageshow and visible visibilitychange revalidate the cookie
+without discarding a still-valid matching workspace. Denial, expiry or replacement
+invalidates the old scope. This is not immediate cross-tab revocation notification.
 
 Requests have a 20-second cancellation timer; no operation is automatically
 resubmitted, including when retryable=true. A transport failure may have followed

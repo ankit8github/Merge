@@ -10,10 +10,11 @@ const ZERO = '00000000-0000-0000-0000-000000000000';
 type Handler = (url: string, options: RequestInit) => Response | Promise<Response> | undefined;
 function server(handler: Handler = () => undefined) {
   const model = { user: U1, valid: true };
+  const authenticated = session();
   const fetch = vi.fn((url: string, options: RequestInit) => {
     const custom = handler(url, options); if (custom) return Promise.resolve(custom);
     if (url === '/health') return Promise.resolve(json({ status: 'ok' }));
-    if (url === '/auth/session') return Promise.resolve(model.valid ? json({ ...session(), identity: { user_id: model.user, username: model.user === U1 ? 'test_builder' : 'another_builder' } }) : failure(401));
+    if (url === '/auth/session') return Promise.resolve(model.valid ? json({ ...authenticated, identity: { user_id: model.user, username: model.user === U1 ? 'test_builder' : 'another_builder' } }) : failure(401));
     if (url === '/api/hackathons?limit=20') return Promise.resolve(json({ items: [hackathon()], next_cursor: H1 }));
     if (url === '/api/hackathons?limit=20&cursor=' + H1) return Promise.resolve(json({ items: [hackathon(H2)], next_cursor: null }));
     if (url.startsWith('/api/hackathons?limit=1&cursor=')) {
@@ -56,7 +57,7 @@ it('restores selection and My team after a reload-style remount only after fresh
   expect(fetch.mock.calls.some(([url]) => url === '/api/hackathons?limit=1&cursor=' + ZERO)).toBe(true);
   expect(fetch.mock.calls.every(([, options]) => !options.method || options.method === 'GET')).toBe(true);
 });
-it.each(['focus', 'pageshow', 'reload'])('preserves catalog/team pages and view across the %s session remount', async event => {
+it.each(['focus', 'pageshow', 'reload'])('preserves catalog/team pages and view across %s validation', async event => {
   server(); const app = render(<App />); await choose();
   fireEvent.click(workspace().getByRole('button', { name: /Next page/ })); await screen.findByRole('heading', { name: 'Test Team Beta' });
   fireEvent.click(catalog().getByRole('button', { name: /Next page/ })); await catalog().findByRole('button', { name: /Second Challenge/ });
@@ -223,7 +224,7 @@ it('keeps newer navigation when an older workspace callback resets its page', ()
   });
   expect(result.current.navigation).toMatchObject({ view: 'mine', catalog: [null, H1], teams: [null] });
 });
-it.each([U1, OTHER])('keeps the latest history destination and validated identity %s during session checking', async user => {
+it.each([U1, OTHER])('keeps the latest history destination and validated identity %s during background checking', async user => {
   let checking = false;
   const replies: ((response: Response) => void)[] = [];
   server(url => checking && url === '/auth/session' ? new Promise<Response>(resolve => { replies.push(resolve); }) : undefined);
@@ -235,16 +236,17 @@ it.each([U1, OTHER])('keeps the latest history destination and validated identit
   await screen.findByRole('heading', { name: 'Your invitations' });
   checking = true;
   fireEvent(window, new PopStateEvent('popstate', { state: mine }));
-  await screen.findByText('Restoring your session...');
+  expect(screen.queryByText('Restoring your session...')).toBeNull();
   fireEvent(window, new PopStateEvent('popstate', { state: discover }));
   expect(stored().value.view).toBe('discover');
+  expect(replies).toHaveLength(1);
+  // The earlier observation is superseded; only one trailing GET runs.
+  await act(async () => replies[0](json({ ...session(), identity: { user_id: user === U1 ? OTHER : U1, username: 'obsolete' } })));
   expect(replies).toHaveLength(2);
-  checking = false;
   await act(async () => replies[1](json({ ...session(), identity: { user_id: user, username: user === U1 ? 'test_builder' : 'another_builder' } })));
   if (user === U1) await screen.findByRole('heading', { name: 'Test Team Alpha' });
   else await screen.findByRole('heading', { name: 'Choose a hackathon.' });
-  // The older request may ignore abort; its old identity must not win.
-  await act(async () => replies[0](json({ ...session(), identity: { user_id: user === U1 ? OTHER : U1, username: user === U1 ? 'another_builder' : 'test_builder' } })));
+  checking = false;
   expect(screen.getByText(user === U1 ? '@test_builder' : '@another_builder')).toBeTruthy();
   expect(stored().owner).toBe(user);
   expect(stored().value.view).toBe('discover');
@@ -318,10 +320,11 @@ it.each(['focus', 'pageshow'])('rechecks identity when %s arrives during a pendi
   seed(); const replies: ((response: Response) => void)[] = [];
   const { fetch } = server(url => url === '/auth/session' ? new Promise<Response>(resolve => { replies.push(resolve); }) : undefined);
   render(<App />); await waitFor(() => expect(replies).toHaveLength(1));
-  fireEvent(window, new Event(event)); expect(replies).toHaveLength(2);
+  fireEvent(window, new Event(event)); expect(replies).toHaveLength(1);
+  await act(async () => replies[0](json(session())));
+  expect(replies).toHaveLength(2); expect(screen.queryByText('@test_builder')).toBeNull();
   await act(async () => replies[1](json({ ...session(), identity: { user_id: OTHER, username: 'another_builder' } })));
   await screen.findByText('@another_builder');
-  await act(async () => replies[0](json(session())));
   expect(screen.getByText('@another_builder')).toBeTruthy();
   expect(stored().owner).toBe(OTHER); expect(stored().value).toEqual(emptyNavigation());
   expect(fetch.mock.calls.some(([url]) => url.includes('limit=1&') || url.includes('/me/team'))).toBe(false);

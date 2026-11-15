@@ -1,5 +1,41 @@
 # Current verified status
 
+## Routine session checks preserve UI - 16 November 2026
+
+Started clean at `1416c72434d5323ac5c80fb5f5854d53cda7f2c7`. A pre-fix regression
+proved focus immediately unmounted the authenticated workspace before a session
+reply. The old restore/checking/epoch path explains a reset without requiring a
+document reload; actual owner browser navigation/HMR attribution remains unknown.
+
+Routine focus, visible visibilitychange, pageshow and popstate now validate in
+the background. Matching user/CSRF/absolute expiry preserves epoch/signal and
+mounted views, pagination and drafts. Events coalesce to one active GET and one
+latest trailing observation. Superseded replies cannot replace identity; logout,
+expiry, denials and replacement credentials/account still invalidate the scope.
+Blocking bootstrap/explicit recovery, server authorization, SSE reconnect/refetch,
+public-only navigation persistence and memory-only/no-auto-replay journals remain.
+An expired suspended tab is cleared on return even before its timer is serviced.
+Decision and scope: [DECISIONS.md](DECISIONS.md), [FRONTEND.md](FRONTEND.md).
+
+Offline evidence: **111 focused tests passed**, 33.10 s; **464 full frontend tests
+passed**, 19 files with one worker, 188.13 s; **38 unchanged admission tests passed**,
+30.16 s. An earlier full run had one catalog-wait timeout (463 passed); direct
+admission and complete confirmation passed without changing assertions/timeouts.
+This intermittent timing observation remains documented. TypeScript/Vite build passed, 50
+modules, 2.77 s. Includes **30 new regressions** and retained genuine-reload/race
+checks; current-scope 401/403 denials cannot be masked by queued lifecycle events.
+Commands/coverage/limits: [TESTING.md](TESTING.md). Diff/secret/source/link
+checks passed and all **1169** baseline evidence hashes are preserved. Favicon
+PNG/index.html remain byte-identical. No backend, policy, dependency, migration,
+business-rule or deployment change; no fixture/DB/live/cloud operation.
+
+Uncommitted owner-review patch. **CONDITIONAL for release** pending separately
+approved deployment/public-browser acceptance. No commit, push or deployment.
+Browser discard/crash/manual reload still loses memory-only drafts/journals;
+network/service and 403 failures still hide private content for explicit recovery.
+The owner reports the application deployed; this investigation did not verify a
+public URL, deployed source SHA or live fix. Earlier release records retain scope.
+
 ## Header favicon polish - 15 November 2026
 
 Added [frontend/public/favicon.png](../frontend/public/favicon.png), a 64x64 RGBA

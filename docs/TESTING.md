@@ -1,5 +1,65 @@
 # Testing and verification
 
+## Session revalidation without workspace resets - 16 November 2026
+
+Baseline: clean `1416c72434d5323ac5c80fb5f5854d53cda7f2c7`; the committed favicon
+and index.html remain byte-identical. Windows, Node 22.15.0/npm 10.9.2, locked
+dependencies; synthetic same-origin HTTP/EventSource and jsdom, no live account,
+backend, database, public browser, deployment or fixture operation.
+
+The initial targeted `SessionRevalidation.test.tsx` test failed before correction:
+the existing workspace's `isConnected` became false immediately on focus, before
+the deferred session response. This proves the React unmount path, without claiming
+a real document navigation. After correction the same test retains DOM identity,
+unsaved fields and scope throughout an unexpired matching-session 200 response.
+
+| Directory | Exact command | Final actual result |
+| --- | --- | --- |
+| frontend | `npm.cmd test -- --reporter=dot --maxWorkers=1 src/SessionRevalidation.test.tsx src/DiscoveryNavigation.test.tsx src/Journeys.test.tsx src/Realtime.test.tsx` | **111 passed**, 4 files, 33.10 s |
+| frontend | `npm.cmd test -- --reporter=dot --maxWorkers=1` | **464 passed**, 19 files, 188.13 s |
+| frontend | `npm.cmd test -- --reporter=dot --maxWorkers=1 src/Admission.test.tsx` | **38 passed**, 30.16 s; unchanged admission suite investigated after the timeout |
+| frontend | `npm.cmd run build` | TypeScript passed; Vite passed, 50 modules, 2.77 s |
+| root | `git diff --check` | Passed |
+
+Thirty new cases cover focus/blur/screenshot-like events, hidden/visible
+minimize/restore, pageshow, rapid coalescing, superseded identity observations,
+valid 200 DOM/scope preservation, 401/403/service failure, pending logout,
+late account responses, credential/expiry replacement, local/persisted public
+pagination and private inbox pagination, open profile drafts, explicit restoration,
+absolute expiry including suspended timers, guest bootstrap, SSE continuity and
+reconnect/reset canonical reads, and pending/uncertain journal non-replay/storage.
+Current-scope 401/403 denials also hide immediately despite queued events; only
+a genuinely replaced scope can fence an old denial as stale.
+One earlier final-code full run had **463 passed / 1 failed**, 205.62 s: the first
+unchanged admission case timed out finding the catalog button while its loading
+state remained visible. The unchanged admission file then passed all 38 tests,
+and the complete unchanged final code passed 464/464 on confirmation. No assertion,
+timeout, dependency or test configuration was relaxed; one intermittent timing
+failure remains recorded rather than claiming the suite is flake-free.
+Existing reload/StrictMode, navigation-generation, stale read and mutation suites
+remain. Four old lifecycle race cases now assert sequential coalescing instead
+of overlapping GETs/full-page loading; identity and navigation isolation assertions
+remain, alongside new late-result tests for transports that ignore cancellation.
+
+No backend, authentication policy, business logic, dependencies, migration or
+deployment files changed. All **1169** captured prior ignored evidence hashes
+are preserved. Source/secret/artifact/link review covers the bounded change.
+Raw logs and the pre-fix source snapshot are in the new ignored
+`frontend/test-results/session-refresh-*` directory; historical receipts were
+not rewritten. Full backend tests were not run for this frontend-only component.
+
+Recommendation is **CONDITIONAL for live release**: offline acceptance passed;
+no commit/push/deploy or public manual check was performed. After separately
+approved deployment, the owner can use an existing authorized account to select
+a hackathon, paginate, open/edit an unsaved draft, switch tabs, minimize/restore
+and take a screenshot. Inspect document requests/navigation timing to distinguish
+an actual reload from a React remount, and confirm unchanged DOM/view/no POST.
+Do not create live mutations or revoke resources just to exercise this checklist.
+Browser discard/crash/manual reload cannot retain memory-only drafts/journals;
+only validated public navigation hints are recoverable. 403/network/service failures
+still hide the workspace with explicit recovery; revocation detection is not
+instant cross-tab notification. No HMR code is included in the production HTML.
+
 ## Render setup input diagnostics - 15 November 2026
 
 Windows PowerShell, Python 3.11.9, existing locked dependencies. Synthetic input
