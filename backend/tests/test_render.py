@@ -528,3 +528,141 @@ def test_setup_cli_validates_owner_before_opening_status_listener(monkeypatch):
     monkeypatch.setattr(setup, 'HTTPServer', lambda *a, **k: pytest.fail('Status listener reached'))
     with pytest.raises(SystemExit) as result: setup.main()
     assert result.value.code == 1
+
+
+@pytest.mark.parametrize('change,missing,category', [
+    ({'RENDER': 'false'}, None, 'platform_identity'),
+    ({'RENDER_SERVICE_TYPE': 'worker'}, None, 'platform_identity'),
+    ({'RENDER_SERVICE_TYPE': 'web_service'}, None, 'platform_identity'),
+    ({'RENDER_SERVICE_ID': 'not-a-service'}, None, 'platform_identity'),
+    ({'MERGE_RENDER_ENVIRONMENT': 'development'}, None, 'platform_identity'),
+    ({'IS_PULL_REQUEST': 'true'}, None, 'platform_identity'),
+    ({}, 'RENDER', 'platform_identity'),
+    ({'MERGE_RENDER_THROTTLE_KEY': ''}, None, 'conflicting_environment'),
+    ({'MERGE_RENDER_THROTTLE_KEY': 'a'*64}, None, 'conflicting_environment'),
+    ({'PGHOST': 'synthetic-sensitive-input'}, None, 'conflicting_environment'),
+    ({'DATABASE_URL': 'synthetic-sensitive-input'}, None, 'conflicting_environment'),
+    ({'RAILWAY_PROJECT_ID': 'synthetic-sensitive-input'}, None, 'conflicting_environment'),
+    ({'VITE_SECRET': 'synthetic-sensitive-input'}, None, 'conflicting_environment'),
+    ({'MERGE_AUTH_MODE': 'production'}, None, 'conflicting_environment'),
+    ({'MERGE_RENDER_DB_HOST': 'dpg-abcdefgh1234-a.oregon-postgres.render.com'}, None, 'private_db_host'),
+    ({}, 'MERGE_RENDER_DB_HOST', 'private_db_host'),
+    ({'RENDER_EXTERNAL_HOSTNAME': 'https://merge-synthetic.onrender.com'}, None, 'public_hostname'),
+    ({}, 'RENDER_EXTERNAL_HOSTNAME', 'public_hostname'),
+    ({'RENDER_EXTERNAL_URL': ORIGIN+'/'}, None, 'public_origin'),
+    ({'RENDER_EXTERNAL_URL': 'http://merge-synthetic.onrender.com'}, None, 'public_origin'),
+    ({'RENDER_EXTERNAL_URL': 'https://other-synthetic.onrender.com'}, None, 'public_origin'),
+    ({'PORT': '8000'}, None, 'port'),
+    ({}, 'PORT', 'port'),
+    ({'MERGE_RENDER_SETUP_COMMIT': '96e32e1'}, None, 'reviewed_commit'),
+    ({'MERGE_RENDER_SETUP_COMMIT': 'B'*40}, None, 'reviewed_commit'),
+    ({'MERGE_RENDER_SETUP_COMMIT': 'c'*40}, None, 'reviewed_commit'),
+    ({'RENDER_GIT_COMMIT': 'b'*7}, None, 'reviewed_commit'),
+    ({}, 'RENDER_GIT_COMMIT', 'reviewed_commit'),
+    ({}, 'MERGE_RENDER_SETUP_COMMIT', 'reviewed_commit'),
+    ({'MERGE_RENDER_SETUP_ATTEMPT': 'synthetic-sensitive-input'}, None, 'setup_attempt'),
+    ({}, 'MERGE_RENDER_SETUP_ATTEMPT', 'setup_attempt'),
+    ({'MERGE_RENDER_CATALOG_ID': 'synthetic-sensitive-input'}, None, 'catalog_id'),
+    ({}, 'MERGE_RENDER_CATALOG_ID', 'catalog_id'),
+    ({'MERGE_RENDER_CATALOG_MIN': '0'}, None, 'catalog_bounds'),
+    ({'MERGE_RENDER_CATALOG_MAX': '101'}, None, 'catalog_bounds'),
+    ({'MERGE_RENDER_CATALOG_MIN': '5'}, None, 'catalog_bounds'),
+    ({'MERGE_RENDER_CATALOG_MAX': 'not-an-integer'}, None, 'catalog_bounds'),
+    ({}, 'MERGE_RENDER_CATALOG_MIN', 'catalog_bounds'),
+    ({}, 'MERGE_RENDER_CATALOG_MAX', 'catalog_bounds'),
+    ({'MERGE_RENDER_CATALOG_NAME': '   '}, None, 'catalog_name'),
+    ({'MERGE_RENDER_CATALOG_NAME': 'x'*121}, None, 'catalog_name'),
+    ({'MERGE_RENDER_CATALOG_NAME': 'synthetic\x00input'}, None, 'catalog_name'),
+    ({}, 'MERGE_RENDER_CATALOG_NAME', 'catalog_name'),
+    ({'MERGE_RENDER_SETUP_OWNER': 'postgres'}, None, 'setup_owner'),
+    ({}, 'MERGE_RENDER_SETUP_OWNER', 'setup_owner'),
+    ({'MERGE_RENDER_MIGRATOR_PASSWORD': 'short'}, None, 'owner_secret_format'),
+    ({'MERGE_RENDER_MIGRATOR_PASSWORD': 'm'*48+'\n'}, None, 'owner_secret_format'),
+    ({'MERGE_RENDER_MIGRATOR_PASSWORD': 'm'*48+'+'}, None, 'owner_secret_format'),
+    ({}, 'MERGE_RENDER_MIGRATOR_PASSWORD', 'owner_secret_format'),
+    ({'MERGE_RENDER_RUNTIME_PASSWORD': 'short'}, None, 'runtime_secret_format'),
+    ({}, 'MERGE_RENDER_RUNTIME_PASSWORD', 'runtime_secret_format'),
+    ({'MERGE_RENDER_MIGRATOR_PASSWORD': 'r'*48}, None, 'distinct_secrets'),
+])
+def test_setup_input_categories_fail_before_io_without_values(monkeypatch, capsys, change, missing, category):
+    env = setup_env() | change
+    if missing: env.pop(missing)
+    monkeypatch.setattr(config.os, 'environ', env)
+    monkeypatch.setattr(sys, 'argv', ['setup', '--confirm-new-render-production'])
+    def blocked(*a, **k): pytest.fail('Rejected inputs reached listener or initialization')
+    monkeypatch.setattr(setup, 'HTTPServer', blocked)
+    monkeypatch.setattr(setup, 'initialize', blocked)
+    with pytest.raises(config.InputRejection) as error:
+        config.load_setup(environ=env)
+    assert config.input_category(error.value) == category
+    with pytest.raises(SystemExit) as result: setup.main()
+    assert result.value.code == 1
+    captured = capsys.readouterr()
+    assert captured.out == ''
+    assert captured.err == f'Render setup inputs rejected [{category}]; details suppressed.\n'
+    assert 'synthetic-sensitive-input' not in captured.err
+    if env.get('MERGE_RENDER_RUNTIME_PASSWORD'):
+        assert env['MERGE_RENDER_RUNTIME_PASSWORD'] not in captured.err
+
+
+@pytest.mark.parametrize('length', [32, 128])
+def test_setup_accepts_secret_format_boundaries_without_printing(length):
+    env = setup_env() | {'MERGE_RENDER_MIGRATOR_PASSWORD': 'm'*(length-2)+'_-',
+                         'MERGE_RENDER_RUNTIME_PASSWORD': 'r'*length}
+    assert config.load_setup(environ=env).target.url().username == 'merge_prod_user'
+
+
+@pytest.mark.parametrize('value', ['m'*31, 'm'*129, 'm'*48+'=', 'm'*48+'@', 'm'*48+':',
+                                  'm'*48+'.', 'm'*48+' ', 'm'*48+'é', '"'+'m'*48+'"'])
+def test_owner_secret_format_restrictions_are_unchanged(value):
+    with pytest.raises(config.InputRejection) as error:
+        config.load_setup(environ=setup_env() | {'MERGE_RENDER_MIGRATOR_PASSWORD': value})
+    assert config.input_category(error.value) == 'owner_secret_format'
+
+
+@pytest.mark.parametrize('optional_defaults', [False, True])
+def test_documented_git_backed_docker_defaults_are_compatible(optional_defaults):
+    env = setup_env() | {'RENDER_EXTERNAL_URL': ORIGIN, 'IS_PULL_REQUEST': 'false',
+        'RENDER_GIT_BRANCH': 'main', 'RENDER_GIT_REPO_SLUG': 'synthetic/merge',
+        'RENDER_CPU_COUNT': '0.1', 'RENDER_WEB_CONCURRENCY': '1', 'WEB_CONCURRENCY': '1'}
+    if not optional_defaults:
+        env.pop('RENDER_EXTERNAL_URL'); env.pop('IS_PULL_REQUEST')
+    assert config.load_setup(environ=env).target.origin == ORIGIN
+
+
+def test_input_diagnostic_precedence_preserves_fail_fast_validation():
+    env = setup_env() | {'MERGE_RENDER_THROTTLE_KEY': '', 'MERGE_RENDER_SETUP_COMMIT': 'short',
+                         'MERGE_RENDER_MIGRATOR_PASSWORD': 'short'}
+    for category, remove in [('conflicting_environment', 'MERGE_RENDER_THROTTLE_KEY'),
+                             ('reviewed_commit', 'MERGE_RENDER_SETUP_COMMIT'),
+                             ('owner_secret_format', None)]:
+        with pytest.raises(config.InputRejection) as error: config.load_setup(environ=env)
+        assert config.input_category(error.value) == category
+        if remove == 'MERGE_RENDER_THROTTLE_KEY': env.pop(remove)
+        elif remove: env[remove] = env['RENDER_GIT_COMMIT']
+
+
+@pytest.mark.parametrize('failure', ['unknown', 'forged', 'mutated', 'subclass'])
+def test_unexpected_setup_errors_cannot_escape_diagnostic_allowlist(monkeypatch, capsys, failure):
+    class UnprintableError(Exception):
+        category = 'reviewed_commit'
+        def __str__(self): pytest.fail('Raw exception was stringified')
+        def __repr__(self): pytest.fail('Raw exception was represented')
+    error = UnprintableError()
+    if failure == 'mutated':
+        error = config.InputRejection('reviewed_commit'); error.category = 'synthetic-sensitive-input'
+    elif failure == 'subclass':
+        class UntrustedRejection(config.InputRejection): pass
+        error = UntrustedRejection('reviewed_commit')
+    elif failure == 'unknown': error.category = 'synthetic-sensitive-input'
+    def fail(): raise error
+    monkeypatch.setattr(config, 'load_setup', fail)
+    monkeypatch.setattr(sys, 'argv', ['setup', '--confirm-new-render-production'])
+    def blocked(*a, **k): pytest.fail('Unexpected input failure reached initialization/listener')
+    monkeypatch.setattr(setup, 'HTTPServer', blocked)
+    monkeypatch.setattr(setup, 'initialize', blocked)
+    with pytest.raises(SystemExit) as result: setup.main()
+    assert result.value.code == 1
+    captured = capsys.readouterr()
+    assert captured.out == ''
+    assert captured.err == 'Render setup inputs rejected [unexpected]; details suppressed.\n'

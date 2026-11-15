@@ -47,7 +47,8 @@ def main():
     p.parse_args()
     # Validate every input before DNS, SQL or even a status listener.
     try: selected = config.load_setup()
-    except Exception: p.exit(1, 'Render setup inputs rejected; details suppressed.\n')
+    except Exception as error:
+        p.exit(1, 'Render setup inputs rejected [' + config.input_category(error) + ']; details suppressed.\n')
     stopped, status = Event(), Status()
     def stop(*args): stopped.set()
     signal.signal(signal.SIGTERM, stop)

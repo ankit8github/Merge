@@ -1,5 +1,42 @@
 # Current verified status
 
+## Render setup input rejection diagnostics - 15 November 2026
+
+Started clean at published `96e32e154df38c8447b6a4dd85c6029dbb331d52`.
+The owner reports a Render setup process exiting at input validation, before
+DNS/SQL/initialization/listener construction in that invocation. The existing
+message cannot identify its exact failed condition. Owner confirms no throttle
+key during setup, the complete setup SHA, explicit PORT 10000 and setup owner
+merge_prod_user. Render's documented Docker platform defaults match the existing
+checks. Remaining field presence/format and deployed SHA equality are unverified;
+no secret or dashboard environment was read and no root cause is fabricated.
+
+Implemented fixed allowlisted input categories with a generic unexpected fallback;
+no values, raw exceptions, credentials or URLs are logged. Preserved every input,
+owner/runtime, DB identity/private-host/TLS/privilege, create-once and revision guard.
+No dependencies, migrations or application feature changes. Canonical trace and
+private dashboard review checklist: [RENDER.md](RENDER.md#setup-input-rejection-offline-diagnosis).
+
+Actual focused regressions: **467 passed**, 10.49 s, one existing Starlette/httpx
+deprecation warning; includes 70 new diagnostic cases. Render/Railway/VPS offline
+contracts passed. A synthetic comparison of published versus pending setup/runtime
+validation found **zero acceptance changes across 758 cases**. Static source,
+imports, documentation and secret/artifact review passed; all **1149** captured
+pre-review evidence hashes remain intact. Exact commands/scope: [TESTING.md](TESTING.md).
+
+Initial preparation stopped before staging or commit. The owner subsequently
+authorized exactly one reviewed local commit of these six files:
+`fix(deploy): add sanitized Render setup diagnostics`.
+Final review reran the focused suite: **467 passed**, 13.17 s, with the same single
+deprecation warning. Render/Railway/VPS checks and source/import/documentation/
+secret/artifact review passed again. All **1154** pre-review evidence hashes remain
+intact. Git history supplies the resulting identity after staged review.
+No DB connection, setup retry, migration, service startup, cloud modification,
+deployment or push. Full backend/frontend/build suites and native/live checks
+were not rerun for this diagnostic-only change. The next owner action is private
+configuration review, not a setup retry to obtain a category; publication/live
+actions need separate approval. The exact failing live input remains unknown.
+
 ## Render database owner compatibility - 15 November 2026
 
 Started from the owner-reported published release 424f29c459cb8049d70809b74dd9082eade469b5.

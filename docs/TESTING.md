@@ -1,5 +1,35 @@
 # Testing and verification
 
+## Render setup input diagnostics - 15 November 2026
+
+Windows PowerShell, Python 3.11.9, existing locked dependencies. Synthetic input
+validation only; no real environment secrets, DNS, database, setup, migrations,
+listener/service startup, cloud action, commit or push. No acceptance rule changed.
+
+| Directory | Exact command | Actual result |
+| --- | --- | --- |
+| backend | `.\.venv\Scripts\python.exe -B -m pytest -q tests/test_render.py tests/test_railway.py tests/test_production.py tests/test_ci_configuration.py tests/test_release_support.py --tb=short` | **467 passed**, 10.49 s; one existing Starlette/httpx deprecation warning |
+| backend | `.\.venv\Scripts\python.exe -B -m app.render.check` | Passed offline Render contracts |
+| backend | `.\.venv\Scripts\python.exe -B -m app.railway.check` | Passed unchanged Railway contracts |
+| backend | `.\.venv\Scripts\python.exe -B -m app.production.check` | Passed unchanged VPS contracts |
+
+Seventy new regressions cover every input diagnostic category, failure ordering,
+documented Docker defaults, secret-format boundaries and refusal, unknown/forged
+exception categories and exact sanitized stderr. Rejected input never reaches
+DNS, initialization or the HTTP listener. Exceptions are not stringified, and
+normal serve remains runtime-only. Published acceptance decisions were also
+compared offline with the pending implementation: **758 synthetic cases, zero
+acceptance changes**. Local results are retained under the new ignored `backend/test-results/render-input-review-*`
+directory. Historical evidence is retained, not rewritten.
+
+The full backend/frontend/build suites were not rerun for this diagnostic-only
+patch. Previous results below retain their original scope. Live cause is still
+unknown: owner confirms throttle absent, full setup SHA, explicit PORT 10000 and
+owner merge_prod_user, without exposing credentials or dashboard environment.
+The complete validation trace and private review checklist are in
+[RENDER.md](RENDER.md#setup-input-rejection-offline-diagnosis). Stop before setup
+retry, publication or deployment; no permission/credential relaxation is justified.
+
 ## Render setup-owner compatibility - 15 November 2026
 
 Python 3.11.9 on Windows PowerShell with existing locked dependencies. Only

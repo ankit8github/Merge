@@ -136,6 +136,78 @@ localhost and DSNs are rejected before connecting. Remove accidental imported
 variables rather than weakening validation. If provider-generated credentials or
 internal hostname do not meet this contract, stop for adapter review; no fallback.
 
+## Setup input rejection: offline diagnosis
+
+At published `96e32e1`, `Render setup inputs rejected; details suppressed.` means
+`load_setup()` failed **before** DNS, SQL, initialization or the HTTP listener.
+It does not identify the rejected field or establish anything about database
+permissions. That invocation did not reach the setup claim; retain prior deployment
+records because this says nothing about any earlier invocation.
+
+The owner confirmed that the throttle key was absent and the setup SHA was the
+full `96e32e154df38c8447b6a4dd85c6029dbb331d52`. Those two suspected configuration
+mistakes are ruled out. The owner also confirmed explicit `PORT=10000` and
+`MERGE_RENDER_SETUP_OWNER=merge_prod_user`; missing PORT/owner are ruled out too.
+No dashboard environment or secret values were read in
+this investigation. The exact remaining failure is **not established** by the log.
+
+The diagnostic patch emits only a fixed category, for example
+`Render setup inputs rejected [reviewed_commit]; details suppressed.` Unknown
+exceptions map to `unexpected`. Values, variable-name dumps, credentials, URLs,
+exception text and tracebacks are never included. All acceptance rules remain
+unchanged. Checks run in this order and stop at the first rejection:
+
+| Category | Existing condition / private dashboard check |
+| --- | --- |
+| `platform_identity` | `RENDER=true`, `RENDER_SERVICE_TYPE=web`, `MERGE_RENDER_ENVIRONMENT=production`, `RENDER_SERVICE_ID` matching `srv-[a-z0-9]{8,64}`, and `IS_PULL_REQUEST=false` (absent also accepted) |
+| `conflicting_environment` | No unapproved `MERGE_*`, `PG*`, `VITE_*`, `RAILWAY_*`, `DATABASE_URL` or `DATABASE_PUBLIC_URL` keys; a present empty key still conflicts. Setup forbids the runtime throttle key |
+| `private_db_host` | Exact short internal hostname matching `dpg-[a-z0-9]{8,64}-[a-z]`; no external host, port, URL or whitespace |
+| `public_hostname` | Lowercase assigned `*.onrender.com` hostname only, without scheme, path or port |
+| `public_origin` | `RENDER_EXTERNAL_URL` exactly `https://` plus that hostname, without trailing slash; if absent, the adapter derives it; existing HTTPS origin rules also apply |
+| `port` | Explicit `PORT` of 4-5 ASCII digits, 1024-65535, excluding 8000/18012/18013/19099; set `10000` explicitly |
+| `reviewed_commit` | Explicit 40-character lowercase setup SHA exactly equal to `RENDER_GIT_COMMIT`; short, stale, quoted, whitespace-padded or missing values fail |
+| `setup_attempt` | Present setup-attempt value parseable as a UUID |
+| `catalog_id` | Present catalog ID parseable as a UUID |
+| `catalog_bounds` | Both limits parseable as integers, `1 <= min <= max <= 100` |
+| `catalog_name` | Present string of 1-120 characters, not whitespace-only and containing no NUL |
+| `setup_owner` | Explicit `merge_prod_user` or legacy `merge_migrator` only |
+| `owner_secret_format` | Selected owner's password passes the unchanged 32-128 ASCII letters/digits/underscore/hyphen rule |
+| `runtime_secret_format` | Fresh runtime password passes the same rule |
+| `distinct_secrets` | Owner and runtime passwords differ |
+| `unexpected` | Unclassified internal validation failure; stop for offline review |
+
+The final setup-target validation repeats host/owner/password/origin checks; it
+adds no fallback or connection. Runtime still accepts only `merge_runtime` and
+rejects every setup variable. Database identity, private DNS pinning, TLS, role
+flags/ownership, durable claim, exact0006 and grant checks are unchanged.
+
+[Render's default-variable documentation](https://render.com/docs/environment-variables)
+lists the five examined variables for Docker too: source commit SHA, service type
+`web`, assigned hostname/HTTPS URL, and preview flag `false` outside previews.
+No documented mismatch requires a platform-validation change. This runbook uses
+a **Git-backed Docker build**, not a prebuilt registry image. Do not override
+provider identity variables to make validation pass. Render's default listening
+port is 10000; this adapter intentionally requires an explicit `PORT` setting.
+
+The secret alphabet/length is an adapter policy, not a verified guarantee about
+Render-generated passwords. Privately compare format only; do not send the
+password, a full connection URL, a hash or an environment dump. Quotes, copied
+URL encoding, spaces/newlines, `+`, `/`, `=`, `@`, `:` and punctuation fail. Do
+not trim or transform an actual password to satisfy the regex: the resulting
+credential would differ. A genuine provider-format incompatibility needs a
+separately reviewed code change, not credential rotation or weaker DB guards.
+
+Smallest safe next step: review the **names/presence** of dashboard variables,
+explicit PORT/owner, UUID/catalog syntax and deployed SHA against the table.
+For this investigation, make no dashboard changes, deploys or setup retries.
+If a later approved edit is needed, Render offers
+[Save only](https://render.com/docs/configure-environment-variables), which does
+not deploy immediately. A dashboard-only input correction can use the published
+adapter; publishing the diagnostic code is optional and requires separate review.
+If publishing any patch, explicitly approve and use its **new full SHA** for
+setup, never the previous SHA and never an automatic SHA fallback. Do not retry
+setup simply to obtain a category or reset/adopt an existing setup claim.
+
 ## Explicit first database setup without a Free shell
 
 These steps are **future owner actions**, not actions taken in this preparation.

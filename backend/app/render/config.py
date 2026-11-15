@@ -16,6 +16,37 @@ SETUP = COMMON | {'MERGE_RENDER_SETUP_OWNER', 'MERGE_RENDER_MIGRATOR_PASSWORD', 
                   'MERGE_RENDER_SETUP_COMMIT', 'MERGE_RENDER_CATALOG_ID', 'MERGE_RENDER_CATALOG_NAME',
                   'MERGE_RENDER_CATALOG_MIN', 'MERGE_RENDER_CATALOG_MAX'}
 RESERVED_PORTS = {8000, 18012, 18013, 19099}
+INPUT_CATEGORIES = frozenset({
+    'platform_identity', 'conflicting_environment', 'private_db_host',
+    'public_hostname', 'public_origin', 'port', 'reviewed_commit',
+    'setup_attempt', 'catalog_id', 'catalog_bounds', 'catalog_name',
+    'setup_owner', 'owner_secret_format', 'runtime_secret_format',
+    'distinct_secrets', 'unexpected',
+})
+
+
+class InputRejection(ValueError):
+    """A fixed diagnostic code, never an input value or underlying exception."""
+    def __init__(self, category):
+        if category not in INPUT_CATEGORIES:
+            raise ValueError('Unknown Render input category')
+        self.category = category
+        super().__init__(category)
+
+
+def input_category(error):
+    # Do not stringify exceptions, accept subclasses or trust a mutated attribute.
+    category = getattr(error, 'category', None) if type(error) is InputRejection else None
+    if type(category) is str and category in INPUT_CATEGORIES:
+        return category
+    return 'unexpected'
+
+
+def _validated(category, operation, *args):
+    try:
+        return operation(*args)
+    except (KeyError, TypeError, ValueError):
+        raise InputRejection(category) from None
 
 
 def port(env):
@@ -37,18 +68,18 @@ def platform(env, allowed):
         or env.get('MERGE_RENDER_ENVIRONMENT') != 'production'
         or env.get('IS_PULL_REQUEST', 'false') != 'false'
         or not re.fullmatch(r'srv-[a-z0-9]{8,64}', env.get('RENDER_SERVICE_ID', ''))):
-        raise ValueError('Explicit Render production web service required')
+        raise InputRejection('platform_identity')
     if any((k.startswith('MERGE_') and k not in allowed) or k.startswith(('PG', 'VITE_', 'RAILWAY_'))
            or k in ('DATABASE_URL', 'DATABASE_PUBLIC_URL') for k in env):
-        raise ValueError('Conflicting Render environment rejected')
-    host(env.get('MERGE_RENDER_DB_HOST'))
+        raise InputRejection('conflicting_environment')
+    _validated('private_db_host', host, env.get('MERGE_RENDER_DB_HOST'))
     domain = env.get('RENDER_EXTERNAL_HOSTNAME', '')
     if not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.onrender\.com', domain):
-        raise ValueError('Assigned Render HTTPS hostname required')
+        raise InputRejection('public_hostname')
     if env.get('RENDER_EXTERNAL_URL', 'https://' + domain) != 'https://' + domain:
-        raise ValueError('Render origin mismatch')
-    port(env)
-    return public_origin('https://' + domain)
+        raise InputRejection('public_origin')
+    _validated('port', port, env)
+    return _validated('public_origin', public_origin, 'https://' + domain)
 
 
 @dataclass(frozen=True, repr=False)
@@ -131,21 +162,31 @@ def load_setup(*, environ=None):
     origin = platform(env, SETUP)
     commit = env.get('MERGE_RENDER_SETUP_COMMIT', '')
     if not re.fullmatch(r'[0-9a-f]{40}', commit) or commit != env.get('RENDER_GIT_COMMIT'):
-        raise ValueError('Explicit reviewed Render Git SHA required')
+        raise InputRejection('reviewed_commit')
     try:
         attempt = UUID(env['MERGE_RENDER_SETUP_ATTEMPT'])
-        catalog_id = UUID(env['MERGE_RENDER_CATALOG_ID'])
-        minimum, maximum = int(env['MERGE_RENDER_CATALOG_MIN']), int(env['MERGE_RENDER_CATALOG_MAX'])
-        name = env['MERGE_RENDER_CATALOG_NAME']
-        if (not 1 <= minimum <= maximum <= 100 or not isinstance(name, str)
-            or not 1 <= len(name) <= 120 or not name.strip() or '\x00' in name): raise ValueError()
     except (KeyError, ValueError, TypeError):
-        raise ValueError('Explicit bounded Render setup/catalog inputs required') from None
+        raise InputRejection('setup_attempt') from None
+    try:
+        catalog_id = UUID(env['MERGE_RENDER_CATALOG_ID'])
+    except (KeyError, ValueError, TypeError):
+        raise InputRejection('catalog_id') from None
+    try:
+        minimum, maximum = int(env['MERGE_RENDER_CATALOG_MIN']), int(env['MERGE_RENDER_CATALOG_MAX'])
+        if not 1 <= minimum <= maximum <= 100: raise ValueError()
+    except (KeyError, ValueError, TypeError):
+        raise InputRejection('catalog_bounds') from None
+    try:
+        name = env['MERGE_RENDER_CATALOG_NAME']
+        if (not isinstance(name, str) or not 1 <= len(name) <= 120
+            or not name.strip() or '\x00' in name): raise ValueError()
+    except (KeyError, ValueError, TypeError):
+        raise InputRejection('catalog_name') from None
     target = RenderSetupTarget(host(env['MERGE_RENDER_DB_HOST']),
-        setup_owner(env.get('MERGE_RENDER_SETUP_OWNER')),
-        secret(env.get('MERGE_RENDER_MIGRATOR_PASSWORD')), origin)
-    runtime = secret(env.get('MERGE_RENDER_RUNTIME_PASSWORD'))
+        _validated('setup_owner', setup_owner, env.get('MERGE_RENDER_SETUP_OWNER')),
+        _validated('owner_secret_format', secret, env.get('MERGE_RENDER_MIGRATOR_PASSWORD')), origin)
+    runtime = _validated('runtime_secret_format', secret, env.get('MERGE_RENDER_RUNTIME_PASSWORD'))
     if target.password.get_secret_value() == runtime.get_secret_value():
-        raise ValueError('Distinct Render runtime/migrator secrets required')
+        raise InputRejection('distinct_secrets')
     target.url()
     return SetupConfig(target, runtime, attempt, commit, catalog_id, name, minimum, maximum)
