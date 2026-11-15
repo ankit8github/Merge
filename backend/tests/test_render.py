@@ -33,9 +33,9 @@ def environment():
 def target(): return config.RenderConfig('dpg-abcdefgh1234-a', 'runtime', SecretStr('r'*48), ORIGIN, SecretStr('a'*64))
 
 
-def setup_env():
+def setup_env(owner='merge_prod_user'):
     env = environment(); env.pop('MERGE_RENDER_THROTTLE_KEY')
-    return env | dict(MERGE_RENDER_MIGRATOR_PASSWORD='m'*48, MERGE_RENDER_SETUP_ATTEMPT=str(uuid4()),
+    return env | dict(MERGE_RENDER_SETUP_OWNER=owner, MERGE_RENDER_MIGRATOR_PASSWORD='m'*48, MERGE_RENDER_SETUP_ATTEMPT=str(uuid4()),
         MERGE_RENDER_SETUP_COMMIT='b'*40, RENDER_GIT_COMMIT='b'*40, MERGE_RENDER_CATALOG_ID=str(uuid4()),
         MERGE_RENDER_CATALOG_NAME='Synthetic event', MERGE_RENDER_CATALOG_MIN='2', MERGE_RENDER_CATALOG_MAX='4')
 
@@ -333,7 +333,9 @@ def test_initializer_serializes_disposes_and_verifies_runtime_only_after_success
         if fail_apply: raise ValueError('synthetic private failure')
     monkeypatch.setattr(init,'apply',apply)
     def engine(selected):
-        assert selected.role=='runtime' and selected.password.get_secret_value()=='r'*48
+        assert type(selected) is config.RenderConfig and selected.role=='runtime'
+        assert selected.url().username=='merge_runtime' and selected.password.get_secret_value()=='r'*48
+        assert not hasattr(selected, 'owner_username') and 'm'*48 not in repr(selected)
         events.append('runtime_engine'); return runtime
     monkeypatch.setattr(database,'engine',engine)
     monkeypatch.setattr(database,'ready',lambda resource:events.append('ready'))
@@ -379,3 +381,150 @@ def test_render_supervisor_stops_both_children_on_edge_exit(monkeypatch):
     stopped=SimpleNamespace(is_set=lambda:False,wait=lambda *a:False)
     assert serve.supervise('synthetic.json',stopped,{})==1
     assert 'api:term' in events and 'edge:wait' in events and 'api:wait' in events
+
+
+@pytest.mark.parametrize('username', ['merge_prod_user', 'merge_migrator'])
+def test_explicit_reviewed_setup_owner_is_separate_from_fixed_runtime(username):
+    selected = config.load_setup(environ=setup_env(username))
+    assert type(selected.target) is config.RenderSetupTarget
+    url = selected.target.url()
+    assert (url.username, url.database, url.port) == (username, 'merge_prod', 5432)
+    assert selected.target.role == 'migrator'
+    assert selected.target.password.get_secret_value() not in repr(selected.target)
+    assert selected.runtime_password.get_secret_value() not in repr(selected)
+    assert target().url().username == 'merge_runtime'
+
+
+@pytest.mark.parametrize('username', ['', None, 'postgres', 'pg_database_owner', 'pg_read_all_data',
+    'merge_runtime', 'merge_app', 'merge_prod_user ', 'MERGE_PROD_USER', 'unknown_owner',
+    'merge_prod_user; SELECT 1', '"merge_prod_user"'])
+def test_setup_rejects_missing_unknown_reserved_and_injected_owner_before_dns(username):
+    with pytest.raises(ValueError):
+        config.load_setup(environ=setup_env() | {'MERGE_RENDER_SETUP_OWNER': username})
+
+
+def test_no_legacy_owner_default_when_setup_variable_absent():
+    env = setup_env(); env.pop('MERGE_RENDER_SETUP_OWNER')
+    with pytest.raises(ValueError): config.load_setup(environ=env)
+
+
+@pytest.mark.parametrize('username', ['merge_prod_user', 'merge_migrator', 'postgres', 'merge_runtime'])
+def test_normal_serve_rejects_any_setup_owner_environment(username):
+    with pytest.raises(ValueError):
+        config.load(environ=environment() | {'MERGE_RENDER_SETUP_OWNER': username})
+
+
+@pytest.mark.parametrize('role', ['migrator', 'merge_prod_user', 'postgres', 'merge_runtime', 'unknown'])
+def test_normal_target_cannot_select_owner_or_arbitrary_role(role):
+    from dataclasses import replace
+    with pytest.raises(ValueError): replace(target(), role=role).url()
+
+
+def test_database_factories_reject_cross_path_targets_before_dns_or_engine(monkeypatch):
+    selected = config.load_setup(environ=setup_env())
+    def forbidden(*a, **k): pytest.fail('Cross-path target reached DNS/engine creation')
+    monkeypatch.setattr(database, 'private_addresses', forbidden)
+    monkeypatch.setattr(database, 'create_engine', forbidden)
+    with pytest.raises(ValueError): database.engine(selected.target)
+    with pytest.raises(ValueError): database.setup_engine(target(), (ADDRESS,))
+    with pytest.raises(ValueError): init.owner(SetupConnection(), target(), (ADDRESS,))
+
+
+@pytest.mark.parametrize('username', ['merge_prod_user', 'merge_migrator'])
+def test_setup_engine_uses_only_explicit_owner_and_preserves_private_tls_options(monkeypatch, username):
+    selected = config.load_setup(environ=setup_env(username))
+    calls = []
+    monkeypatch.setattr(database, 'create_engine', lambda url, **kw: calls.append((url, kw)) or MagicMock())
+    database.setup_engine(selected.target, (ADDRESS,))
+    url, kw = calls[0]
+    assert url.username == username and url.password == 'm'*48
+    assert kw['poolclass'] is database.NullPool and kw['hide_parameters'] is True
+    assert kw['isolation_level'] == 'READ COMMITTED'
+    assert kw['connect_args'] == {'hostaddr': ADDRESS, 'sslmode': 'require', 'connect_timeout': 5,
+        'options': '-c statement_timeout=15000 -c lock_timeout=5000 -c search_path=public'}
+
+
+class OwnerConnection(SetupConnection):
+    def __init__(self, username='merge_prod_user'):
+        super().__init__()
+        self.who = ('merge_prod', username, ADDRESS, 5432)
+        self.version = 170004
+        self.ssl = True
+    def execute(self, q, params=None):
+        query = str(q)
+        if 'current_database(),current_user' in query:
+            result = SimpleNamespace(one=lambda: self.who)
+        elif 'server_version_num' in query:
+            result = SimpleNamespace(scalar_one=lambda: self.version)
+        elif 'pg_stat_ssl' in query:
+            result = SimpleNamespace(scalar_one=lambda: self.ssl)
+        else:
+            return super().execute(q, params)
+        self.calls.append((query, params))
+        return result
+
+
+@pytest.mark.parametrize('username', ['merge_prod_user', 'merge_migrator'])
+def test_exact_configured_owner_can_satisfy_existing_preflight_with_synthetic_permissions(username):
+    selected = config.load_setup(environ=setup_env(username))
+    c = OwnerConnection(username)
+    init.owner(c, selected.target, (ADDRESS,))
+    assert len(c.calls) == 4 and all(q.startswith('SELECT') for q, p in c.calls)
+    init.claim(c, selected)
+    assert ('CREATE SCHEMA merge_deployment AUTHORIZATION CURRENT_USER', None) in c.calls
+    assert not any('AUTHORIZATION merge_migrator' in q for q, p in c.calls)
+
+
+@pytest.mark.parametrize('failure', ['wrong_user', 'wrong_approved_user', 'database', 'address', 'port',
+    'version16', 'version18', 'tls', 'superuser', 'no_createrole', 'not_owner', 'recovery', 'readonly'])
+def test_new_owner_keeps_all_identity_tls_version_and_privilege_rejections(failure):
+    selected = config.load_setup(environ=setup_env())
+    c = OwnerConnection()
+    if failure == 'wrong_user': c.who = ('merge_prod', 'postgres', ADDRESS, 5432)
+    elif failure == 'wrong_approved_user': c.who = ('merge_prod', 'merge_migrator', ADDRESS, 5432)
+    elif failure == 'database': c.who = ('merge_test', 'merge_prod_user', ADDRESS, 5432)
+    elif failure == 'address': c.who = ('merge_prod', 'merge_prod_user', '8.8.8.8', 5432)
+    elif failure == 'port': c.who = ('merge_prod', 'merge_prod_user', ADDRESS, 5433)
+    elif failure == 'version16': c.version = 160008
+    elif failure == 'version18': c.version = 180000
+    elif failure == 'tls': c.ssl = False
+    elif failure == 'superuser': c.flags = (True, True, True, False, 'off')
+    elif failure == 'no_createrole': c.flags = (False, False, True, False, 'off')
+    elif failure == 'not_owner': c.flags = (False, True, False, False, 'off')
+    elif failure == 'recovery': c.flags = (False, True, True, True, 'off')
+    else: c.flags = (False, True, True, False, 'on')
+    with pytest.raises(ValueError): init.owner(c, selected.target, (ADDRESS,))
+    assert all(q.startswith('SELECT') for q, p in c.calls)
+
+
+@pytest.mark.parametrize('username', ['merge_prod_user', 'merge_migrator'])
+def test_existing_runtime_guard_never_adopts_owner_login(username):
+    from test_railway import Connection
+    c = Connection(); c.who = ('merge_prod', username, ADDRESS, 5432)
+    with pytest.raises(ValueError): database.Guard(target(), (ADDRESS,))(c)
+    assert c.invalid and all(not q.startswith(('CREATE', 'ALTER', 'GRANT')) for q in c.calls)
+
+
+@pytest.mark.parametrize('username', ['postgres', 'pg_database_owner', 'merge_runtime', 'unknown_owner'])
+def test_blueprint_still_rejects_unreviewed_initial_users(username):
+    bp = json.loads((ROOT/'render.yaml').read_text())
+    bp['databases'][0]['user'] = username
+    with pytest.raises(ValueError): check.validate_blueprint(bp)
+
+
+def test_blueprint_contract_can_describe_approved_owner_and_matching_oregon_region():
+    bp = json.loads((ROOT/'render.yaml').read_text())
+    bp['databases'][0].update(user='merge_prod_user', region='oregon')
+    bp['services'][0]['region'] = 'oregon'
+    assert check.validate_blueprint(bp) == '0006_profiles'
+    bp['services'][0]['envVars'].append({'key': 'MERGE_RENDER_SETUP_OWNER', 'value': 'merge_prod_user'})
+    with pytest.raises(ValueError): check.validate_blueprint(bp)
+
+
+def test_setup_cli_validates_owner_before_opening_status_listener(monkeypatch):
+    monkeypatch.setattr(sys, 'argv', ['setup', '--confirm-new-render-production'])
+    env = setup_env(); env.pop('MERGE_RENDER_SETUP_OWNER')
+    monkeypatch.setattr(config.os, 'environ', env)
+    monkeypatch.setattr(setup, 'HTTPServer', lambda *a, **k: pytest.fail('Status listener reached'))
+    with pytest.raises(SystemExit) as result: setup.main()
+    assert result.value.code == 1

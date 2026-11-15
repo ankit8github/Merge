@@ -1,6 +1,45 @@
 # Testing and verification
 
-## Current local release review - 15 November 2026
+## Render setup-owner compatibility - 15 November 2026
+
+Python 3.11.9 on Windows PowerShell with existing locked dependencies. Only
+synthetic env/DNS/connections/processes were used in the focused tests; no database,
+setup, migration, server/browser, cloud, commit or push action was performed.
+
+| Directory | Exact command | Actual result |
+| --- | --- | --- |
+| backend | `.\.venv\Scripts\python.exe -B -m pytest -q tests/test_render.py tests/test_railway.py tests/test_production.py tests/test_ci_configuration.py tests/test_release_support.py --tb=short` | **397 passed**, 13.69 s; includes **143 Render cases** |
+| backend | `.\.venv\Scripts\python.exe -B -m pytest -q -m 'not database' --tb=short` | **2213 passed**, 32 database cases deselected, 125.95 s |
+| backend | `.\.venv\Scripts\python.exe -B -m app.render.check` | Passed offline Render contracts |
+| backend | `.\.venv\Scripts\python.exe -B -m app.railway.check` | Passed unchanged Railway contracts |
+| backend | `.\.venv\Scripts\python.exe -B -m app.production.check` | Passed unchanged VPS contracts |
+| root | `git diff --check` | Passed |
+
+Fifty new regressions cover explicit reviewed owner selection, missing/unknown/
+reserved names, runtime refusal, exact connected identity, database/TLS/version/
+owner/CREATE ROLE rejection, schema CURRENT_USER ownership, bounded setup engine,
+Blueprint validation and CLI rejection before status-listener construction. Existing
+transactional rollback/replay, exact0006, runtime authentication/CSRF and platform
+checks remain. One existing Starlette/httpx deprecation warning remains.
+
+The new ignored local audit helper runs from repository root:
+
+```powershell
+$ownerEvidence = Get-Content backend/test-results/render-owner-current.txt
+.\backend\.venv\Scripts\python.exe -B (Join-Path $ownerEvidence 'check_repository.py')
+```
+
+It checks the explicitly bounded source delta, secret/artifact patterns, Python
+AST/imports, JSON, local Markdown paths/fragments and unchanged source/evidence.
+All **1122 baseline evidence paths** retain their hashes/ignore status (including
+the new pointer captured at baseline). Shared guard/grant files, migrations, CI,
+frontend, Docker/Caddy and root fresh-resource Blueprint stay byte-identical.
+No actual account privilege is established by these tests. Frontend/build and
+native/live deployment checks were not rerun for this backend-only change. The
+existing Oregon database must not be recreated or modified during review.
+Configuration and remaining live requirements: [RENDER.md](RENDER.md).
+
+## Previous local release review - 15 November 2026
 
 Actual environment: Windows PowerShell, Python 3.11.9, Node 22.15.0 and npm 10.9.2;
 existing locked dependencies. No database, migration, startup, browser, benchmark,

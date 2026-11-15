@@ -1,21 +1,20 @@
 """Explicit fresh-instance setup only. Never imported by application startup."""
 from pathlib import Path
-from dataclasses import replace
 from alembic import command
 from alembic.config import Config
 from psycopg import sql
 from sqlalchemy import text
 from app.production import grants
 from app.render import database
-from app.render.config import REVISION
+from app.render.config import REVISION, RenderConfig, RenderSetupTarget
 
 LOCK = 50631926061115
 
 
 def owner(c, target, addresses):
-    target.url()
-    if target.role != 'migrator': raise ValueError('Explicit Render owner required')
-    database.server(c, addresses, role='merge_migrator')
+    if not isinstance(target, RenderSetupTarget): raise ValueError('Explicit Render owner required')
+    selected = target.url()
+    database.server(c, addresses, role=selected.username)
     flags = tuple(c.execute(text("""SELECT r.rolsuper,r.rolcreaterole,
         d.datdba=r.oid,pg_is_in_recovery(),current_setting('transaction_read_only')
         FROM pg_roles r CROSS JOIN pg_database d
@@ -43,7 +42,7 @@ def claim(c, selected):
                 raise ValueError('Previous/unknown setup claim; manual investigation required')
             return False
         empty(c)
-        c.execute(text('CREATE SCHEMA merge_deployment AUTHORIZATION merge_migrator'))
+        c.execute(text('CREATE SCHEMA merge_deployment AUTHORIZATION CURRENT_USER'))
         c.execute(text('REVOKE ALL ON SCHEMA merge_deployment FROM PUBLIC'))
         c.execute(text("""CREATE TABLE merge_deployment.setup_claim (
             singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton),
@@ -109,7 +108,7 @@ def initialize(selected):
     finally:
         resource.dispose()
     # Completed claims may only repeat this read-only runtime verification.
-    runtime = replace(selected.target, role='runtime', password=selected.runtime_password)
+    runtime = RenderConfig(selected.target.db_host, 'runtime', selected.runtime_password, selected.target.origin)
     resource = database.engine(runtime)
     try:
         database.ready(resource)

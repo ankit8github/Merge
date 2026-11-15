@@ -1,5 +1,47 @@
 # Current verified status
 
+## Render database owner compatibility - 15 November 2026
+
+Started from the owner-reported published release 424f29c459cb8049d70809b74dd9082eade469b5.
+The owner reports existing available merge_prod / PG17 in Oregon, initial username
+merge_prod_user. No database connection, live permission query, setup/migration,
+startup, cloud modification, staging, commit or push occurred during initial
+preparation. The owner subsequently authorized one reviewed local commit, including
+all ten pending files; push and live operations remain outside scope.
+
+Added explicit setup-only MERGE_RENDER_SETUP_OWNER and a separate setup target.
+Only merge_prod_user and legacy merge_migrator are accepted; no owner default,
+arbitrary identifier or privileged-role fallback. Normal serve stays merge_runtime
+and rejects setup inputs/targets. Owner preflight still requires exact database,
+configured current_user, private address, TLS, PG17, non-superuser/CREATE ROLE,
+actual database ownership and primary read-write status. Deployment schema uses
+verified CURRENT_USER. Durable create-once claim, exact0006, runtime grants,
+application behavior and all shared/VPS/Railway/local/CI safeguards remain unchanged.
+
+Actual offline results: **397 focused checks passed** (13.69 s), including 143
+Render cases; **2213 full database-free backend tests passed**, 32 database cases
+deselected (125.95 s). Render/Railway/VPS deployment checks passed. Static review
+passed for 336 source paths, 206 Python files, 761 local import targets, 369 local
+Markdown links and 56 fragments. All 1122 captured baseline evidence paths retain
+their hashes and ignore status. The capture includes the new audit pointer.
+Exact commands and limits: [TESTING.md](TESTING.md).
+
+The actual account's role flags, ownership and grant capability remain unknown:
+its name/availability are not permission evidence. Missing authority must stop
+before claim/DDL, not trigger another account or relaxed guard. The existing
+fresh-resource Blueprint remains unchanged and must not recreate/adopt this
+existing database. Use the manual Oregon procedure in [RENDER.md](RENDER.md).
+Authorized local commit: `fix(deploy): support Render-provided setup owner`.
+Final commit review reran the focused suite: **397 passed** (10.57 s), with one
+existing Starlette/httpx deprecation warning. Render/Railway/VPS offline checks
+passed again. Static review preserved all **1142** pre-review evidence hashes;
+source/import/documentation/secret/artifact checks passed. Git history supplies
+the resulting commit identity after staged review and diff checks.
+New CI and separately approved live verification remain pending. Frontend/build,
+native Docker/Caddy, DB/setup/migrations and cloud operations were not run for
+this backend-only fix. The previous release results below retain their scope.
+
+
 Updated: 15 November 2026. Deadline: **23:59 IST**. Merge is implemented locally;
 Render Free is the selected demonstration target, prepared but not deployed.
 The public repository exists. The owner reports five Actions jobs passed at
@@ -7,7 +49,7 @@ baseline `bb60ab3`; the local release needs a fresh hosted run after publication
 No verified live application URL, measured load report or completed integrated
 browser certificate is claimed.
 
-## Local release review
+## Published release review - 424f29c
 
 The owner authorized one local commit after validation:
 `chore(deploy): prepare Render release and streamline docs`.

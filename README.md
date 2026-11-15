@@ -10,8 +10,9 @@ team discovery, invitations, membership management and explained recommendations
 Built for [Hack4Hack Crew Hiring Challenge 2026, PS1](https://hack4hack.com/hackathons/hack4hack-crew-hiring-challenge-2026-tp3m).
 **Current status:** local release candidate. Integrated browser acceptance,
 measured load and public HTTPS deployment are outstanding. The owner reports all
-five Actions jobs passed for `bb60ab3`; the pending Render and Railway adapters await publication
-and a new CI run.
+five Actions jobs passed for `bb60ab3`. The deployment adapters are published at
+`424f29c`; the setup-owner compatibility patch is verified offline and awaits
+review/publication and new CI.
 
 ## Overview
 
@@ -135,7 +136,7 @@ npm.cmd test -- --reporter=dot --maxWorkers=1
 npm.cmd run build
 ```
 
-Latest local verification on Windows: **2,163 backend tests passed** (32 database
+Latest local verification on Windows: **2,213 backend tests passed** (32 database
 cases deselected), **434 frontend tests passed** across 18 files with one worker,
 and the **TypeScript/production build passed**. These checks used existing locked
 dependencies. Exact commands, timings and warnings are recorded in
@@ -148,7 +149,7 @@ public CI, browser or performance certification.
 | Local PostgreSQL SSE | 4/4 on historical exact `0005_invitations` sources |
 | Local PostgreSQL lifecycle | 10/10; aggregate report and owner-confirmed exit |
 | Local authenticated last-seat race | Prior invitation acceptance: 13 cases x 3; three 50-caller races, each 1 success / 49 safe rejections |
-| Public GitHub Actions | Owner reports 5/5 jobs passed at bb60ab3; pending adapters have not run in public CI |
+| Public GitHub Actions | Owner reports 5/5 at bb60ab3; the current setup-owner patch has not run in public CI |
 | Full integrated browser acceptance | Incomplete; original consumed campaign is uncertified |
 | Scale seed and load | Tooling exists for 10,000 users / 2,000 teams / 100 clients; not executed, no measured p95 |
 | Public HTTPS deployment | Not verified; no live URL claimed |

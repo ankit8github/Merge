@@ -4,7 +4,7 @@ import socket
 from sqlalchemy import create_engine, event
 from sqlalchemy.pool import NullPool
 from app.railway.database import Guard, NETWORKS, ready, server
-from app.render.config import REVISION
+from app.render.config import REVISION, RenderConfig, RenderSetupTarget
 
 
 def private_addresses(target):
@@ -17,6 +17,8 @@ def private_addresses(target):
 
 
 def engine(target):
+    if not isinstance(target, RenderConfig) or target.role != 'runtime':
+        raise ValueError('Only the restricted Render runtime target may serve')
     addresses = private_addresses(target)
     guard = Guard(target, addresses, REVISION)
     resource = create_engine(target.url(), hide_parameters=True, echo=False,
@@ -33,7 +35,8 @@ def connect_args(addresses):
 
 
 def setup_engine(target, addresses):
-    if target.role != 'migrator': raise ValueError('Explicit Render migrator required')
+    if not isinstance(target, RenderSetupTarget) or target.role != 'migrator':
+        raise ValueError('Explicit Render setup target required')
     return create_engine(target.url(), hide_parameters=True, echo=False,
         isolation_level='READ COMMITTED', poolclass=NullPool,
         execution_options={'schema_translate_map': {None: 'public'}}, connect_args=connect_args(addresses))

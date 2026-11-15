@@ -5,13 +5,14 @@ import re
 from uuid import UUID
 from pydantic import SecretStr
 from sqlalchemy import URL
-from app.production.config import DATABASE, REVISION, ROLES, SafeParser, public_origin
+from app.production.config import DATABASE, REVISION, SafeParser, public_origin
 from app.railway.config import secret, port as shared_port
 from app.security.auth_policy import AuthSettings
 
 COMMON = {'MERGE_RENDER_ENVIRONMENT', 'MERGE_RENDER_DB_HOST', 'MERGE_RENDER_RUNTIME_PASSWORD'}
 RUNTIME = COMMON | {'MERGE_RENDER_THROTTLE_KEY'}
-SETUP = COMMON | {'MERGE_RENDER_MIGRATOR_PASSWORD', 'MERGE_RENDER_SETUP_ATTEMPT',
+SETUP_OWNERS = frozenset({'merge_prod_user', 'merge_migrator'})
+SETUP = COMMON | {'MERGE_RENDER_SETUP_OWNER', 'MERGE_RENDER_MIGRATOR_PASSWORD', 'MERGE_RENDER_SETUP_ATTEMPT',
                   'MERGE_RENDER_SETUP_COMMIT', 'MERGE_RENDER_CATALOG_ID', 'MERGE_RENDER_CATALOG_NAME',
                   'MERGE_RENDER_CATALOG_MIN', 'MERGE_RENDER_CATALOG_MAX'}
 RESERVED_PORTS = {8000, 18012, 18013, 19099}
@@ -60,12 +61,12 @@ class RenderConfig:
 
     def url(self):
         host(self.db_host)
-        if self.role not in ROLES or not isinstance(self.password, SecretStr):
-            raise ValueError('Fixed Render role required')
+        if self.role != 'runtime' or not isinstance(self.password, SecretStr):
+            raise ValueError('Fixed Render runtime role required')
         secret(self.password.get_secret_value())
         public_origin(self.origin)
         return URL.create('postgresql+psycopg', host=self.db_host, port=5432,
-                          database=DATABASE, username=ROLES[self.role], password=self.password.get_secret_value())
+                          database=DATABASE, username='merge_runtime', password=self.password.get_secret_value())
 
     def auth(self):
         self.url()
@@ -87,9 +88,35 @@ def load(*, environ=None):
     return selected
 
 
+def setup_owner(value):
+    # Only operator-reviewed initial owners; no arbitrary SQL identifier or default.
+    if not isinstance(value, str) or value not in SETUP_OWNERS:
+        raise ValueError('Explicit approved Render setup owner required')
+    return value
+
+
+@dataclass(frozen=True, repr=False)
+class RenderSetupTarget:
+    db_host: str
+    owner_username: str
+    password: SecretStr = field(repr=False)
+    origin: str
+    role: str = field(default='migrator', init=False)
+
+    def url(self):
+        host(self.db_host)
+        username = setup_owner(self.owner_username)
+        if self.role != 'migrator' or not isinstance(self.password, SecretStr):
+            raise ValueError('Explicit Render setup target required')
+        secret(self.password.get_secret_value())
+        public_origin(self.origin)
+        return URL.create('postgresql+psycopg', host=self.db_host, port=5432,
+                          database=DATABASE, username=username, password=self.password.get_secret_value())
+
+
 @dataclass(frozen=True, repr=False)
 class SetupConfig:
-    target: RenderConfig
+    target: RenderSetupTarget
     runtime_password: SecretStr = field(repr=False)
     attempt: UUID
     commit: str
@@ -114,8 +141,9 @@ def load_setup(*, environ=None):
             or not 1 <= len(name) <= 120 or not name.strip() or '\x00' in name): raise ValueError()
     except (KeyError, ValueError, TypeError):
         raise ValueError('Explicit bounded Render setup/catalog inputs required') from None
-    target = RenderConfig(host(env['MERGE_RENDER_DB_HOST']), 'migrator',
-                          secret(env.get('MERGE_RENDER_MIGRATOR_PASSWORD')), origin)
+    target = RenderSetupTarget(host(env['MERGE_RENDER_DB_HOST']),
+        setup_owner(env.get('MERGE_RENDER_SETUP_OWNER')),
+        secret(env.get('MERGE_RENDER_MIGRATOR_PASSWORD')), origin)
     runtime = secret(env.get('MERGE_RENDER_RUNTIME_PASSWORD'))
     if target.password.get_secret_value() == runtime.get_secret_value():
         raise ValueError('Distinct Render runtime/migrator secrets required')

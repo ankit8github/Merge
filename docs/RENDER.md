@@ -18,7 +18,7 @@ Render Free web container :$PORT (10000 by default)
    | private same-region dpg-* hostname, TCP 5432, TLS required
 Render Free PostgreSQL 17: merge_prod
    merge_runtime: restricted application login
-   merge_migrator: Render-created database owner, setup deployment only
+   configured Render-created owner: setup deployment only (merge_prod_user here)
 ```
 
 Caddy is the only public listener during ordinary application operation. Render
@@ -33,21 +33,41 @@ ranking, SSE authorization, all six migrations, CI, local/test/release/VPS guard
 No dependency or business schema revision is added. A private deployment-only
 `merge_deployment.setup_claim` table records explicit initialization attempts.
 
+## Existing database reported by the owner
+
+The owner reports this resource available; no connection or privilege inspection
+was performed during this compatibility fix:
+
+| Field | Reported value |
+| --- | --- |
+| Database / PostgreSQL | `merge_prod` / **17** |
+| Region / port | **Oregon (US West)** / `5432` |
+| Initial owner | `merge_prod_user` |
+| Internal hostname | `dpg-dbsob2e1egvs73edo350-a` |
+| Plan | Free |
+
+Use this existing resource for the separately approved fresh setup. Do not
+recreate it, rename its user, change credentials or apply the fresh-resource
+Blueprint to it. Put the web service in **Oregon**, in the same account/region.
+The hostname/account are nonsecret configuration; no password or full connection
+URL belongs in this document.
+
 ## Dashboard settings: review first, execute only after owner approval
 
 Manual creation is recommended for the first initialization because Free has no
 shell, one-off job or paid pre-deploy command. The root [render.yaml](../render.yaml)
-is an equivalent JSON-subset YAML runtime Blueprint, with autodeploy disabled and
-no setup hook. It is not an automatic initialization recipe. A direct initial
+is a **fresh-resource legacy template** (Singapore, initial user merge_migrator),
+with autodeploy disabled and no setup hook. It is not the procedure for attaching
+the existing Oregon database. Do not sync it to adopt/recreate that resource. It is not an automatic initialization recipe. A direct initial
 Blueprint sync starts the ordinary command against an empty schema and fails
 closed until the separate setup deployment is explicitly selected.
 
 | Resource / field | Exact selection |
 | --- | --- |
-| PostgreSQL display name | `merge-postgres` |
-| Database / initial user | `merge_prod` / `merge_migrator` (set during creation; immutable) |
+| PostgreSQL resource | Select the existing owner-reported resource; no new database |
+| Database / initial user | Existing `merge_prod` / `merge_prod_user`; do not rename or recreate |
 | PostgreSQL version / plan | Explicitly **17**, **Free**; do not accept a newer default |
-| Region | Singapore for both services, or review and change both before creation |
+| Region | **Oregon (US West)** for the web service, matching the existing database |
 | External database access | Disable all external access; Blueprint `ipAllowList: []` |
 | Web name / source | `merge-demo`; `https://github.com/ankit8github/Merge`, branch `main` |
 | Runtime / plan / instances | Docker / **Free** / **1** |
@@ -77,7 +97,7 @@ Ordinary application environment:
 | --- | --- |
 | `PORT` | `10000` or Render-assigned unprivileged port; never 8000/18012/18013/19099 |
 | `MERGE_RENDER_ENVIRONMENT` | `production` |
-| `MERGE_RENDER_DB_HOST` | Exact short **internal** `dpg-...-a` hostname from the database; Blueprint uses `fromDatabase.host` |
+| `MERGE_RENDER_DB_HOST` | `dpg-dbsob2e1egvs73edo350-a` for the reported database; never its external hostname |
 | `MERGE_RENDER_RUNTIME_PASSWORD` | Fresh private runtime password, 32-128 URL-safe letters/digits/underscore/hyphen |
 | `MERGE_RENDER_THROTTLE_KEY` | Fresh private 64-character lowercase hex key |
 
@@ -91,7 +111,8 @@ For the **setup deployment only**, retain PORT/environment/host/runtime password
 
 | Name | Source / constraint |
 | --- | --- |
-| `MERGE_RENDER_MIGRATOR_PASSWORD` | Render-generated fresh initial `merge_migrator` credential; same safe password alphabet/length, distinct from runtime password |
+| `MERGE_RENDER_SETUP_OWNER` | **`merge_prod_user`** for this existing database; legacy `merge_migrator` is the only other reviewed name; no default |
+| `MERGE_RENDER_MIGRATOR_PASSWORD` | Private Render-provided password for the selected owner; historical variable name retained, safe alphabet/length required, distinct from runtime password |
 | `MERGE_RENDER_SETUP_ATTEMPT` | Fresh UUID, stored with the reviewed deployment record |
 | `MERGE_RENDER_SETUP_COMMIT` | Exact reviewed 40-character lowercase Git SHA, equal to `RENDER_GIT_COMMIT` |
 | `MERGE_RENDER_CATALOG_ID` | Fresh explicit hackathon UUID |
@@ -107,7 +128,10 @@ variables. No shared environment group or frontend `VITE_*` secret.
 
 No `DATABASE_URL`, `DATABASE_PUBLIC_URL`, `PG*`, `RAILWAY_*`, `VITE_*` or unrelated
 `MERGE_*` overrides. The adapter rejects these. The database/user/port are fixed
-`merge_prod` / runtime-or-migrator / 5432. Public region-qualified database hosts,
+`merge_prod` / **merge_runtime during normal serve** / 5432. The setup-only
+owner is selected explicitly and cannot be passed to the runtime engine. Normal
+serve rejects every setup-owner/migrator/setup/catalog input; remove them all
+before switching commands. Public region-qualified database hosts,
 localhost and DSNs are rejected before connecting. Remove accidental imported
 variables rather than weakening validation. If provider-generated credentials or
 internal hostname do not meet this contract, stop for adapter review; no fallback.
@@ -119,18 +143,20 @@ These steps are **future owner actions**, not actions taken in this preparation.
 1. Review and commit/publish the complete pending scope after offline checks, then
    require fresh public CI at that SHA. Record the full reviewed SHA. Connect that
    GitHub repository in Render only after publication approval.
-2. Create the fresh Free PostgreSQL resource with the settings above. Do not reuse
-   development, acceptance, Railway, VPS or any retained database. Disable external
-   access **before** attaching credentials to the web service. Keep the original
-   generated owner credential private. Do not expose a public database port or
-   use the external PSQL command from your computer.
+2. Use the **existing** fresh Free PostgreSQL resource reported above. Confirm it
+   is the intended unused production target, never a development/acceptance/retained
+   database. Do not recreate it or rename/change its owner. Confirm external access
+   is disabled before attaching credentials to the web service; any needed change
+   is a separate approved owner action. Keep the existing owner credential private.
+   Do not expose a public database port or use the external PSQL command locally.
 3. Create the Free Docker web service in the same account/region. In the creation
    form, select the explicit **setup Docker command**, `/ready`, autodeploy off and
    the complete setup-only environment before its first deploy. Pin/check the
    reviewed source commit in the deployment view. Do not select paid hooks/jobs.
 4. The explicit setup process validates inputs, resolves only private addresses,
    requires TLS and PostgreSQL 17, checks exact database/user/server identity,
-   non-superuser owner authority with CREATE ROLE, primary read-write status, and
+   **current_user equal to MERGE_RENDER_SETUP_OWNER**, actual database ownership,
+   non-superuser authority with CREATE ROLE, primary read-write status, and
    acquires a session advisory lock. It requires an empty public schema and no
    existing `merge_runtime` role. It cannot adopt or reset an existing database.
 5. It commits one private attempt/SHA claim **before** application DDL. In a separate
@@ -138,7 +164,9 @@ These steps are **future owner actions**, not actions taken in this preparation.
    PUBLIC database/schema access, grants runtime CONNECT/USAGE, upgrades the existing
    migrations to exact **0006_profiles**, applies the existing table/column/function
    grants, inserts one explicitly supplied hackathon, and marks the claim complete.
-   Raw runtime password is converted to a SCRAM verifier client-side before CREATE
+   The private deployment schema is authorized to the already verified CURRENT_USER,
+   not a fixed owner name or interpolated identifier. Raw runtime password is
+   converted to a SCRAM verifier client-side before CREATE
    ROLE; SQL errors/parameters are suppressed by the command. Provider SQL logs may
    still contain credential verifiers and require private access/retention review.
 6. It verifies the existing runtime identity, exact revision, public table inventory
@@ -164,6 +192,25 @@ These steps are **future owner actions**, not actions taken in this preparation.
     and only then opens Caddy. `/ready` now returns `{"status":"ready"}` or HTTP 503;
     this is real application readiness. It never creates roles/catalog/schema or
     runs migrations. Privileged setup inputs are absent from the runtime process.
+
+### Can merge_prod_user perform setup?
+
+**Conditionally; its name and availability do not prove its permissions.** The
+unchanged preflight requires exact `merge_prod` identity/private address/5432,
+PostgreSQL17 and TLS, then `rolsuper=false`, `rolcreaterole=true`, database owner
+OID equal to the selected account's OID, primary status and read-write transaction.
+There is no fallback to another login, SET ROLE, superuser or relaxed role flags.
+A syntactically approved name with the wrong connected identity still fails.
+`merge_runtime`, postgres/pg_* and unknown names cannot be setup owners.
+
+[PostgreSQL's role attributes](https://www.postgresql.org/docs/17/role-attributes.html)
+require CREATE ROLE authority explicitly; Render's credential documentation does
+not attest the live flags of this instance. The account **can satisfy** the adapter
+if these checks pass, but that has **not** been verified with a database connection.
+Missing authority fails before claim/DDL; stop for a separately reviewed provisioning
+decision rather than weakening a guard. Runtime keeps its stricter no-elevated-flags,
+no-membership, exact0006 and table/column grant checks. Its post-setup verification
+uses a newly constructed fixed runtime target and only the runtime password.
 
 If Render's initial user lacks the required ownership/CREATE ROLE/grant authority,
 setup stops. This provider capability has **not** been tested; do not make runtime
@@ -256,7 +303,9 @@ on the review host. Offline contracts do not certify native Caddy schema, binary
 compatibility, Linux startup, 512 MB operation, managed grants, provider Blueprint
 acceptance, public HTTPS/header/SSE behavior or new hosted CI.
 
-Owner explanation: normal serve cannot initialize a database. Explicit setup
+Owner explanation: normal serve cannot initialize a database or select the owner
+account. Set MERGE_RENDER_SETUP_OWNER=merge_prod_user only for explicit setup;
+remove it and the owner password before normal serve. Explicit setup
 binds a fresh attempt to the reviewed SHA, commits a claim before owned DDL and
 blocks unattended recovery after interruption. Its HTTP endpoint is status-only.
 For an offline exercise, change the synthetic PORT in the packaging test to a
@@ -274,3 +323,5 @@ Run only the regression test; no database or server is needed.
 - [Public client IP guidance](https://render.com/articles/host-pocketbase-on-render): CF-Connecting-IP overwrite, unsafe leftmost XFF.
 - [SSE guidance](https://render.com/articles/sse-vs-websockets-llm-streaming): streaming/reconnection patterns; not acceptance evidence for this app.
 - [Database credentials](https://render.com/docs/postgresql-credentials): direct SQL users are outside dashboard credential management.
+- [PostgreSQL17 schema authorization](https://www.postgresql.org/docs/17/sql-createschema.html): CURRENT_USER ownership without identifier interpolation.
+- [PostgreSQL17 role attributes](https://www.postgresql.org/docs/17/role-attributes.html): explicit CREATEROLE and privileged-role semantics.

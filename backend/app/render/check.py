@@ -3,7 +3,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 from urllib.parse import urlsplit
-from app.render.config import REVISION, SafeParser, RESERVED_PORTS
+from app.render.config import REVISION, SafeParser, RESERVED_PORTS, SETUP_OWNERS
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -70,7 +70,7 @@ def validate_blueprint(bp):
     if any(key in service for key in ('preDeployCommand', 'initialDeployHook', 'disk', 'scaling')):
         raise ValueError('No paid hook/disk/scaling or automatic setup')
     if (db['plan'] != 'free' or db['postgresMajorVersion'] != '17' or db['databaseName'] != 'merge_prod'
-        or db['user'] != 'merge_migrator' or db['ipAllowList'] != [] or db['region'] != service['region']):
+        or db['user'] not in SETUP_OWNERS or db['ipAllowList'] != [] or db['region'] != service['region']):
         raise ValueError('Private fresh Render PostgreSQL 17 required')
     env = {item['key']: item for item in service['envVars']}
     if set(env) != {'PORT', 'MERGE_RENDER_ENVIRONMENT', 'MERGE_RENDER_DB_HOST', 'MERGE_RENDER_RUNTIME_PASSWORD', 'MERGE_RENDER_THROTTLE_KEY'}:

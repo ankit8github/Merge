@@ -1,5 +1,35 @@
 # Merge — Architecture Decision Records (ADRs)
 
+### Render-provided setup owner compatibility - 2026-11-15
+
+The owner reports a fresh Render PostgreSQL 17 database merge_prod in Oregon,
+initial owner merge_prod_user. The original adapter fixed the setup account to
+merge_migrator, which rejects this otherwise potentially compatible provider account.
+One bounded correction: separate explicit RenderSetupTarget from the fixed runtime
+RenderConfig. Require MERGE_RENDER_SETUP_OWNER, accepting only the reviewed
+merge_prod_user and legacy merge_migrator names; no default, arbitrary identifier,
+postgres/pg_* role or runtime-role fallback. The selected account must still match
+current_user, own merge_prod, be a non-superuser with CREATE ROLE, and meet all
+existing private-address/TLS/PG17/read-write guards before initialization.
+
+Only the explicit setup CLI/migration owner may use that target. Runtime is always
+merge_runtime; it rejects setup-owner variables/objects, and post-setup verification
+constructs a new runtime target using only the runtime password. Deployment schema
+authorization uses the already verified CURRENT_USER instead of a fixed identifier.
+Durable claim, empty schema/absent runtime role, owned DDL, exact0006, runtime grants,
+application authentication/transactions, local/VPS/Railway/CI guards stay unchanged.
+
+The existing Blueprint remains a fresh-resource legacy template, not a recipe to
+adopt/recreate the reported existing database. Its validator may accept either
+reviewed initial user while still rejecting every other user and requiring the
+same app/database region. Existing database setup is manual, same-region Oregon,
+with the exact operator-supplied private hostname and setup owner. No cloud or DB
+change, connection, initialization, migration, startup, commit or push was authorized
+by the initial preparation request. The final owner review subsequently authorizes
+one local commit of all ten pending files; push and live operations remain excluded.
+Actual role flags/ownership/CREATE ROLE/grant capability remain unverified offline.
+
+
 ### Documentation release review - 2026-11-15
 
 The owner authorizes documentation consolidation, a complete Render adapter review,
