@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { api, ApiError, errorMessage, type Profile } from './api';
 import ProfilePanel from './components/Profile';
 import TeamLifecycle from './components/Lifecycle';
@@ -11,6 +11,7 @@ import type { Admission } from './hooks/useAdmission';
 import { H1, I1, invitation, session, team, U1 } from './test/fixtures';
 
 const U2 = '00000000-0000-0000-0000-000000000022';
+beforeEach(() => { vi.spyOn(api, 'profileTimezones').mockResolvedValue(['UTC']); });
 const profile = (): Profile => ({ ...session().identity, display_name: 'Builder', skills: ['python'], timezone: 'UTC', discoverable: false, version: 1 });
 const workspace = () => new AbortController().signal;
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -47,7 +48,7 @@ it('announces local profile validation errors and focuses the invalid field with
   render(<ProfilePanel session={session()} signal={workspace()} onExpired={vi.fn()} />);
   fireEvent.click(screen.getByRole('button', { name: 'Edit skills and time zone' }));
   const skills = await screen.findByLabelText('Skills');
-  fireEvent.change(skills, { target: { value: 'bad skill' } });
+  fireEvent.change(skills, { target: { value: 'bad/skill' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
   expect(screen.getByRole('alert').textContent).toContain('comma-separated skills');
   expect(document.activeElement).toBe(skills); expect(save).not.toHaveBeenCalled();
@@ -128,7 +129,8 @@ it('requires reload on an unrecognized 422 response and submits the reloaded pro
   fireEvent.click(screen.getByRole('button', { name: 'Save profile' })); await screen.findByText(/Reload your profile before editing again/);
   expect(screen.getByRole('button', { name: 'Save profile' }).matches(':disabled')).toBe(true);
   fireEvent.click(screen.getByRole('button', { name: 'Reload profile' }));
-  const skills = await screen.findByLabelText('Skills'); expect((skills as HTMLInputElement).value).toBe('react');
+  fireEvent.click(await screen.findByRole('button', { name: 'Discard draft and use saved profile' }));
+  const skills = screen.getByLabelText('Skills'); expect((skills as HTMLInputElement).value).toBe('react');
   expect(get).toHaveBeenCalledTimes(2); expect(save).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole('button', { name: 'Save profile' })); await screen.findByText(/Profile saved/);
   expect(save.mock.calls[1][1]).toMatchObject({ skills: ['react'], version: 4 });

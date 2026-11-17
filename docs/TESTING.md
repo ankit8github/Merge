@@ -1,5 +1,83 @@
 # Testing and verification
 
+## Profile UX and authoritative zone choices — 17 November 2026
+
+Started from clean reviewed HEAD `28dec1c`. Windows PowerShell, Python 3.11.9,
+Node 22.15.0/npm 10.9.2; existing locked dependencies. Local implementation only.
+No live application/account, SQL, migration, credential, fixture reset, cloud,
+staging, commit, push or deployment operation. Build output is generated locally.
+
+| Directory | Exact command | Actual result |
+| --- | --- | --- |
+| frontend | `npm.cmd test -- --reporter=dot --maxWorkers=1 src/ProfileUX.test.tsx src/ProfilesRanking.test.tsx src/ProductAudit.test.tsx src/SessionRevalidation.test.tsx` | **149 passed**, 4 files, 28.55 s; final four added cases subsequently passed in the full suite |
+| backend | `.\.venv\Scripts\python.exe -B -m pytest -q tests/test_profiles_matching.py tests/test_integrated_host.py tests/test_integrated_plan.py --tb=short -p no:cacheprovider` | **233 passed**, 22.04 s |
+| frontend | `npm.cmd test -- --reporter=dot --maxWorkers=1` | **546 passed**, 20 files, 166.92 s |
+| backend | `.\.venv\Scripts\python.exe -B -m pytest -q -m 'not database' --tb=short -p no:cacheprovider` | **2312 passed**, **32 database cases deselected**, 81.26 s |
+| frontend | `npm.cmd run build` | TypeScript passed; Vite **51 modules**, 3.04 s |
+| root | `git diff --check` | Passed; Git reports normal LF/CRLF checkout warnings |
+
+There are **82 new frontend** cases and **29 new backend** cases. Frontend covers
+natural ASCII-space aliases, preserved punctuation/hyphens, deduplication, entered
+count before deduplication, exact 32/33-character boundaries, invalid/empty entries,
+complete strict catalogue decoding including maximum bound, aliases and browser
+disagreement/unavailability, keyboard/pointer combobox events and result bounds,
+opt-in/out, corrected errors, precise server-error lifetime, version adoption,
+matching-current-state uncertainty, reload failure, close/reopen/in-flight drafts,
+401 expiry, logout/unmount cancellation and late success/denial isolation. Existing
+negative skills fixtures use `bad/skill` because spaces are now valid editor input;
+backend/raw SQL space rejection tests remain unchanged in meaning.
+
+Backend adds complete catalogue equality against the unchanged ProfileBody
+validator, deterministic repeat reads, private headers, guest/Origin/actor/query/
+method refusal, overflow/empty refusal, canonical/invalid skill boundaries, alias/
+opt-in versions and exact 70/30/novelty scoring. Exact current OpenAPI and integrated
+route inventories include only the new GET (25 integrated routes including health,
+nine service overrides); the legacy route gap is eight, with legacy hosts unchanged.
+No required cases or assertions were removed or relaxed. Both backend runs retain
+one existing Starlette/httpx deprecation warning.
+
+Initial focused runs exposed a TypeScript narrowing error, an incorrect new test
+boundary (30 letters + hyphen + letter is exactly 32), the legacy-gap count and a
+POST test reaching existing strict-media middleware before method rejection. These
+were corrected, with JSON supplied for the wrong-method probe. The first full
+backend run had **2311 passed / 1 failed / 32 deselected**, 111.06 s: its exact
+OpenAPI inventory lacked the approved GET. Adding that explicit entry preserved
+the exact comparison; the full confirmation above passed. No timeout/assertion
+weakening or runtime security relaxation was used.
+
+Static review: modified Python parses in memory, edited local Markdown targets
+resolve, and no files are staged. Matching/profile write services, ProfileBody,
+PostgreSQL model/constraints/migrations, session-revalidation hook, dependencies,
+CI and legacy hosts remain unchanged. Favicon PNG is byte-identical to HEAD;
+index.html content matches HEAD respecting Windows checkout line endings. An
+initial raw Git-blob comparison of index.html encountered CRLF versus LF and was
+corrected to compare repository content; no source rewrite was needed.
+
+Real PostgreSQL execution is **not run**. A TCP listener on loopback 5432 is not
+database identity or authorization evidence. `MERGE_RELEASE_DB_PASSWORD` is absent;
+the existing fixed `release_support.acceptance --confirm-profile-test` runner
+requires the private existing credential. It was not invoked to prompt/fall back;
+no old receipt, fixture, runner roster or schema was changed. Full offline tests
+retain the fixed 30-case profile collection check, not a live pass.
+
+Release recommendation: **CONDITIONAL**. Local offline implementation checks pass;
+real browser/screen-reader/mobile acceptance remains required for popup focus,
+touch selection, live announcements, zoom/scroll and layout. jsdom key events are
+not native browser or assistive-technology proof. Drafts are memory-only and lost
+on real reload/crash/logout/credential replacement. Deploying the new frontend
+requires this additive backend endpoint first or together; an unavailable catalogue
+blocks save with explicit read recovery. No public deployment/release is certified.
+
+Final local-commit review, same date: actual runtime/test/document diffs reviewed
+against full parent `28dec1ce8d0d4a573c9300828ae3811f870a7ec1`; exactly the same
+22 source/test/document files, no generated output in the change set. No runtime
+or test corrections were required. Corrected only the integrated guide's stale
+endpoint/legacy-gap prose counts to 24/eight. Existing full 546/2312 and production
+build evidence above remains applicable; suites/build were not rerun for this
+documentation-only final review. Owner authorization now permits exactly one local
+commit after unstaged/staged whitespace and exact-file review, with no DB access,
+credential bypass, push or deployment. Git history supplies the commit identity.
+
 ## Session revalidation without workspace resets - 16 November 2026
 
 Baseline: clean `1416c72434d5323ac5c80fb5f5854d53cda7f2c7`; the committed favicon

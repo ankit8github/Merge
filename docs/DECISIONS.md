@@ -1,5 +1,38 @@
 # Merge — Architecture Decision Records (ADRs)
 
+### Profile editor UX — owner-approved local implementation, 2026-11-17
+
+The owner approves natural skill entry, a server-supplied zone picker and retained
+draft recovery for local implementation/testing only. Convert internal ASCII space
+runs to hyphens in the editor, then apply existing trim/lowercase/deduplication and
+sort rules. Preview canonical labels. Stored syntax, backend validation, PostgreSQL
+constraints, exact matching and 70/30 scoring remain unchanged; no migration.
+
+Add authenticated GET /api/profile/timezones, returning sorted `items` from the
+installed backend zone set, excluding existing prohibited names and names exceeding
+the existing 64-character limit. Bound the complete list to 1–2048 entries; fail
+closed instead of truncating. No query/actor selectors, new service, write, runtime
+dependency or external lookup. Extend only the current integrated host's closed
+route/dependency audit and legacy-gap assertion; older hosts stay restricted.
+
+Keep typed search separate from an explicitly selected identifier; preserve saved
+aliases and suggest the browser zone only if it occurs in the server list. No
+browser canonicalization of stored identifiers. Drafts and baseline versions live
+in the account/session-scoped panel, never storage. Canonical reload retains the
+draft and requires explicit adoption/discard before a new manual save. A GET is
+current-state evidence, not proof that an uncertain earlier write rolled back.
+Keep CAS, strict acknowledgement checks, 401 expiry, denial handling, cancellation
+and stale-response fences. No automatic POST/rebase/retry or authentication change.
+
+Verification/results belong in TESTING.md and PROGRESS.md after execution. No
+staging, commit, push, live database operation or deployment is authorized here.
+
+Final review authorization, same date: after local implementation the owner
+explicitly authorizes staging exactly the reviewed 22 files and one local commit,
+`feat(profile): improve skill entry and timezone discovery`, from parent
+`28dec1ce8d0d4a573c9300828ae3811f870a7ec1`. This supersedes only the earlier
+staging/commit stop. Push, deployment and all database operations remain excluded.
+
 ### Routine session revalidation without workspace replacement - 2026-11-16
 
 The owner authorizes preserving mounted authenticated UI during routine session

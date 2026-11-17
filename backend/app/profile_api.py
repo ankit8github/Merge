@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from app.auth import AuthenticatedSession, AuthFailure, ErrorResponse, authenticated_session, error_response
-from app.profile_models import ProfileBody, ProfileView
+from app.profile_models import ProfileBody, ProfileView, ZONES
 from app.team_api import creation_session
 from app.services.profiles import ProfileError, ProfileService
 from app.services.matching import MatchingService
@@ -15,6 +15,10 @@ class RankQuery(BaseModel):
     model_config = ConfigDict(extra='forbid')
     limit: int = Field(default=20, ge=1, le=20)
     cursor: str | None = Field(default=None, min_length=1, max_length=128, pattern=r'^[A-Za-z0-9_-]+$')
+
+
+class ProfileTimezones(BaseModel):
+    items: list[str] = Field(min_length=1, max_length=2048)
 
 
 class Suggestion(BaseModel):
@@ -67,6 +71,16 @@ def get_matching_service(request: Request, auth: AuthenticatedSession = Depends(
 
 router = APIRouter(prefix='/api', tags=['profiles and matching'], dependencies=[Depends(scope)],
     responses={s:{'model':ErrorResponse} for s in (401,403,404,409,415,422,503)})
+
+
+@router.get('/profile/timezones', response_model=ProfileTimezones)
+def profile_timezones(auth: AuthenticatedSession = Depends(authenticated_session)):
+    # Same installed set and exclusions as ProfileBody, including the field bound.
+    # Refuse an unexpectedly large/empty catalogue; never return a partial list.
+    items = sorted(zone for zone in ZONES if len(zone) <= 64 and zone not in ('localtime', 'Factory'))
+    if not 1 <= len(items) <= 2048:
+        raise ProfileError()
+    return ProfileTimezones(items=items)
 
 
 @router.get('/me/profile',response_model=ProfileView)

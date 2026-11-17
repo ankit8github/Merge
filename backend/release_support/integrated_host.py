@@ -43,6 +43,7 @@ ENDPOINTS = {
     (T+'/members','GET'):lifecycle_api.members,(T+'/leave','POST'):lifecycle_api.leave,
     (T+'/members/{user_id}/remove','POST'):lifecycle_api.remove,
     ('/api/me/profile','GET'):profile_api.profile,('/api/me/profile','POST'):profile_api.update_profile,
+    ('/api/profile/timezones','GET'):profile_api.profile_timezones,
     (T+'/suggestions','GET'):profile_api.suggestions,(H+'/events','GET'):realtime_api.events,
 }
 SERVICES = {auth.get_services,read_api.get_read_service,team_api.get_team_service,
@@ -60,7 +61,8 @@ def expected_dependencies(path, method):
     if path in ('/auth/register','/auth/login'): return {auth.get_services}
     expected = BASE.copy()
     if path.startswith('/auth/'): return expected
-    if path == '/api/me/profile' or path.endswith('/suggestions'):
+    if path == '/api/profile/timezones': expected.add(profile_api.scope)
+    elif path == '/api/me/profile' or path.endswith('/suggestions'):
         expected |= {profile_api.scope,profile_api.get_matching_service if path.endswith('/suggestions') else profile_api.get_profile_service}
         if method == 'POST': expected.add(team_api.creation_session)
     elif path.endswith('/events'): expected |= {realtime_api.get_realtime_service,realtime_api.stream_request}

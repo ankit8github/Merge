@@ -56,8 +56,8 @@ owner-operated browser observations + hashed artifacts
   -> offline final evidence join / new retained review report
 ```
 
-`integrated_host.py` is independent of browser_full.py. It has23 exact
-method/path/endpoint entries plus GET /health (24 total), nine explicit service
+`integrated_host.py` is independent of browser_full.py. It has24 exact
+method/path/endpoint entries plus GET /health (25 total), nine explicit service
 overrides, and a closed transitive dependency audit at lifespan entry, every
 request and shutdown. It checks effective **and retained original** endpoint
 identity. Missing/extra route, method, endpoint, dependency or override fails.
@@ -73,10 +73,10 @@ live ASGI entry point is exported.
 | Requests | POST create/decision; GET own request and leader pending requests |
 | Invitations | POST issue/redeem; GET own inbox |
 | **Additional lifecycle** | GET /teams/{t}/members; POST /teams/{t}/leave and /teams/{t}/members/{u}/remove |
-| **Additional profiles/matching** | GET/POST /api/me/profile; GET /teams/{t}/suggestions |
+| **Additional profiles/matching** | GET/POST /api/me/profile; GET /teams/{t}/suggestions; authenticated GET /api/profile/timezones |
 | **Additional realtime** | GET /api/hackathons/{h}/events, original authenticated SSE endpoint |
 
-The old exact0005 host still excludes those seven additional method/path
+The old exact0005 host still excludes those eight additional method/path
 entries. Its own16 entries plus health and original dependency audit remain
 byte-identical. The old exact0003 host is also unchanged.
 

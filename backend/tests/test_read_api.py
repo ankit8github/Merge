@@ -181,6 +181,7 @@ def test_read_openapi_types_preserved_alongside_create(discovery):
         base+'/{hackathon_id}/teams/{team_id}/members/{user_id}/remove':{'post'},
         base+'/{hackathon_id}/events':{'get'},
         '/api/me/profile':{'get','post'},
+        '/api/profile/timezones':{'get'},
         base+'/{hackathon_id}/teams/{team_id}/suggestions':{'get'}}
     assert {path:set(operations) for path,operations in paths.items()} == expected
     for path,operations in paths.items():

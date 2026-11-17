@@ -219,6 +219,15 @@ function rankings(value: unknown, h: string, t: string, actor: string): Rankings
     skill_weight: .7, timezone_weight: .3, items, next_cursor: v.next_cursor as string | null };
 }
 export const api = {
+  profileTimezones: (signal?: AbortSignal): Promise<string[]> => request('/api/profile/timezones', value => {
+    const v = object(value), items = v.items;
+    if (Object.keys(v).length !== 1 || !Array.isArray(items) || items.length < 1 || items.length > 2048 ||
+        items.some((zone, i) => typeof zone !== 'string' || !/^[A-Za-z0-9_+./-]{1,64}$/.test(zone) ||
+          zone === 'localtime' || zone === 'Factory' || zone.split('/').some(part => !part || part === '.' || part === '..') ||
+          (i > 0 && items[i - 1] >= zone))) throw new ApiError(0, 'invalid_response');
+    // Do not use browser Intl to validate/canonicalize the server's identifiers.
+    return items as string[];
+  }, signal),
   profile: (actor: string, signal?: AbortSignal) => request('/api/me/profile', value => profile(value, actor), signal),
   saveProfile: (actor: string, body: ProfileEdit, csrf: string, signal?: AbortSignal) => {
     if (!/^[A-Za-z0-9_-]{43}$/.test(csrf)) throw new ApiError(422, 'invalid_request');

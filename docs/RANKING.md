@@ -4,6 +4,62 @@ Pre-implementation contract, 2026-11-14. Owner-authorized additive APIs/schema;
 proposed ADR-009 refinement for review, with no change to membership, session,
 locking, stored mutation replies, SSE publication or old acceptance scopes.
 
+## Profile editor refinement — 17 November 2026
+
+Owner-approved local implementation supersedes the original manual-entry UX below,
+without changing the stored/API skill rules, schema, ranking or authorization.
+
+The editor accepts internal ASCII space runs as hyphens after trimming/lowercasing;
+it previews the exact deduplicated/sorted labels that will be sent. Count all
+entered comma-separated labels before deduplication (maximum 20); reject empty
+entries, unsupported characters and canonical labels longer than 32. Empty skills
+remain allowed. Existing punctuation/hyphens are not rewritten; no taxonomy,
+fuzzy matching or synonym merging beyond this explicit input alias is introduced.
+Direct API callers still cannot store spaces. Backend raw-label limits stay intact.
+
+### Authenticated zone catalogue
+
+`GET /api/profile/timezones` returns only `{"items": ["…"]}`: a sorted unique list
+of identifiers in the installed `ZONES` set accepted by the existing validator,
+excluding `localtime`, `Factory` and identifiers exceeding the 64-character field
+bound. Require 1–2048 entries; an empty/oversized catalogue yields sanitized 503,
+never truncation. Existing authenticated same-origin read policy/private no-store
+headers apply; no query/actor parameters or POST. No profile/membership service,
+external lookup, domain mutation, audit/outbox event or schema access is added.
+Authentication still performs its existing session validation.
+
+The frontend checks response keys, types, count/identifier bounds, ordering,
+duplicates, prohibited names and malformed path segments. It uses these identifiers
+for selection/validation, never browser Intl canonicalization. Saved aliases stay
+exact. Search text is separate from selection; unfinished search blocks submission.
+Browser-detected zones are optional buttons only when present in the server list.
+Catalogue failure disables selection/save and offers explicit read retry; drafts
+remain. The picker renders at most 50 matches, announces the total and asks users
+to narrow a broader search; the API catalogue itself is complete.
+
+### Drafts, versions and recovery
+
+The account/session-scoped panel owns memory-only draft values, search, baseline
+version and recovery state. Closing hides the editor without destroying these or
+cancelling an in-flight save. Account/credential replacement and logout fence and
+abort requests. Existing session-revalidation behavior remains unchanged.
+
+Blur/submit validate fields; an erroneous field updates on correction. Discovery
+changes immediately revalidate the zone requirement. A definite `422 invalid_request`
+retains an editable draft and its server error until a meaningful payload change or
+explicit recovery. Other failures, including unknown 422/malformed acknowledgements,
+freeze edits and require canonical GET. Reload shows current server state separately,
+keeping the draft and old expected version. Explicit "Keep draft for a new save"
+adopts the observed version without POST; "Discard draft and use saved profile"
+replaces the draft. Only another explicit Save sends a write. A matching GET cannot
+prove an uncertain earlier write failed, and CAS still guards later completions.
+No persistence, automatic replay/rebase, migration or backend-rule relaxation.
+
+Current integrated host audit adds only the authenticated catalogue GET (25 routes
+including health, nine unchanged service overrides). Legacy profile-router exclusions
+remain unchanged; receipts and old fixture scopes are not recertified. Verification
+and browser/real-PostgreSQL limits: [TESTING.md](TESTING.md).
+
 ## Component / acceptance
 
 New backend profile DTO/API/service/model and matching service; one additive

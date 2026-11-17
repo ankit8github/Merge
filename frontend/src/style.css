@@ -121,6 +121,15 @@ dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
 .field-error { color: #802c22; font-size: .85rem; margin-top: .5rem; }
 .profile-panel { padding: 1rem; margin-bottom: 1rem; min-width: 0; }
 .profile-panel form { max-width: 40rem; }
+.timezone-picker { position: relative; margin-block: 1rem; }
+.timezone-picker [role="listbox"] { list-style: none; padding: .25rem; margin: .25rem 0; max-height: 16rem; overflow-y: auto; border: 1px solid #91a698; border-radius: .5rem; background: #fff; }
+.timezone-picker [role="listbox"][hidden] { display: none; }
+.timezone-picker [role="option"] { padding: .65rem; cursor: pointer; overflow-wrap: anywhere; }
+.timezone-picker [role="option"].active { outline: 2px solid #315c48; outline-offset: -2px; background: #edf3ea; }
+.timezone-picker [role="option"][aria-selected="true"] { font-weight: 700; }
+.timezone-actions { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: .5rem; }
+.profile-recovery { margin-top: 1rem; padding: 1rem; border: 1px solid #91a698; border-radius: .5rem; }
+.profile-recovery .button { margin: .25rem; }
 .checkbox-label { display: flex; gap: .7rem; align-items: center; }
 .checkbox-label input { width: auto; }
 .request-card p { overflow-wrap: anywhere; }

@@ -69,6 +69,14 @@ stale responses and close streams. Unknown mutation delivery requires recovery;
 UI refresh never silently replays a command. [Frontend](FRONTEND.md) retains the
 component contracts and failure cases.
 
+The profile editor accepts natural skill entry but submits existing canonical
+hyphenated labels; stored syntax and exact matching do not change. An authenticated
+read-only `/api/profile/timezones` supplies the backend's accepted installed IANA
+identifiers, with a bounded complete response. Browser zone detection only offers
+an explicit suggestion. Draft values and expected versions remain separate in the
+session-scoped panel; canonical reload cannot overwrite/rebase a draft without an
+explicit user choice. No migration, new dependency or automatic write retry.
+
 ## Realtime and deterministic matching
 
 Authenticated SSE reads committed subscriber-visible outbox counts in short

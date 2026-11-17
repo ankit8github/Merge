@@ -75,8 +75,8 @@ def test_read_rejects_duplicate_keys_and_oversize(tmp_path):
 def test_preflight_honestly_blocks_execution_without_prompt_or_connection(plan, capsys):
     result = p.readiness(plan)
     assert result['status'] == 'CONDITIONAL' and result['live_operations_performed'] is False
-    assert result['routes'] == 24 and result['service_overrides'] == 9
-    assert len(result['missing_legacy_routes']) == 7
+    assert result['routes'] == 25 and result['service_overrides'] == 9
+    assert len(result['missing_legacy_routes']) == 8
     assert p.main(['validate']) == 0
     assert p.main(['readiness']) == 2
     assert 'CONDITIONAL' in capsys.readouterr().out

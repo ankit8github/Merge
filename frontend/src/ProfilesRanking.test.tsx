@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import App from './App';
 import { api, type Profile, type Rankings } from './api';
 import ProfilePanel, { validateProfile } from './components/Profile';
@@ -9,6 +9,7 @@ import { ReadInvalidation } from './hooks/useRealtime';
 import { csrf, failure, H1, H2, hackathon, invitation, json, session, T1, T2, team, U1 } from './test/fixtures';
 
 const U2 = '00000000-0000-0000-0000-000000000022';
+beforeEach(() => { vi.spyOn(api, 'profileTimezones').mockResolvedValue(['UTC']); });
 const profile = (): Profile => ({ user_id: U1, username: 'test_builder', display_name: 'Builder', skills: [], timezone: null, discoverable: false, version: 0 });
 const ranking = (): Rankings => ({ hackathon_id: H1, team_id: T1, user_id: U1, reference_at: '2026-11-14T12:00:00Z',
   team_skills: ['python'], skill_weight: .7, timezone_weight: .3, next_cursor: null,
@@ -17,7 +18,7 @@ const ranking = (): Rankings => ({ hackathon_id: H1, team_id: T1, user_id: U1, r
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 it('normalizes skills, permits empty private profiles and gives field-specific errors', () => {
-  expect(validateProfile(' React, python,react ', 'UTC', true)).toEqual({ fields: {}, values: { skills: ['python','react'], timezone: 'UTC', discoverable: true } });
+  expect(validateProfile(' React, python,react ', 'UTC', true, ['UTC'])).toEqual({ fields: {}, values: { skills: ['python','react'], timezone: 'UTC', discoverable: true } });
   expect(validateProfile('', '', false).fields).toEqual({});
   expect(validateProfile('', '', true).fields.timezone).toBeTruthy();
   expect(validateProfile('a,,b', 'Mars/Bad', true).fields).toHaveProperty('skills');
@@ -66,11 +67,13 @@ it('loads profile only on explicit opening, focuses invalid fields and saves nor
   expect(get).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Edit skills and time zone' }));
   const skills = await screen.findByLabelText('Skills');
-  fireEvent.change(skills, { target: { value: 'bad skill' } });
+  fireEvent.change(skills, { target: { value: 'bad/skill' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
   expect(document.activeElement).toBe(skills); expect(skills.getAttribute('aria-invalid')).toBe('true'); expect(save).not.toHaveBeenCalled();
   fireEvent.change(skills, { target: { value: ' Python, python ' } });
   fireEvent.change(screen.getByLabelText('Time zone'), { target: { value: 'UTC' } });
+  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'ArrowDown' });
+  fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' });
   fireEvent.click(screen.getByLabelText('Show me in teammate rankings'));
   fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
   await screen.findByText(/Profile saved/);
@@ -86,7 +89,9 @@ it.each(['conflict','unknown'])('requires canonical profile reload after %s deli
   expect(screen.getByRole('button', { name: 'Save profile' }).matches(':disabled')).toBe(true);
   fireEvent.click(screen.getByRole('button', { name: 'Save profile' })); expect(save).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole('button', { name: 'Reload profile' }));
-  await waitFor(() => expect(get).toHaveBeenCalledTimes(2)); await waitFor(() => expect((screen.getByRole('button', { name: 'Save profile' }) as HTMLButtonElement).disabled).toBe(false));
+  await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  fireEvent.click(await screen.findByRole('button', { name: 'Keep draft for a new save' }));
+  expect(screen.getByRole('button', { name: 'Save profile' }).matches(':disabled')).toBe(false);
 });
 
 it('ignores old-account profile saves and aborts their transport', async () => {

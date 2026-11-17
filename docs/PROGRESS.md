@@ -1,5 +1,48 @@
 # Current verified status
 
+## Profile editor UX — 17 November 2026
+
+Started clean at reviewed `28dec1c`. Implemented natural ASCII-space skill entry
+with canonical preview, unchanged stored hyphenated labels, and the authenticated
+bounded `/api/profile/timezones` catalogue. A searchable combobox preserves exact
+saved aliases, separates search from selection and offers only accepted optional
+browser-zone suggestions. Responsive blur/submit/correction validation retains
+precise server-error lifetime. Panel-owned drafts survive close/reopen and canonical
+reload; conflicts/uncertain saves retain separate server state and require deliberate
+version adoption or discard before another manual POST. No automatic replay/rebase.
+
+Actual offline evidence: **82 new frontend / 29 new backend cases**; **149 focused
+frontend passed** (before four final cases), **233 focused backend passed**;
+**546 full frontend passed**, 20 files, 166.92 s; **2312 full offline backend passed**,
+32 database cases deselected, 81.26 s. Final TypeScript/Vite production build passed,
+51 modules, 3.04 s. Exact commands, initial failures/fixes, warning and qualifications:
+[TESTING.md](TESTING.md). Current route audit is exact 25 including health/nine
+unchanged overrides; legacy restricted hosts remain unchanged. Diff/syntax/link
+checks passed; no staged files. Favicon bytes, index content and session hook are
+preserved. No new dependencies, migrations, backend skill rules, ranking formula,
+membership/invitation/lifecycle, authorization, CSRF/Origin/session/throttle or
+deployment settings changed. Existing profile CAS and acknowledgement checks remain.
+
+**CONDITIONAL for release; local owner-review patch only.** Native browser/mobile/
+screen-reader acceptance remains open. Real PostgreSQL tests were not run: the
+isolated runner credential is unavailable; no SQL, fixture reset/adoption, receipt
+rewrite or fallback target was attempted. Old evidence keeps its historical scope.
+No stage, commit, push, production-data operation or deployment. Drafts are memory-
+only; real reload/crash/logout/account/credential replacement still discards them.
+New frontend requires the additive backend endpoint; catalogue failure blocks save
+until explicit read recovery. The owner should trace `Data Science, data-science`
+to one canonical label and explain why GET after a timeout does not establish that
+the original write rolled back. Stop here for owner review.
+
+Final review, same date: the owner subsequently authorizes exactly one local
+commit of these 22 files with subject `feat(profile): improve skill entry and
+timezone discovery`, parent `28dec1ce8d0d4a573c9300828ae3811f870a7ec1`. Actual
+diff review found no runtime defect requiring correction; two stale harness-guide
+counts were corrected within the same file set. Full offline/build evidence above
+is retained without a rerun for documentation-only final corrections. All database,
+push and deployment operations remain excluded. Git history supplies the resulting
+commit identity; the browser/PostgreSQL release conditions remain open.
+
 ## Routine session checks preserve UI - 16 November 2026
 
 Started clean at `1416c72434d5323ac5c80fb5f5854d53cda7f2c7`. A pre-fix regression

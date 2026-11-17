@@ -105,6 +105,7 @@ def route_gap():
     from test_support.browser_full import ENDPOINTS, REVISION
     from app import lifecycle_api, realtime_api, profile_api
     required = {
+        ('/api/profile/timezones', 'GET'): profile_api.profile_timezones,
         ('/api/me/profile', 'GET'): profile_api.profile,
         ('/api/me/profile', 'POST'): profile_api.update_profile,
         ('/api/hackathons/{hackathon_id}/teams/{team_id}/suggestions', 'GET'): profile_api.suggestions,

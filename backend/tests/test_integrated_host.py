@@ -183,7 +183,7 @@ def test_integrated_target_rejected_before_engine(target):
 
 def test_static_readiness_no_live_io():
     result=run.static_readiness()
-    assert result['status']=='CONDITIONAL' and result['routes']==24 and result['service_overrides']==9
+    assert result['status']=='CONDITIONAL' and result['routes']==25 and result['service_overrides']==9
     assert result['live_operations_performed'] is False
 
 

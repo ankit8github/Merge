@@ -235,3 +235,70 @@ def test_new_api_dependency_has_no_engine_fallback():
     request=SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(auth_engine=None)))
     for dependency in (profile_api.get_profile_service,profile_api.get_matching_service):
         with pytest.raises(ProfileError): dependency(request,MagicMock())
+
+
+def test_timezone_catalogue_is_complete_sorted_and_uses_unchanged_validation(profiles):
+    r = profiles
+    accepted = []
+    for zone in ZONES:
+        try:
+            ProfileBody(skills=[], timezone=zone, discoverable=False, version=0)
+            accepted.append(zone)
+        except ValidationError:
+            pass
+    for _ in range(2):
+        response = r.api.client.get('/api/profile/timezones', headers=r.headers)
+        assert response.status_code == 200
+        assert_private(response)
+        assert response.json() == {'items': sorted(accepted)}
+        assert 1 <= len(response.json()['items']) <= 2048
+    assert {'UTC', 'Asia/Kolkata', 'Asia/Calcutta'} <= set(accepted)
+    assert not {'Factory', 'localtime'} & set(accepted)
+    r.p.get.assert_not_called(); r.p.update.assert_not_called(); r.m.suggestions.assert_not_called()
+
+
+@pytest.mark.parametrize('kind,status', [('guest',401),('origin',403),('actor',422),('query',422),('duplicate',422),('post',405)])
+def test_timezone_catalogue_preserves_security_and_readonly_contract(profiles, kind, status):
+    r = profiles; headers = dict(r.headers); path = '/api/profile/timezones'
+    if kind == 'guest': headers.pop('Cookie')
+    elif kind == 'origin': headers['Origin'] = 'https://other.example'
+    elif kind == 'actor': headers['X-Actor-ID'] = str(uuid4())
+    elif kind == 'query': path += '?limit=20'
+    elif kind == 'duplicate': path += '?zone=UTC&zone=UTC'
+    response = r.api.client.post(path, headers=headers, json={}) if kind == 'post' else r.api.client.get(path, headers=headers)
+    assert response.status_code == status
+    r.p.get.assert_not_called(); r.p.update.assert_not_called(); r.m.suggestions.assert_not_called()
+
+
+@pytest.mark.parametrize('count', [0, 2049])
+def test_timezone_catalogue_never_silently_truncates(monkeypatch, profiles, count):
+    monkeypatch.setattr(profile_api, 'ZONES', frozenset(f'Area/Zone{i:04}' for i in range(count)))
+    response = profiles.api.client.get('/api/profile/timezones', headers=profiles.headers)
+    assert response.status_code == 503 and response.json()['error']['code'] == 'service_unavailable'
+
+
+@pytest.mark.parametrize('skills,expected', [
+    (['data-science','Data-Science',' C++ ','c#','node.js','foo--bar'], ['c#','c++','data-science','foo--bar','node.js']),
+    (['x'*32], ['x'*32]), (['python']*20, ['python']), ([], []),
+])
+def test_existing_skill_contract_remains_canonical(skills, expected):
+    assert ProfileBody(**body(skills=skills)).skills == expected
+
+
+@pytest.mark.parametrize('skills', [['Data Science'], ['a\tb'], ['a\nb'], ['a\u00a0b'], ['x'*33], ['a']*21, ['a,b'], [''], ['é']])
+def test_backend_still_rejects_noncanonical_or_out_of_bounds_skills(skills):
+    with pytest.raises(ValidationError): ProfileBody(**body(skills=skills))
+
+
+@pytest.mark.parametrize('zone', ['Asia/Calcutta', 'Asia/Kolkata', 'UTC'])
+@pytest.mark.parametrize('discoverable', [True, False])
+def test_existing_zone_aliases_and_discovery_roundtrip_unchanged(zone, discoverable):
+    profile = ProfileBody(**body(timezone=zone, discoverable=discoverable, version=7))
+    assert profile.timezone == zone and profile.version == 7 and profile.discoverable is discoverable
+
+
+def test_canonical_skill_novelty_and_exact_70_30_weights_unchanged():
+    score, explanation = components(['data-science', 'python'], {'data-science'}, 'UTC', ['UTC'], AT)
+    assert score == 65 and explanation['new_skills'] == ['python']
+    assert explanation['skill_points'] == 35 and explanation['timezone_points'] == 30
+    assert components(['data-science'], {'data-science'}, 'Asia/Calcutta', ['Asia/Kolkata'], AT)[0] == 30

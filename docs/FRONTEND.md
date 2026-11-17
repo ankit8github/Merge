@@ -38,6 +38,28 @@ Offline verification and owner-approved live follow-up: [TESTING.md](TESTING.md)
 
 ## Batch A profiles, ranking and essential UX
 
+Profile UX refinement, 17 November 2026: natural skill entry previews canonical
+hyphenated labels; only those labels reach the unchanged backend matching contract.
+The searchable zone combobox loads `/api/profile/timezones`, keeps its search
+separate from explicit selection, displays saved/selected identifiers distinctly,
+and preserves aliases. Arrow keys navigate, Enter selects without saving, Escape
+dismisses and Tab leaves normally. Pointer selection and clear/optional accepted
+browser-zone buttons remain explicit. At most 50 matches are displayed with a
+total/narrow-search notice. Save is unavailable until a valid catalogue loads.
+
+Drafts, search/errors and baseline version belong to the session-scoped panel and
+survive close/reopen and canonical reload. Reload keeps controls locked until the
+user explicitly adopts the observed version with the retained draft or discards it
+for saved values; neither choice sends a POST. Unknown outcomes still require that
+read and deliberate choice, with no rollback inference or silent rebase/replay.
+Blur/submit validation, correction of prior errors and discovery-dependent zone
+validation update aria-invalid/descriptions. Canonical preview is not a noisy live
+region; error/result announcements retain restrained roles and first-error focus.
+Definite server rejection stays until payload changes or explicit recovery.
+Auth/account cleanup still cancels/fences all reads/saves. Drafts are memory-only;
+real document reload, crash, logout or replacement credentials discard them.
+This supersedes the earlier close/reload draft loss, not the session model.
+
 An explicit account-scoped editor loads/saves skills, IANA time zone and discovery
 opt-in through the existing same-origin session/CSRF transport. Version conflicts
 or unknown save delivery require canonical reload; there is no automatic retry or

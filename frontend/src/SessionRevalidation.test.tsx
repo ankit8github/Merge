@@ -24,6 +24,7 @@ function server(handler: Handler = () => undefined) {
     if (url.endsWith('/invitations/mine?limit=20')) return Promise.resolve(json({ items: [invitation()], next_cursor: I1 }));
     if (url.endsWith('/invitations/mine?limit=20&cursor=' + I1)) return Promise.resolve(json({ items: [], next_cursor: null }));
     if (url === '/api/me/profile') return Promise.resolve(json({ ...identity.identity, display_name: 'Builder', skills: [], timezone: null, discoverable: false, version: 1 }));
+    if (url === '/api/profile/timezones') return Promise.resolve(json({ items: ['UTC'] }));
     throw new Error('Unexpected offline URL');
   });
   vi.stubGlobal('fetch', fetch);
